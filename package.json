@@ -1,0 +1,23 @@
+{
+  "name": "pumpkin-smasher-2",
+  "version": "1.0.0",
+  "description": "Smash Pumpkins!",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "DragonFire7z",
+  "license": "ISC",
+  "dependencies": {
+    "@code-dot-org/p5": "^0.5.4-cdo.10",
+    "@replit/database": "^2.0.2",
+    "axios": "^1.4.0",
+    "body-parser": "^1.20.2",
+    "dnode": "^1.2.2",
+    "express": "^4.18.2",
+    "json-rpc-2.0": "^1.6.0",
+    "peer": "^0.6.1",
+    "socket.io": "^4.7.1",
+    "webrtc": "^1.14.1"
+  }
+}

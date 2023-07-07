@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <link rel="stylesheet" type="text/css" href="assets/instructions/style.css">
+  </head>
+  <body>
+    <div id="title">
+      <p id="namestroke">Pumpkin Smasher</p>
+      <p id="name">Pumpkin Smasher</p>
+    </div>
+    <div id="main">
+      <div style="height: 3vmin"></div>
+      <p class="heading">Introduction</p>
+      <p class="text">Pumpkin Smasher is an online game that requires 4 people to play. At the beginning of each game, 1 player is selected as 
+  Pumpkin Master while the rest remain Skeletons. The goal of the Skeletons is to destroy all three objectives before the 5 minute timer runs out. On the other hand, the goal of the Pumpkin Master is to summon monsters and use abilities in order to stop the skeletons from destroying the objectives.</p>
+      <div style="height: 3vmin"></div>
+      <p class="heading">Objectives:</p>
+      <p class="text">Three objectives are spawned randomly at the edges of the map. These objectives need to be protected at all costs by the Pumpkin Master and the Skeletons should do whatever they can to destroy them. Hitting an objective rewards 0.2 points.</p>
+      <img src="assets/pumpkins/objective.png" style="position: relative; left: 37.5vmin; top: 0vmin; width: 25vmin">
+      <div class="hide"><img src="assets/skeleton/1.png" style="position: relative; left: 51vmin; top: -2vmin; width: 7vmin"></div>
+      <div style="height: 3.5vmin"></div>
+      <p class="heading">Skeleton Gameplay:</p>
+      <p class="text">Skeletons are what you play as most of the time, the skeletons move using WASD and the arrow keys. They have an axe which can be swung using the space bar killing nearby monsters and pumpkins. A skeleton can only hit monsters on the side they are facing meaning that skeletons can be killed if surrounded on both sides.</p>
+      <div style="height: 3vmin"></div>
+      <p class="text">Smashing pumpkins and monsters spawned throughout the match increases a skeleton's score. When they get enough score, they can level up their health, speed and axe range.</p>
+      <img src="assets/gui/bone.png" style="position: relative; left: 31.25vmin; top: -1.5vmin; width: 12.5vmin">
+      <img src="assets/gui/bone_damaged.png" style="position: relative; left: 31.25vmin; top: -1.5vmin; width: 12.5vmin">
+      <img src="assets/gui/bone_broken.png" style="position: relative; left: 31.25vmin; top: -1.5vmin; width: 12.5vmin">
+      <p class="text">Upgrades and what they do:</p>
+      <p class="subtext">Health - Increases the skeletons max HP by 1 bone (2 HP).</p>
+      <p class="subtext">Speed - Increases the skeletons movement speed by a multiplier of 1.3x.</p>
+      <p class="subtext">Axe Range - Increases the distance that axe swings can hit enemys by 1/3 of a tile.</p>
+      <div style="height: 3vmin"></div>
+      <p class="text">How much score needs to be reached to 
+level up:</p>
+      <p class="subtext">Lvl 1: 10 pts (+10 prev lvl)</p>
+      <p class="subtext">Lvl 2: 25 pts (+15 prev lvl)</p>
+      <p class="subtext">Lvl 3: 50 pts (+25 prev lvl)</p>
+      <p class="subtext">Lvl 4: 90 pts (+40 prev lvl)</p>
+      <p class="subtext">Lvl 5: 150 pts (+60 prev lvl)</p>
+      <p class="subtext">Lvl 6: 235 pts (+85 prev lvl)</p>
+      <p class="subtext">Lvl 7: 350 pts (+115 prev lvl)</p>
+      <p class="subtext">Lvl 8: 500 pts (+150 prev lvl)</p>
+      <div style="height: 3vmin"></div>
+      <p class="text">After death, it takes 10 seconds to revive and you have 5 seconds of immunity directly after revival. However, swinging your axe while immune will immeadately revoke your immunity.</p>
+      <div class="hide"><img src="assets/skeleton/joining.png" style="position: relative; left: 45vmin; top: -7vmin; width: 10vmin"></div>
+      <img id="colorful" src="assets/misc/spin.png" style="position: relative; left: 68vmin; top: 7.5vmin; width: 8vmin;">
+      <p class="heading">Pumpkin Master Gameplay:</p>
+      <p class="text">The Pumpkin Master is the enemy of the skeletons. In order to achieve their goal of preventing the skeletons from destroying the objectives, they are able to spawn monsters and use abilities at the cost of pumpkin coins.</p>
+      <div style="height: 3vmin"></div>
+      
+      <p class="heading">Monsters:</p>
+      <p class="text">Monsters can be spawned from the bottom lefthand corner of your screen. They attack skeletons and cost pumpkin coins. Some require you to click on a pumpkin to spawn them while others can just be spawned on any tile.</p>
+      <div style="height: 3vmin"></div>
+      
+      <p class="text">Monster</p>
+      <div class="hide"><img src="assets/entities/monster/attack.png" id="monster" style="position: relative; left: 2.5vmin; top: 0vmin; width: 10vmin"></div>
+      <p class="subtext">Cost: 1 coin</p>
+      <p class="subtext">Pumpkin to place: Yes</p>
+      <p class="subtext">Value: 1/2 a point</p>
+      <p class="subtext">Description: A simple monster that will follow nearby skeletons around and will deal 1 damage to any skeleton it manages to reach.</p>
+      <div style="height: 3vmin"></div>
+      
+      <p class="text">Ghost</p>
+      <div class="hide"><img src="assets/entities/ghost/attack.png" id="ghost" style="position: relative; left: 3.5vmin; top: 0vmin; width: 8vmin; opacity: 0.5;"></div>
+      <p class="subtext">Cost: 3 coins</p>
+      <p class="subtext">Pumpkin to place: Yes</p>
+      <p class="subtext">Value: 1/2 a point</p>
+      <p class="subtext">Description: A monster that will just follow nearby skeletons around and will deal 1 damage to any skeleton it can touch. However, unlike basic monsters, it can go through walls.</p> 
+      <div style="height: 3vmin"></div>
+      
+      <p class="text">Nuke</p>
+      <div class="hide"><img src="assets/entities/nuke/target.png" id="nuke" style="position: relative; left: 1.5vmin; top: 0vmin; width: 12vmin"></div>
+      <p class="subtext">Cost: 3 coins</p>
+      <p class="subtext">Pumpkin to place: No</p>
+      <p class="subtext">Value: None</p>
+      <p class="subtext">Description: A giant pumpkin that falls from the sky onto a desired target and will deal 2 damage to any skeletons it lands on (2 tile radius).</p>
+      <div style="height: 3vmin"></div>
+
+      <p class="text">Rusher</p>
+      <div class="hide"><img src="assets/entities/rusher/idle.png" id="rusher" style="position: relative; left: -2.5vmin; top: 0vmin; width: 20vmin"></div>
+      <p class="subtext">Cost: 5 coins</p>
+      <p class="subtext">Pumpkin to place: Yes</p>
+      <p class="subtext">Value: 1 point</p>
+      <p class="subtext">Description: A pumpkin monster who will repeatedly rush the skeletons and deal 1 damage if it hits them. While rushing, it is invincible and cannot be killed by an axe attack, instead it will be launched back a bit. It will attempt to run from the skeletons when it is not rushing but it can be cornered into walls and defeated.</p>
+      <div style="height: 3vmin"></div>
+
+      <p class="text">Wizard</p>
+      <div class="hide"><img src="assets/entities/wizard/idle.png" id="wizard" style="position: relative; left: -2.5vmin; top: 0vmin; width: 20vmin"></div>
+      <p class="subtext">Cost: 7 coins</p>
+      <p class="subtext">Pumpkin to place: Yes</p>
+      <p class="subtext">Value: 1 point</p>
+      <p class="subtext">Description: A pumpkin monster who will repeatedly rush the skeletons and deal 1 damage if it hits them. While rushing, it is invincible and cannot be killed by an axe attack, instead it will be launched back a bit. It will attempt to run from the skeletons when it is not rushing but it can be cornered into walls and defeated.</p>
+      <div style="height: 3vmin"></div>
+
+      <p class="text">Brute</p>
+      <div class="hide"><img src="assets/entities/brute/attack.png" id="brute" style="position: relative; left: 2.5vmin; top: 0vmin; width: 10vmin"></div>
+      <p class="subtext">Cost: 7 coins</p>
+      <p class="subtext">Pumpkin to place: Yes</p>
+      <p class="subtext">Value: 1 point</p>
+      <p class="subtext">Description: A pumpkin monster who will repeatedly rush the skeletons and deal 1 damage if it hits them. While rushing, it is invincible and cannot be killed by an axe attack, instead it will be launched back a bit. It will attempt to run from the skeletons when it is not rushing but it can be cornered into walls and defeated.</p>
+      <div style="height: 3vmin"></div>
+
+      <p class="heading">Abilities:</p>
+      <p class="text">Abilities act on an entire section of the map and can be quite overpowered, but also quite expensive. They cost pumpkin coins just like monsters and are found just above the monster menu. Some have a cooldown, which means you cannot spam them like you can the monsters.</p>
+      <div style="height: 3vmin"></div>
+
+      <p class="text">Fog</p>
+      <div class="hide"><img src="assets/abilities/fog/icon.png" style="position: relative; left: 1.5vmin; top: 0vmin; width: 12vmin"></div>
+      <p class="subtext">Cost: 5 coins</p>
+      <p class="subtext">Cooldown: None</p>
+      <p class="subtext">Description: Spawns a thick of fog over a room. This disables the arrows that point to the objectives and it limits skeleton visibility. The fog lasts 1 minute before dissapating. Stacking fogs will increase fog intensity and will reset the fog's timer to 1 minute.</p>
+      <div style="height: 3vmin"></div>
+
+       <p class="text">Vines</p>
+      <div class="hide"><img src="assets/abilities/vines/icon.png" style="position: relative; left: 1.5vmin; top: 0vmin; width: 12vmin"></div>
+      <p class="subtext">Cost: 7 coins</p>
+      <p class="subtext">Cooldown: None</p>
+      <p class="subtext">Description: Spawns vine blockades at the entrances and exits of a room. This blocks skeletons from easily traversing the map. Each one can be destroyed in 20 hits from an axe. They last 1 minute before disappearing.</p>
+      <div style="height: 3vmin"></div>
+
+      <p class="text">Swarm</p>
+      <div class="hide"><img src="assets/abilities/swarm/icon.png" style="position: relative; left: 1.5vmin; top: 0vmin; width: 12vmin"></div>
+      <p class="subtext">Cost: 20 coins</p>
+      <p class="subtext">Cooldown: 10 seconds</p>
+      <p class="subtext">Description: Converts all of the pumpkins in a room into the basic monster which will follow the nearest skeleton. Each monster will disappear after 20 seconds.</p>
+      <div style="height: 3vmin"></div>
+
+      <p class="text">Shield</p>
+      <div class="hide"><img src="assets/abilities/shield/icon.png" style="position: relative; left: 1.5vmin; top: 0vmin; width: 12vmin"></div>
+      <p class="subtext">Cost: 70 coins</p>
+      <p class="subtext">Cooldown: 45 seconds</p>
+      <p class="subtext">Description: Spawns a shield in the desired room that will protect all of the objectives from damage. This means the skeletons need to attack it before they can attack the objectives. The shield will disappear after 2 minutes and it can also be destroyed in 50 hits. Hitting a shield rewards 0.1 points. You cannot have 2 shields, spawning another shield will just move the current one to a new location and bring it back to full health.</p>
+      <div style="height: 3vmin"></div>
+
+    </div>
+    <script src="assets/instructions/script.js"></script>
+  </body>
+</html>

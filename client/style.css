@@ -1,0 +1,137 @@
+
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+
+canvas {
+  display: block;
+  touch-action: none;
+}
+
+.display {
+  visibility: hidden;
+}
+
+.menu {
+  position: absolute;
+  color: #ffa500;
+  background-color: #231709;
+  border: 0.6vmin solid #ffa500;
+}
+
+.menu:focus, .menu:hover {
+  outline: none !important;
+  background-color: #381e08;
+}
+
+/* Home */
+
+#startBtn {
+  top: calc(50vh - 0.25vmin);
+  left: calc(50vw - 9.75vmin);
+  width: 19.5vmin;
+  height: 13vmin;
+  font-size: 5vmin;
+}
+
+#hostBtn {
+  top: calc(50vh + 14.75vmin);
+  left: calc(50vw - 17vmin);
+  width: 15.5vmin;
+  height: 10.5vmin;
+  font-size: 4.25vmin;
+}
+
+#joinBtn {
+  top: calc(50vh + 14.75vmin);
+  left: calc(50vw + 1.5vmin);
+  width: 15.5vmin;
+  height: 10.5vmin;
+  font-size: 4.25vmin;
+}
+
+#username {
+  top: calc(100vh - 19.75vmin);
+  left: calc(50vw - 45vmin);
+  width: 90vmin;
+  height: 6.5vmin;
+  padding: 0px 0px 0px 0.75vmin;
+  font-size: 5vmin;
+}
+
+#tutorialBtn {
+  top: calc(100vh - 10vmin);
+  left: calc(50vw - 12.25vmin);
+  width: 25.5vmin;
+  height: 8vmin;
+  font-size: 4vmin;
+}
+
+#instructionsBtn {
+  top: calc(100vh - 10vmin);
+  left: calc(50vw - 40vmin);
+  width: 25.5vmin;
+  height: 8vmin;
+  font-size: 3.75vmin;
+}
+
+#settingsBtn {
+  top: calc(100vh - 10vmin);
+  left: calc(50vw + 15.5vmin);
+  width: 25.5vmin;
+  height: 8vmin;
+  font-size: 4vmin;
+}
+
+/* View */
+
+#roomCode {
+  top: 9.75vmin;
+  left: 9.75vmin;
+  width: calc(75vw - 18vmin);
+  height: 6.45vmin;
+  padding: 0px 0px 0px 0.75vmin;
+  font-size: 5vmin;
+}
+#roomCode:invalid {
+  background-color: #420000;
+}
+
+#enterBtn {
+  top: 9.75vmin;
+  left: calc(75vw - 5.25vmin);
+  width: calc(25vw - 4.5vmin);
+  height: 7.5vmin;
+  font-size: 5vmin;
+}
+
+#instructions {
+  width: 100vw;
+  height: 100vh;
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  visibility: hidden;
+}
+
+#widgetBot {
+  width: 90vmin;
+  height: 90vmin;
+  position: absolute;
+  top: calc(100vh - 92vmin);
+  left: calc(100vw - 144vmin);
+}
+#onlineMembers {
+  width: 50vmin;
+  height: 90vmin;
+  position: absolute;
+  top: calc(100vh - 92vmin);
+  left: calc(100vw - 52vmin);
+}
+#discordWidget {
+  visibility: hidden;
+  z-index: 1;
+}
