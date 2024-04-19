@@ -30,7 +30,7 @@
 // Connection
 const socket = io();
 socket.on("connect", () => {
-  console.log("Joined server as Socket ("+socket.id+")");
+  console.log("Joined server as Socket (" + socket.id + ")");
   if (room != "" && (display == "game" || display == "pmgame" || display == "lobby")) {
     socket.emit('rejoin', room, player.id, false);
   } else {
@@ -63,10 +63,9 @@ viewDis.div = document.getElementById("viewDis");
 viewDis.roomCode = document.getElementById("roomCode");
 viewDis.enter = document.getElementById("enterBtn");
 var instructions = document.getElementById("instructions");
-instructions.src = window.origin+"/instructions";
+instructions.src = window.origin + "/instructions";
 
 // Variable Setups
-const amountNeeded = 4;
 var amount = 0;
 var windowScale;
 var room = "";
@@ -81,7 +80,7 @@ var user = {};
 if (localStorage.user != undefined) {
   user = JSON.parse(localStorage.user);
   homeDis.username.value = user.name;
-} 
+}
 var defaultUser = {};
 defaultUser.lastSession = {};
 defaultUser.name = "";
@@ -110,7 +109,9 @@ defaultUser.doneTutorial = false;
     rusher: 0,
     wizard: 0,
     projectile: 0,
-    brute: 0
+    brute: 0,
+    catapult: 0,
+    debuffer: 0,
   },
   Deaths: 0,
   ObjectivesDestroyed: 0,
@@ -123,7 +124,9 @@ defaultUser.doneTutorial = false;
     speeder: 0,
     rusher: 0,
     wizard: 0,
-    brute: 0
+    brute: 0,
+    catapult: 0,
+    debuffer: 0,
   },
   SpawnedMonsters: 0,
   Spawned: {
@@ -133,7 +136,9 @@ defaultUser.doneTutorial = false;
     speeder: 0,
     rusher: 0,
     wizard: 0,
-    brute: 0
+    brute: 0,
+    catapult: 0,
+    debuffer: 0,
   },
   UsedAbilities: 0,
   Used: {
@@ -141,7 +146,7 @@ defaultUser.doneTutorial = false;
     vines: 0,
     swarm: 0,
     shield: 0,
-    generators: 0
+    generators: 0,
   }
 }
 user.achivements = {
@@ -180,10 +185,12 @@ EntityIDs[3] = "speeder";
 EntityIDs[4] = "rusher";
 EntityIDs[5] = "wizard";
 EntityIDs[6] = "brute";
+EntityIDs[7] = "catapult";
+EntityIDs[8] = "debuffer";
 EntityIDs.length = Object.keys(EntityIDs).length;
 // Display
 EntityDisplay = {};
-EntityDisplay.monster = (function(){
+EntityDisplay.monster = (function() {
   var tex = {};
   //tex.reveal = new Animation("assets/entities/monster/reveal.png", 4, 12);
   //tex.hide = new Animation("assets/entities/monster/hide.png", 4, 12);
@@ -195,31 +202,31 @@ EntityDisplay.monster = (function(){
     icon: function() {
       tex.icon.show(0, 40);
     },
-    display:function(e) {
+    display: function(e) {
       tex[e.img].show(38, 0, e.f);
     }
   };
 });
-EntityDisplay.ghost = (function(){
+EntityDisplay.ghost = (function() {
   var tex = {};
   tex.icon = new FitImage("assets/entities/ghost/icon.png");
   tex.attack = new Animation("assets/entities/ghost/attack.png", 8, 12);
   return {
     cost: 3,
     pumpkin: true,
-    icon: function () {
+    icon: function() {
       tint(255, 255, 255, 128);
       tex.icon.show(0, 60);
       tint(255, 255, 255, 255);
     },
-    display:function(e) {
+    display: function(e) {
       tint(255, 255, 255, 128);
       tex[e.img].show(28, 0, e.f);
       tint(255, 255, 255, 255);
     }
   };
 });
-EntityDisplay.nuke = (function(){
+EntityDisplay.nuke = (function() {
   var tex = {};
   tex.icon = new FitImage("assets/entities/nuke/icon.png");
   tex.target = new Animation("assets/entities/nuke/target.png", 12, 12);
@@ -234,37 +241,43 @@ EntityDisplay.nuke = (function(){
     }
   };
 });
-EntityDisplay.speeder = (function(){
+EntityDisplay.speeder = (function() {
   var tex = {};
   tex.icon = new FitImage("assets/entities/speeder/icon.png");
-  tex.attack = new Animation("assets/entities/speeder/attack.png", 8, 12);
-  return {  
+  tex.attack = new Animation("assets/entities/speeder/attack.png", 8, 16);
+  return {
     cost: 4,
     pumpkin: true,
-    icon: function () {
+    icon: function() {
+      translate(-5, 0);
       tex.icon.show(0, 40);
+      translate(5, 0);
     },
     display: function(e) {
-      tex[e.img].show(38, 0, e.f);
+      scale(e.facing, 1);
+      translate(-4, 0);
+      tex[e.img].show(60, 0, e.f);
+      translate(4, 0);
+      scale(-e.facing, 1);
     }
   };
 });
-EntityDisplay.falling_pumpkin = (function(){
+EntityDisplay.falling_pumpkin = (function() {
   var tex = {};
   tex.falling_pumpkin = new FitImage("assets/entities/nuke/falling_pumpkin.png");
-  return {  
+  return {
     display: function(e) {
       tex.falling_pumpkin.show(90, 0);
     }
   };
 });
-EntityDisplay.rusher = (function(){
+EntityDisplay.rusher = (function() {
   var tex = {};
   tex.idle = new Animation("assets/entities/rusher/idle.png", 14, 12);
   tex.icon = new FitImage("assets/entities/rusher/icon.png");
   tex.attack = new Animation("assets/entities/rusher/attack.png", 28, 12);
   tex.rush = new FitImage("assets/entities/rusher/rush.png");
-  return {  
+  return {
     cost: 5,
     pumpkin: true,
     icon: function() {
@@ -275,15 +288,15 @@ EntityDisplay.rusher = (function(){
     }
   };
 });
-EntityDisplay.wizard = (function(){
+EntityDisplay.wizard = (function() {
   var tex = {};
   tex.idle = new Animation("assets/entities/wizard/idle.png", 14, 12);
   tex.icon = new FitImage("assets/entities/wizard/icon.png");
   tex.attack = new Animation("assets/entities/wizard/attack.png", 28, 12);
-  return {  
+  return {
     cost: 7,
     pumpkin: true,
-    icon: function () {
+    icon: function() {
       tex.icon.show(65, 0);
     },
     display: function(e) {
@@ -291,24 +304,24 @@ EntityDisplay.wizard = (function(){
     }
   };
 });
-EntityDisplay.projectile = (function(){
+EntityDisplay.projectile = (function() {
   var tex = {}
   tex.projectile = new Animation("assets/entities/wizard/projectile.png", 8, 8);
-  return {  
+  return {
     display: function(e) {
       tex.projectile.show(20, 0, e.f);
     }
   };
 });
-EntityDisplay.brute = (function(){
+EntityDisplay.brute = (function() {
   var tex = {};
   tex.icon = new FitImage("assets/entities/brute/icon.png");
   tex.leap = new FitImage("assets/entities/brute/leap.png");
   tex.attack = new Animation("assets/entities/brute/attack.png", 8, 12);
-  return {  
+  return {
     cost: 10,
     pumpkin: true,
-    icon: function () {
+    icon: function() {
       tint(255, 128, 128);
       tex.icon.show(0, 40);
       tint(255, 255, 255);
@@ -324,16 +337,68 @@ EntityDisplay.brute = (function(){
     }
   };
 });
-EntityDisplay.shockwave = (function(){
+EntityDisplay.shockwave = (function() {
   var tex = {};
   tex.shockwave = new Animation("assets/entities/brute/shockwave.png", 4, false);
-  return {  
-    display: function(e) { 
+  return {
+    display: function(e) {
       tex.shockwave.show(128, 128, e.f);
     }
   };
 });
-
+EntityDisplay.catapult = (function() {
+  var tex = {};
+  tex.icon = new FitImage("assets/entities/catapult/icon.png");
+  tex.launch = new Animation("assets/entities/catapult/launch.png", 4);
+  return {
+    cost: 12,
+    pumpkin: false,
+    icon: function() {
+      translate(0, -5);
+      tex.icon.show(45, 0);
+      translate(0, 5);
+    },
+    display: function(e) {
+      scale(e.facing, 1);
+      translate(0, -5);
+      tex[e.img].show(78, 0, e.f);
+      translate(0, 5);
+      scale(e.facing, -1);
+    }
+  };
+});
+EntityDisplay.payload = (function() {
+  var tex = {}
+  tex.payload = new FitImage("assets/entities/catapult/payload.png");
+  return {
+    display: function(e) {
+      tex.payload.show(20, 0);
+    }
+  };
+});
+EntityDisplay.debuffer = (function() {
+  var tex = {};
+  tex.idle = new Animation("assets/entities/wizard/idle.png", 14, 12);
+  tex.icon = new FitImage("assets/entities/wizard/icon.png");
+  tex.attack = new Animation("assets/entities/wizard/attack.png", 28, 12);
+  return {
+    cost: 15,
+    pumpkin: true,
+    icon: function() {
+      tint(128, 255, 128);
+      tex.icon.show(65, 0);
+      tint(255, 255, 255);
+    },
+    display: function(e) {
+      noStroke();
+      fill("rgba(0,255,0,0.25)");
+      circle(0,0,10*36);
+      tint(128, 255, 128);
+      tex[e.img].show(78, 0, e.f);
+      tint(255, 255, 255);
+    }
+  };
+});
 
 // --------------
 // Ability System
@@ -353,112 +418,112 @@ AbilityIDs[4] = "generators";
 AbilityIDs.length = Object.keys(AbilityIDs).length;
 // Display
 AbilityDisplay = {};
-AbilityDisplay.fog = (function(){
+AbilityDisplay.fog = (function() {
   var icon = new FitImage("assets/abilities/fog/icon.png");
-  var fogGraphic = createGraphics(540,540);
+  var fogGraphic = createGraphics(540, 540);
   var fog;
   LoadImage("assets/abilities/fog/fog.png", img => fog = img);
   return {
     cost: 5,
     cooldown: 1,
-    wait:false,
-    icon:function() {
+    wait: false,
+    icon: function() {
       icon.show(0, 40);
     },
-    show:function(f) {
+    show: function(f) {
       if (display == "pmgame") {
         tint(255, 255, 255, 78 + f.thick * 26);
-        image(fog,-270,-270,540,540);
-        tint(255,255,255,255);
+        image(fog, -270, -270, 540, 540);
+        tint(255, 255, 255, 255);
         return;
       }
-      const prx = floor(player.x / (36*14));
-      const pry = floor(player.y / (36*14));
-      const infog = (prx-f.rx) <= 1 && (pry-f.ry) <= 1;
+      const prx = floor(player.x / (36 * 14));
+      const pry = floor(player.y / (36 * 14));
+      const infog = (prx - f.rx) <= 1 && (pry - f.ry) <= 1;
       if (!infog) {
-        image(fog,-270,-270,540,540);
+        image(fog, -270, -270, 540, 540);
         return;
       }
       fogGraphic.clear();
-      fogGraphic.image(fog,0,0,540,540);
+      fogGraphic.image(fog, 0, 0, 540, 540);
       fogGraphic.push();
       const fx = player.x - f.x + 270;
       const fy = player.y - f.y + 270;
       fogGraphic.translate(fx, fy);
-      fogGraphic.erase(128,0);
+      fogGraphic.erase(128, 0);
       for (var i = 0; i < (5 - f.thick); i++) {
-        fogGraphic.circle(0,0,36 + 36*i);
+        fogGraphic.circle(0, 0, 36 + 36 * i);
       }
       fogGraphic.noErase();
       fogGraphic.pop();
-      image(fogGraphic,-270,-270,540,540);
+      image(fogGraphic, -270, -270, 540, 540);
     }
   };
 });
-AbilityDisplay.vines = (function(){
+AbilityDisplay.vines = (function() {
   var icon = new FitImage("assets/abilities/vines/icon.png");
   var horizVines = new FitImage("assets/abilities/vines/horizontal.png");
   var vertVines = new FitImage("assets/abilities/vines/vertical.png");
   return {
     cost: 7,
     cooldown: 1,
-    wait:false,
-    icon:function() {
+    wait: false,
+    icon: function() {
       icon.show(0, 40);
     },
-    horiz:function() {
-      horizVines.show(0,36);
+    horiz: function() {
+      horizVines.show(0, 36);
     },
-    vert:function() {
-      vertVines.show(36,0);
+    vert: function() {
+      vertVines.show(36, 0);
     }
   };
 });
-AbilityDisplay.swarm = (function(){
+AbilityDisplay.swarm = (function() {
   var icon = new FitImage("assets/abilities/swarm/icon.png");
   return {
     cost: 20,
-    cooldown: 10*1000,
-    wait:false,
-    icon:function() {
+    cooldown: 10 * 1000,
+    wait: false,
+    icon: function() {
       icon.show(0, 40);
     }
   };
 });
-AbilityDisplay.shield = (function(){
+AbilityDisplay.shield = (function() {
   var icon = new FitImage("assets/abilities/shield/icon.png");
-  var shieldImg = new Animation("assets/abilities/shield/shield.png",3,8);
+  var shieldImg = new Animation("assets/abilities/shield/shield.png", 3, 8);
   return {
     cost: 70,
-    cooldown: 90*1000,
-    wait:false,
-    icon:function() {
+    cooldown: 90 * 1000,
+    wait: false,
+    icon: function() {
       icon.show(0, 40);
     },
-    show:function() {
+    show: function() {
       shieldImg.show(0, 140);
     }
   };
 });
-AbilityDisplay.generators = (function(){
+AbilityDisplay.generators = (function() {
   var icon = new FitImage("assets/abilities/generator/icon.png");
   var generatorImg = new FitImage("assets/abilities/generator/generator.png");
   return {
-    cost: 10,
+    cost: 8,
     cooldown: 1,
-    wait:false,
-    icon:function() {
+    wait: false,
+    icon: function() {
       icon.show(0, 40);
     },
-    show:function(g) {
+    show: function(g) {
       generatorImg.show(0, 180);
       var seconds = 1000 / g.amount;
       var percent = fract(Date.now() / seconds);
       translate(0, -25 * percent + 10);
       if (percent >= 0.9) {
-        if (g.amount >= 0.6) {
+        if (g.amount >= 0.8) {
           textures.diamondpumpkin.show(percent * 60);
-        } else if (g.amount >= 0.3) {
+        } else if (g.amount >= 0.4) {
           textures.goldpumpkin.show(percent * 60);
         } else {
           textures.pumpkin.show(percent * 60);
@@ -474,42 +539,42 @@ AbilityDisplay.generators = (function(){
 // Tiles
 var tileIDs = {};
 class Tile {
-  constructor(url,color,id) {
+  constructor(url, color, id) {
     this.image = LoadImage(url);
     this.color = color;
     this.id = id;
     tileIDs[id] = this;
   }
-  render(x,y) {
+  render(x, y) {
     // FitImage scale
     var s = 64;
-    mapBuf.image(this.image,x,y,1,1,0,0,s,s);
+    mapBuf.image(this.image, x, y, 1, 1, 0, 0, s, s);
   }
-  miniRender(x,y) {
+  miniRender(x, y) {
     miniMapBuf.push();
     miniMapBuf.fill(this.color);
-    miniMapBuf.rect(x,y,1,1);
+    miniMapBuf.rect(x, y, 1, 1);
     miniMapBuf.pop();
   }
 }
 class joinTile extends Tile {
-  constructor(url,color,id,compatIDs) {
-    super(url,color,id);
+  constructor(url, color, id, compatIDs) {
+    super(url, color, id);
     this.compatable = compatIDs ?? [this.id];
   }
-  render(x,y,map) {
+  render(x, y, map) {
     //Making sure not out of bounds and testing if neighbors are of the same type
-    var u = this.compatable.includes(map[y-1] ? (map[y-1][x] ?? 0) : 0);
-    var d = this.compatable.includes(map[y+1] ? (map[y+1][x] ?? 0) : 0);
-    var l = this.compatable.includes(map[y][x-1] ?? 0);
-    var r = this.compatable.includes(map[y][x+1] ?? 0);
-    
+    var u = this.compatable.includes(map[y - 1] ? (map[y - 1][x] ?? 0) : 0);
+    var d = this.compatable.includes(map[y + 1] ? (map[y + 1][x] ?? 0) : 0);
+    var l = this.compatable.includes(map[y][x - 1] ?? 0);
+    var r = this.compatable.includes(map[y][x + 1] ?? 0);
+
     // FitImage scale
     var s = 64;
-    
+
     var tx;
     var ty;
-    
+
     //Figuring out current state and getting pixel coords
     if (u + d + r + l == 4) {
       tx = 0; ty = 0;
@@ -518,13 +583,13 @@ class joinTile extends Tile {
       ty = 1;
       if (!u && d && r && l) {
         tx = 0;
-      } 
+      }
       else if (u && d && !r && l) {
         tx = 1;
-      } 
+      }
       else if (u && !d && r && l) {
         tx = 2;
-      } 
+      }
       else if (u && d && r && !l) {
         tx = 3;
       }
@@ -532,34 +597,34 @@ class joinTile extends Tile {
     else if (u + d + r + l == 2) {
       if (!u && !d && r && l) {
         tx = 2; ty = 0;
-      } 
+      }
       else if (u && d && !r && !l) {
         tx = 3; ty = 0;
-      } 
+      }
       else if (!u && d && !r && l) {
         tx = 0; ty = 2;
-      } 
+      }
       else if (u && !d && !r && l) {
         tx = 1; ty = 2;
-      } 
+      }
       else if (u && !d && r && !l) {
         tx = 2; ty = 2;
-      } 
+      }
       else if (!u && d && r && !l) {
         tx = 3; ty = 2;
       }
-    } 
+    }
     else if (u + d + r + l == 1) {
       ty = 3;
       if (!u && d && !r && !l) {
         tx = 0;
-      } 
+      }
       else if (!u && !d && !r && l) {
         tx = 1;
-      } 
+      }
       else if (u && !d && !r && !l) {
         tx = 2;
-      } 
+      }
       else if (!u && !d && r && !l) {
         tx = 3;
       }
@@ -567,7 +632,7 @@ class joinTile extends Tile {
     else if (u + d + r + l == 0) {
       tx = 1; ty = 0;
     }
-    mapBuf.image(this.image,x,y,1,1,tx*s,ty*s,s,s);
+    mapBuf.image(this.image, x, y, 1, 1, tx * s, ty * s, s, s);
   }
 }
 
@@ -639,11 +704,11 @@ class Animation {
     if (!loop) return;
     var self = this;
     this.interval = setInterval(() => {
-        self.frame++;
-        if (self.frame >= self.amount) {
-          self.frame = 0;
-        }
-      }, 1000 / loop);
+      self.frame++;
+      if (self.frame >= self.amount) {
+        self.frame = 0;
+      }
+    }, 1000 / loop);
   }
   show(w, h, f) {
     var { w, h } = this.calc(w, h);
@@ -678,17 +743,17 @@ async function loadAssets() {
   sounds.background[2] = new Sound("assets/sounds/background2.mp3");
 
   // Load tiles
-  var cobble_wall = new joinTile("assets/tiles/cobble-wall.png","#303030",1,[1,2]);
-  var mossy_cobble_wall = new joinTile("assets/tiles/mossy-cobble-wall.png","#303030",2,[1,2]);
-  var dark_wall = new joinTile("assets/tiles/dark-wall.png","#d9d9d9",3);
-  var wood_wall = new joinTile("assets/tiles/wood-wall.png","#ad6934",4);
-  var grave = new Tile("assets/tiles/grave.png","#ebcb00",5);
-  var dirt = new Tile("assets/tiles/dirt.png","#202020",6);
-  var exit = new Tile("assets/tiles/exit.png","#000000",7);
+  var cobble_wall = new joinTile("assets/tiles/cobble-wall.png", "#303030", 1, [1, 2]);
+  var mossy_cobble_wall = new joinTile("assets/tiles/mossy-cobble-wall.png", "#303030", 2, [1, 2]);
+  var dark_wall = new joinTile("assets/tiles/dark-wall.png", "#d9d9d9", 3);
+  var wood_wall = new joinTile("assets/tiles/wood-wall.png", "#ad6934", 4);
+  var grave = new Tile("assets/tiles/grave.png", "#ebcb00", 5);
+  var dirt = new Tile("assets/tiles/dirt.png", "#202020", 6);
+  var exit = new Tile("assets/tiles/exit.png", "#000000", 7);
 
   // Lobby Image
   textures.lobby = LoadImage("assets/misc/lobby.png");
-  
+
   // Skeleton Assets
   textures.skeleton = [];
   textures.skeleton[0] = new FitImage("assets/skeleton/1.png");
@@ -697,7 +762,7 @@ async function loadAssets() {
   textures.skeleton[3] = new FitImage("assets/skeleton/joining.png");
   textures.bone_pile = new FitImage("assets/skeleton/bone_pile.png");
   textures.axe = new FitImage("assets/skeleton/axe.png");
-  
+
   // Pumpkins
   textures.pumpkin = new FitImage("assets/pumpkins/pumpkin.png");
   textures.newpumpkin = new FitImage("assets/pumpkins/new_pumpkin.png");
@@ -706,7 +771,7 @@ async function loadAssets() {
   textures.gutsplat = new Animation("assets/pumpkins/gut_splat.png", 5);
 
   textures.objective = new FitImage("assets/pumpkins/objective.png");
-    
+
   for (var i in EntityDisplay) {
     EntityDisplay[i] = EntityDisplay[i]();
   }
@@ -715,15 +780,15 @@ async function loadAssets() {
   }
 
   // Gui
-  
+
   gui.logo = LoadImage("assets/gui/logo.png");
 
   gui.discord_icon = LoadImage("assets/gui/discord_icon.png");
-  
+
   gui.direction = LoadImage("assets/gui/direction.png");
   gui.shield_direction = LoadImage("assets/gui/shield_direction.png");
   gui.gen_direction = LoadImage("assets/gui/gen_direction.png");
-  
+
   gui.bone = new FitImage("assets/gui/bone.png");
   gui.bone_damaged = new FitImage("assets/gui/bone_damaged.png");
   gui.bone_broken = new FitImage("assets/gui/bone_broken.png");
@@ -737,27 +802,27 @@ async function loadAssets() {
 // Load Counting
 var toLoad = 0;
 var loaded = 0;
-function LoadImage(url,call) {
+function LoadImage(url, call) {
   toLoad++;
-  return loadImage(url,(img)=>{
+  return loadImage(url, (img) => {
     loaded++;
     if (call) call(img);
   });
 }
-function LoadSound(url,call) {
+function LoadSound(url, call) {
   toLoad++;
   //return createAudio(url,(snd)=>{
-  return loadSound(url,(snd)=>{
+  return loadSound(url, (snd) => {
     loaded++;
     if (call) call(snd);
   });
 }
-async function LoadFile(url,call) {
+async function LoadFile(url, call) {
   toLoad++;
   var response = await fetch(url);
   var data = await response.text();
   loaded++;
-  if (call) {call(data);}
+  if (call) { call(data); }
   return data;
 }
 
@@ -773,19 +838,19 @@ var player = {};
 // Upgrades
 var upgradeDisplay = false;
 var upgrades = {
-  speed:0,
-  axelength:0,
-  maxhealth:0
+  speed: 0,
+  axelength: 0,
+  maxhealth: 0
 };
 const upgradeNames = {
-  speed:"Speed",
-  axelength:"Axe Reach",
-  maxhealth:"Health"
+  speed: "Speed",
+  axelength: "Axe Reach",
+  maxhealth: "Health"
 };
 const upgradeMaxes = {
-  speed:4,
-  axelength:4,
-  maxhealth:4
+  speed: 4,
+  axelength: 4,
+  maxhealth: 4
 };
 // Tilemap
 var mapBuf;
@@ -816,8 +881,10 @@ var wMouseY;
 var tileimg;
 
 var roomCodes = [];
-var hostCode = "";
-var hostHidden = false;
+var roomSettings = {
+  hidden: false,
+  start_count: 4,
+};
 
 
 // -------
@@ -853,19 +920,19 @@ class playAnimation {
 }
 
 function setup() {
-  frameRate(tickRate); 
-  
+  frameRate(tickRate);
+
   var canvas_dom = createCanvas(windowWidth, windowHeight).elt;
-  canvas_dom.addEventListener("touchstart",  function(event) {event.preventDefault()}, {passive:false});
-canvas_dom.addEventListener("touchmove",   function(event) {event.preventDefault()}, {passive:false});
-canvas_dom.addEventListener("touchend",    function(event) {event.preventDefault()}, {passive:false});
-canvas_dom.addEventListener("touchcancel", function(event) {event.preventDefault()}, {passive:false});
-  
+  canvas_dom.addEventListener("touchstart", function(event) { event.preventDefault() }, { passive: false });
+  canvas_dom.addEventListener("touchmove", function(event) { event.preventDefault() }, { passive: false });
+  canvas_dom.addEventListener("touchend", function(event) { event.preventDefault() }, { passive: false });
+  canvas_dom.addEventListener("touchcancel", function(event) { event.preventDefault() }, { passive: false });
+
   windowScale = min(windowWidth, windowHeight) / 400;
   wWidth = windowWidth / windowScale;
   wHeight = windowHeight / windowScale;
   userStartAudio();
-  
+
   loadAssets();
 }
 
@@ -877,7 +944,7 @@ function draw() {
   background("#123904");
   translate(windowWidth / 2, windowHeight / 2);
   scale(windowScale, windowScale);
-  
+
   // Disconnect Screen
   if (socket.disconnected && display != "home" && display != "loading" && display != "instructions") {
     format(0, "#ffa500", 10, 40, CENTER);
@@ -886,8 +953,8 @@ function draw() {
   }
   // Hidden Screen
   if (document.hidden) {
-    format(0,"#ffa500",10,40,CENTER);
-    text("Paused",0,0);
+    format(0, "#ffa500", 10, 40, CENTER);
+    text("Paused", 0, 0);
     return;
   }
 
@@ -895,7 +962,7 @@ function draw() {
     returnToHome();
     return;
   }
-  
+
   // MouseX, MouseY, Width and Height
   wMouseX = (mouseX - windowWidth / 2) / windowScale;
   wMouseY = (mouseY - windowHeight / 2) / windowScale;
@@ -908,14 +975,14 @@ function draw() {
   // Background Blur
   if (display == "home" || display == "view") {
     push();
-    if (wWidth/wHeight >= gui.blur.w/gui.blur.h) gui.blur.show(wWidth,0);
-    else gui.blur.show(0,wHeight);
+    if (wWidth / wHeight >= gui.blur.w / gui.blur.h) gui.blur.show(wWidth, 0);
+    else gui.blur.show(0, wHeight);
     pop();
   }
   if ((display == "loading" && subdisplay != "assets") || display == "gameover") {
     push();
-    if (wWidth/wHeight >= gui.blur2.w/gui.blur2.h) gui.blur2.show(wWidth,0);
-    else gui.blur2.show(0,wHeight);
+    if (wWidth / wHeight >= gui.blur2.w / gui.blur2.h) gui.blur2.show(wWidth, 0);
+    else gui.blur2.show(0, wHeight);
     pop();
   }
 
@@ -924,10 +991,19 @@ function draw() {
   if (display == "home" || display == "lobby" || display == "view") {
     // Discord link
     push();
-    if (display == "lobby") translate(player.x,player.y);
-    translate(wWidth/2-23, wHeight/2-23);
-    var overdiscordbtn = mouseRect(wWidth/2-36, wHeight/2-36, 26, 26);
-    if (overdiscordbtn) scale(1.1,1.1);
+    if (display == "lobby") translate(player.x, player.y);
+    translate(wWidth / 2 - 23, wHeight / 2 - 23);
+    var overdiscordbtn = mouseRect(wWidth / 2 - 36, wHeight / 2 - 36, 26, 26);
+    if (overdiscordbtn) scale(1.1, 1.1);
+    image(gui.discord_icon, -13, -13, 26, 26);
+    pop();
+  }
+  if (display == "game" || display == "pmgame") {
+    // Discord link
+    push();
+    translate(wWidth / 2 - 23, wHeight / 2 - 33);
+    var overdiscordbtn = mouseRect(wWidth / 2 - 36, wHeight / 2 - 46, 26, 26);
+    if (overdiscordbtn) scale(1.1, 1.1);
     image(gui.discord_icon, -13, -13, 26, 26);
     pop();
   }
@@ -937,34 +1013,34 @@ function draw() {
       var c = confetti[i];
       c.vel.y += 0.5;
       c.pos.add(c.vel);
-      if (c.pos.x < -wWidth/2) c.vel.x *= -1;
-      if (c.pos.x > wWidth/2) c.vel.x *= -1;
+      if (c.pos.x < -wWidth / 2) c.vel.x *= -1;
+      if (c.pos.x > wWidth / 2) c.vel.x *= -1;
       push();
-      translate(c.pos.x,c.pos.y);
+      translate(c.pos.x, c.pos.y);
       fill(c.color);
-      rect(-c.size,-c.size,c.size*2,c.size*2);
+      rect(-c.size, -c.size, c.size * 2, c.size * 2);
       pop();
     }
   }
 
   if (tutorialMsg) {
     push();
-    translate(0,-wHeight/2+95);
+    translate(0, -wHeight / 2 + 95);
     format("#231709", "#ffa500", 2);
-    rect(-150,-35,300,73);
+    rect(-150, -35, 300, 73);
     // Text
     format("#ffa500", false, 1, 16, LEFT);
     for (var i = 0; i < tutorialMsg.length; i++) {
-      text(tutorialMsg[i],-103,-12+18*i);
+      text(tutorialMsg[i], -103, -12 + 18 * i);
     }
     format("#ffa500", false, 1, 8, RIGHT);
-    text("ENTER to continue",145,33);
+    text("ENTER to continue", 145, 33);
     // Speaker
     if (tutorialPumpkin) {
-      translate(-125,0);
-      EntityDisplay.monster.display({img:"attack",f:0});
+      translate(-125, 0);
+      EntityDisplay.monster.display({ img: "attack", f: 0 });
     } else {
-      translate(-120,-4);
+      translate(-120, -4);
       textures.skeleton[0].show(0, 60);
     }
     pop();
@@ -974,7 +1050,7 @@ function draw() {
       socket.emit("continueTutorial");
     }
   }
-  
+
   localStorage.user = JSON.stringify(user);
 
   if (isMobile) drawGUI();
@@ -1001,43 +1077,43 @@ Displays.game = function() {
     rect(player.x/36,player.y/36,1,1);
     pop();
     //*/
-    
+
     // Fog
-    const prx = floor((player.x-18) / (36*14));
-    const pry = floor((player.y-18) / (36*14));
+    const prx = floor((player.x - 18) / (36 * 14));
+    const pry = floor((player.y - 18) / (36 * 14));
     const infog = fogs.some(f => prx == f.rx && pry == f.ry);
     if (!infog) {
       // Generator Arrows
       for (var i in generators) {
         var gen = generators[i];
-        var delta = createVector(gen.x-player.x,gen.y-player.y);
-        if (delta.magSq() >= 108*108) {
+        var delta = createVector(gen.x - player.x, gen.y - player.y);
+        if (delta.magSq() >= 108 * 108) {
           push();
           rotate(delta.heading());
-          translate(35,0);
-          image(gui.gen_direction,-4,-4,8,8)
+          translate(35, 0);
+          image(gui.gen_direction, -4, -4, 8, 8)
           pop();
         }
       }
       // Objective Arrows
       for (var i = 0; i < objectives.length; i++) {
         if (objectives[i].health <= 0) continue;
-        var delta = createVector(objectives[i].x-player.x,objectives[i].y-player.y);
-        if (delta.magSq() < 108*108) continue;
+        var delta = createVector(objectives[i].x - player.x, objectives[i].y - player.y);
+        if (delta.magSq() < 108 * 108) continue;
         push();
         rotate(delta.heading());
-        translate(35,0);
-        image(gui.direction,-5,-5,10,10)
+        translate(35, 0);
+        image(gui.direction, -5, -5, 10, 10)
         pop();
       }
       // Shield Arrow
       if (shield) {
-        var delta = createVector(shield.x-player.x,shield.y-player.y);
-        if (delta.magSq() >= 108*108) {
+        var delta = createVector(shield.x - player.x, shield.y - player.y);
+        if (delta.magSq() >= 108 * 108) {
           push();
           rotate(delta.heading());
-          translate(35,0);
-          image(gui.shield_direction,-7,-7,14,14)
+          translate(35, 0);
+          image(gui.shield_direction, -7, -7, 14, 14)
           pop();
         }
       }
@@ -1061,32 +1137,33 @@ Displays.game = function() {
     translate(-hw / 2, wHeight / 2 - 40);
     var h = player.health;
     for (var i = 0; i < player.maxhealth; i++) {
-      gui[h >= (i + 1) ? "bone" : h > i ? "bone_damaged" : "bone_broken"].show(40);
+      gui[h > (i + 0.5) ? "bone" : h > i ? "bone_damaged" : "bone_broken"].show(40);
       translate(40, 0);
     }
     pop();
-    
+
     // Score & Level
     push();
     translate(-wWidth / 2 + 8, -wHeight / 2 + 23);
     format(255, false, 1, 18, LEFT);
-    text("Score: "+player.score,0,0);
-    text("Level: "+player.level,0,23);
+    text("Score: " + player.score, 0, 0);
+    text("Level: " + player.level, 0, 23);
     pop();
 
     // PM name
-    var pmName = "";
+    var pmName = [];
     for (var i in players) {
       var p = players[i];
       if (!p.pumpkinMaster) continue;
-      pmName = p.name;
+      pmName.push(p.name);
       break;
     }
+    pmName = pmName.join(", ");
     if (pmName != "") {
       push();
       translate(wWidth / 2 - 8, wHeight / 2 - 8);
       format(255, false, 1, 12, RIGHT);
-      text("Pumpkin Master: "+pmName,0,0);
+      text("Pumpkin Master: " + pmName, 0, 0);
       pop();
     }
 
@@ -1101,19 +1178,19 @@ Displays.game = function() {
         var color = over ? "#381e08" : "#231709";
         if (upgrades[i] >= upgradeMaxes[i]) color = "#2e2e2e";
         format(color, "#ffa500", 2);
-        rect(0,0,110,60);
+        rect(0, 0, 110, 60);
         format("#ffa500", false, 1, 18, CENTER);
         text(upgradeNames[i], 55, 20);
         textSize(30);
         text(upgrades[i], 55, 50);
-        translate(0,-65);
+        translate(0, -65);
         c++;
       }
-      translate(0,30);
+      translate(0, 30);
       format("#231709", "#ffa500", 2);
-      rect(0,0,110,30);
+      rect(0, 0, 110, 30);
       format("#ffa500", false, 1, 18, CENTER);
-      text("Points: "+player.upgradePts, 55, 20);
+      text("Points: " + player.upgradePts, 55, 20);
       pop();
     }
   }
@@ -1161,13 +1238,13 @@ Displays.pmgame = function() {
 
     // Ability Select
     if (cam.mode == "ability" && AbilityDisplay[cam.selA].wait == false && AbilityDisplay[cam.selA].cost < cam.coins) {
-      var rx = floor(msx / (36*14));
-      var ry = floor(msy / (36*14));
-      if (roomMap[rx+","+ry]) {
+      var rx = floor(msx / (36 * 14));
+      var ry = floor(msy / (36 * 14));
+      if (roomMap[rx + "," + ry]) {
         push();
-        scale(36,36);
-        fill(255,255,255,128);
-        rect(rx*14,ry*14,15,15);
+        scale(36, 36);
+        fill(255, 255, 255, 128);
+        rect(rx * 14, ry * 14, 15, 15);
         pop();
       }
     }
@@ -1175,7 +1252,7 @@ Displays.pmgame = function() {
     // Undo Translate & Scale
     scale(1 / cam.zoom);
     translate(-cam.pos.x, -cam.pos.y);
-    
+
     // Show Coins
     push();
     translate(-wWidth / 2, -wHeight / 2);
@@ -1188,19 +1265,19 @@ Displays.pmgame = function() {
     pop();
 
     var activeColors = {
-      red:"#ff0000",
-      green:"#00ff00",
-      orange:"#ffa500",
-      grey:"#a5a5a5"
+      red: "#ff0000",
+      green: "#00ff00",
+      orange: "#ffa500",
+      grey: "#a5a5a5"
     }
     var hideColors = {
-      red:"#640000",
-      green:"#006400",
-      orange:"#644000",
-      grey:"#404040"
+      red: "#640000",
+      green: "#006400",
+      orange: "#644000",
+      grey: "#404040"
     }
-    
-    
+
+
     // Select Pumpkin Monsters
     push();
     translate(-wWidth / 2 + 35, wHeight / 2 - 45);
@@ -1209,7 +1286,7 @@ Displays.pmgame = function() {
     var c = cam.mode == "entity" ? activeColors : hideColors;
     for (var i = 0; i < EntityIDs.length; i++) {
       var m = EntityIDs[i];
-      var over = mouseCircle(t.x,t.y,25) ? "#381e08" : "#231709";
+      var over = mouseCircle(t.x, t.y, 25) ? "#381e08" : "#231709";
       var sel = cam.selE == m ? c.green : c.orange;
       var data = EntityDisplay[m];
       var txt = (data.pumpkin ? pStr : "") + data.cost;
@@ -1224,9 +1301,9 @@ Displays.pmgame = function() {
       t.x += 70;
     }
     if (cam.mode == "entity") {
-      translate(-20,0);
-      scale(-1,1);
-      image(gui.direction,-10,-10,20,20);
+      translate(-20, 0);
+      scale(-1, 1);
+      image(gui.direction, -10, -10, 20, 20);
     }
     pop();
 
@@ -1237,7 +1314,7 @@ Displays.pmgame = function() {
     c = cam.mode == "ability" ? activeColors : hideColors;
     for (var i = 0; i < AbilityIDs.length; i++) {
       var m = AbilityIDs[i];
-      var over = mouseCircle(t.x,t.y,25) ? "#381e08" : "#231709";
+      var over = mouseCircle(t.x, t.y, 25) ? "#381e08" : "#231709";
       var sel = cam.selA == m ? c.green : c.orange;
       var data = AbilityDisplay[m];
       var txt = data.cost;
@@ -1257,9 +1334,9 @@ Displays.pmgame = function() {
       t.x += 70;
     }
     if (cam.mode == "ability") {
-      translate(-20,0);
-      scale(-1,1);
-      image(gui.direction,-10,-10,20,20);
+      translate(-20, 0);
+      scale(-1, 1);
+      image(gui.direction, -10, -10, 20, 20);
     }
     pop();
 
@@ -1269,10 +1346,10 @@ Displays.pmgame = function() {
       push();
       translate(wWidth / 2 - 8, wHeight / 2 - 8);
       format(255, false, 1, 12, RIGHT);
-      text("Pumpkin Master: "+pmName,0,0);
+      text("Pumpkin Master: " + pmName, 0, 0);
       pop();
     }
-    
+
     // Timer
     push();
     translate(0, -wHeight / 2 + 35);
@@ -1305,7 +1382,7 @@ Displays.pmgame = function() {
 var currentTip;
 Displays.lobby = function() {
   translate(-player.x, -player.y);
-  image(textures.lobby,-495,-500,1000,1000);
+  image(textures.lobby, -495, -500, 1000, 1000);
   for (var i in players) {
     var p = players[i];
     if (!p) continue;
@@ -1322,23 +1399,23 @@ Displays.lobby = function() {
     push();
     translate(p.x, p.y);
     // Name
-    format("#ffffff",false,0,12,CENTER);
+    format("#ffffff", false, 0, 12, CENTER);
     if (p.name == "DragonFire7z") fill("#ff0000");
-    text(p.name,-4*p.facing,-20);
+    text(p.name, -4 * p.facing, -20);
     pop();
   }
   push();
   translate(player.x, player.y);
   format("#ffa500", false, 1, 20, CENTER);
-  if (amount < amountNeeded && timeleft == 0) {
-    text(amount + "/" + amountNeeded + " to Start!", 0, 150);
+  if (amount < roomSettings.start_count && timeleft == 0) {
+    text(amount + "/" + roomSettings.start_count + " to Start!", 0, 150);
   }
   else {
     text("Starting in: " + timeleft, 0, 150);
   }
-  if (subdisplay == "host") {
-    var p = hostHidden ? "Private" : "Public";
-    text("Room Code: "+hostCode+" "+p, 0, 180);
+  if (!isNext) {
+    var p = roomSettings.hidden ? "Private" : "Public";
+    text("Room Code: " + room + " " + p, 0, 180);
   }
   format("#ffffff", false, 1, 10, LEFT);
   if (!currentTip) {
@@ -1386,18 +1463,19 @@ Displays.lobby = function() {
       "Split up and attack all three objectives at once, there is no way to defend from all of you.",
       "Fog the entire map to hide the location of your shield.",
       "Press space in a room you are hosting to switch from public to private.",
+      "Press +/- in a room you are hosting to change the player amount required to start.",
       "Private rooms cannot be seen in the join menu.",
       "Press F while in the tutorial to enter freeplay mode!",
       "Made by DragonFireGames!"
     ];
-    currentTip = tips[floor(random()*tips.length)];
-    setTimeout(()=>{
+    currentTip = tips[floor(random() * tips.length)];
+    setTimeout(() => {
       currentTip = false;
-    },5*1000);
+    }, 5 * 1000);
   }
-  text("Tip: "+currentTip,-wWidth/2+5,193);
+  text("Tip: " + currentTip, -wWidth / 2 + 5, wHeight / 2 + 7);
   pop();
-  
+
   // Leave
   if (keyIsDown(27)) {
     exit();
@@ -1407,8 +1485,8 @@ Displays.lobby = function() {
 // Start Screen
 Displays.home = function() {
   push();
-  translate(0,-100);
-  textures.objective.show(180,0);
+  translate(0, -100);
+  textures.objective.show(180, 0);
   pop();
   format(0, "#ffa500", 10, 40, CENTER);
   text("Pumpkin Smasher", 0, -70);
@@ -1427,13 +1505,13 @@ homeDis.clickHost = function() {
   socket.emit('hostRoom');
   setDisplay("loading");
   setTimeout(() => {
-    setDisplay("lobby","host");
+    setDisplay("lobby", "host");
   }, 1000);
 }
 homeDis.clickJoin = function() {
   if (!socket.connected) return;
   socket.emit('viewRooms');
-  setDisplay("loading","view");
+  setDisplay("loading", "view");
 }
 homeDis.clickTutorial = function() {
   socket.emit('doTutorial');
@@ -1450,19 +1528,19 @@ homeDis.clickSettings = function() {
 
 Displays.view = function() {
   push()
-  const wid = wWidth-80;
-  viewDis.roomCode.style.top = (40+cam.scroll)*windowScale+"px";
-  viewDis.enter.style.top = (40+cam.scroll)*windowScale+"px";
-  
+  const wid = wWidth - 80;
+  viewDis.roomCode.style.top = (40 + cam.scroll) * windowScale + "px";
+  viewDis.enter.style.top = (40 + cam.scroll) * windowScale + "px";
+
   const code = viewDis.roomCode.value;
   const codeExists = roomCodes.filter((c) => c.id == code).length == 1;
   viewDis.enter.value = codeExists ? "Join" : "Host";
-  
-  var tx = -wWidth/2+40;
-  var ty = -wHeight/2+75+cam.scroll;
-  translate(tx,ty);
-  
-  var codes = roomCodes.filter((c) => c.hidden == false);
+
+  var tx = -wWidth / 2 + 40;
+  var ty = -wHeight / 2 + 75 + cam.scroll;
+  translate(tx, ty);
+
+  var codes = roomCodes.filter((c) => c.settings.hidden == false);
   for (var i = 0; i < codes.length; i++) {
     const over = mouseRect(tx, ty, wid, 40);
     format(0, "#ffa500", 2);
@@ -1470,15 +1548,15 @@ Displays.view = function() {
     rect(0, 0, wid, 40);
     // Rooms
     format("#ffa500", false, 1, 20, CENTER);
-    text((i+1)+".",25,26);
+    text((i + 1) + ".", 25, 26);
     textAlign(LEFT);
-    if (codes[i].next) text("Public Lobby 🌐",45,26)
-    else text("Code: "+codes[i].id,45,26);
+    if (codes[i].next) text("Public Lobby 🌐", 45, 26)
+    else text("Code: " + codes[i].id, 45, 26);
     textAlign(RIGHT);
-    text(codes[i].amount+"/"+amountNeeded,wid-15,26);
-    ty += 45; translate(0,45);
+    text(codes[i].amount + "/" + codes[i].settings.start_count, wid - 15, 26);
+    ty += 45; translate(0, 45);
     if (over && mouseIsPressed && socket.connected) {
-      socket.emit('joinRoomCode',codes[i].id);
+      socket.emit('joinRoomCode', codes[i].id);
       setDisplay("loading");
       setTimeout(() => {
         setDisplay("lobby");
@@ -1509,7 +1587,7 @@ viewDis.clickEnter = function() {
     socket.emit('hostRoom', code);
     setDisplay("loading");
     setTimeout(() => {
-      setDisplay("lobby","host");
+      setDisplay("lobby", "host");
     }, 1000);
   }
 }
@@ -1566,26 +1644,26 @@ Displays.loading = function() {
   }
   if (subdisplay == "assets") {
     format("#ffa500", 0, 0, 30, CENTER);
-    text((loaded/toLoad*100).toFixed(0)+"% complete", 0, -30);
+    text((loaded / toLoad * 100).toFixed(0) + "% complete", 0, -30);
     format("#231709", 0, 0);
-    rect(-150,-20,300,40);
+    rect(-150, -20, 300, 40);
     format("#006400", 0, 0);
-    rect(-150,-20,lerp(0,300,loaded/toLoad),40);
+    rect(-150, -20, lerp(0, 300, loaded / toLoad), 40);
     format(false, "#ffa500", 2);
-    rect(-150,-20,300,40);
+    rect(-150, -20, 300, 40);
     if (toLoad == loaded) endAssetLoad();
   }
 }
 
-function setDisplay(d,sd) {
+function setDisplay(d, sd) {
   display = d;
   subdisplay = sd ?? "";
   DiscordWidget.style.visibility = "hidden";
   user.lastSession = {};
-  history.pushState({},"",location.origin);
+  history.pushState({}, "", location.origin);
   if (display == "lobby") {
-    history.pushState({},"",location.origin+"?room="+room);
-    if (isNext) history.pushState({},"",location.origin+"?room=next");
+    history.pushState({}, "", location.origin + "?room=" + room);
+    if (isNext) history.pushState({}, "", location.origin + "?room=next");
     return;
   }
   if (display == "home" || display == "loading") return;
@@ -1603,16 +1681,16 @@ function endAssetLoad() {
     setDisplay("loading");
     user.doneTutorial = true;
   }
-  
+
   // Get params
   var params_str = location.href.split('?')[1];
   if (params_str) {
     var params_arr = params_str.split('&');
-  
+
     var params = {};
     for (var i = 0; i < params_arr.length; i++) {
-       var pair = params_arr[i].split('=');
-       params[pair[0]] = pair[1];
+      var pair = params_arr[i].split('=');
+      params[pair[0]] = pair[1];
     }
 
     // Join room
@@ -1641,8 +1719,8 @@ function endAssetLoad() {
     cam = user.cam;
   } else if (display == "pmgame") {
     cam.pos = {
-      x:-(15/2)*36,
-      y:-(15/2)*36
+      x: -(15 / 2) * 36,
+      y: -(15 / 2) * 36
     };
     cam.zoom = 1;
     cam.coins = 0;
@@ -1658,50 +1736,50 @@ function endAssetLoad() {
 function show() {
   if (!mapBuf) return;
   // Show Tilemap Image
-  image(mapBuf,minTileX*36,minTileY*36,mapBuf.width,mapBuf.height);
+  image(mapBuf, minTileX * 36, minTileY * 36, mapBuf.width, mapBuf.height);
   // Show Pumpkin Image
-  image(pumpkinBuf,minTileX*36,minTileY*36,pumpkinBuf.width,pumpkinBuf.height);
+  image(pumpkinBuf, minTileX * 36, minTileY * 36, pumpkinBuf.width, pumpkinBuf.height);
 
   // Abilities
   for (var i = 0; i < vines.length; i++) {
     if (vines[i].health <= 0) continue;
     push();
-    translate(vines[i].x,vines[i].y);
+    translate(vines[i].x, vines[i].y);
     //var alpha = lerp(128,255,vines[i].health/20);
     //tint(255,255,255,floor(alpha));
     AbilityDisplay.vines[vines[i].orient]();
-    healthBar(40,14,vines[i].health/20);
+    healthBar(40, 14, vines[i].health / 20);
     pop();
   }
   if (shield) {
     push();
-    translate(shield.x,shield.y);
+    translate(shield.x, shield.y);
     //var alpha = lerp(128,255,shield.health/50);
     //tint(255,255,255,floor(alpha));
     AbilityDisplay.shield.show();
-    translate(0,-75);
-    healthBar(60,20,shield.health/50);
+    translate(0, -75);
+    healthBar(60, 20, shield.health / 50);
     pop();
   }
   for (var i in generators) {
     var gen = generators[i];
     push();
-    translate(gen.x,gen.y);
+    translate(gen.x, gen.y);
     AbilityDisplay.generators.show(gen);
-    translate(0,-75);
-    healthBar(60,20,gen.health/gen.maxhealth);
+    translate(0, -75);
+    healthBar(60, 20, gen.health / gen.maxhealth);
     pop();
   }
-  
+
   // Show Objectives
   for (var i = 0; i < objectives.length; i++) {
     if (objectives[i].health <= 0) continue;
     push();
-    translate(objectives[i].x,objectives[i].y);
+    translate(objectives[i].x, objectives[i].y);
     if (shield) tint("#ff00ff");
     textures.objective.show(120, 0);
-    translate(0,-72);
-    healthBar(60,20,objectives[i].health/100,shield ? "#ff00ff" : "#00ff00");
+    translate(0, -72);
+    healthBar(60, 20, objectives[i].health / 100, shield ? "#ff00ff" : "#00ff00");
     pop();
   }
 
@@ -1719,7 +1797,7 @@ function show() {
       type: "player",
     });
   }
-  var showplayer = function (p) {
+  var showplayer = function(p) {
     if (p.health <= 0) {
       textures.bone_pile.show(0, 46);
       return;
@@ -1731,7 +1809,7 @@ function show() {
     var off = p.swing ? 5 : 0;
     translate((w - aw) / 2, off);
     rotate(p.swing);
-    textures.axe.show(0, 62*p.axelength);
+    textures.axe.show(0, 62 * (p.axelength + 0.2));
     rotate(-p.swing);
     translate(-(w - aw) / 2, -off);
     // Skeleton
@@ -1822,16 +1900,16 @@ function show() {
     textures.skeleton[p.skin].show(w, 46);
   }
   //*/
-  
+
   // Names
   for (var i in players) {
     var p = players[i];
     if (!p || p.pumpkinMaster) continue;
     push();
     translate(p.x, p.y);
-    format("#ffffff",false,0,12,CENTER);
+    format("#ffffff", false, 0, 12, CENTER);
     if (p.name == "DragonFire7z") fill("#ff0000");
-    text(p.name,-4*p.facing,-20);
+    text(p.name, -4 * p.facing, -20);
     pop();
   }
 
@@ -1843,18 +1921,19 @@ function show() {
   // Fog Ability
   for (var i = 0; i < fogs.length; i++) {
     push();
-    translate(fogs[i].x,fogs[i].y);
+    translate(fogs[i].x, fogs[i].y);
     AbilityDisplay.fog.show(fogs[i]);
     pop();
   }
 }
-function healthBar(w,h,percent,alive,dead) {
+function healthBar(w, h, percent, alive, dead) {
+  if (percent == 1) return;
   format(dead ?? "#ff0000", false);
-  rect(-w/2,-h/2,w,h);
+  rect(-w / 2, -h / 2, w, h);
   format(alive ?? "#00ff00", false);
-  rect(-w/2,-h/2,lerp(0,w,percent),h);
+  rect(-w / 2, -h / 2, lerp(0, w, percent), h);
   format(false, "#202020", 2);
-  rect(-w/2,-h/2,w,h);
+  rect(-w / 2, -h / 2, w, h);
 }
 function smashFX(x, y) {
   var snd = floor(Math.random() * sounds.smash.length);
@@ -1895,7 +1974,7 @@ function keybinds() {
     if (mbGUI.joystick.isActive) {
       var dx = wMouseX - mbGUI.joystick.touchpos.x;
       var dy = wMouseY - mbGUI.joystick.touchpos.y;
-      var delta = createVector(dx,dy);
+      var delta = createVector(dx, dy);
       delta.limit(50);
       u = delta.y < 10;
       d = delta.y > -10;
@@ -1903,7 +1982,7 @@ function keybinds() {
       r = delta.x > 10;
     }
   }
-  socket.emit('move',u,d,l,r);
+  socket.emit('move', u, d, l, r);
 }
 function PMkeybinds() {
   if (keyIsDown(27)) {
@@ -1929,9 +2008,9 @@ async function exit() {
   timeleft = 0;
   upgradeDisplay = false;
   upgrades = {
-    speed:0,
-    axelength:0,
-    maxhealth:0
+    speed: 0,
+    axelength: 0,
+    maxhealth: 0
   };
   for (var i = 0; i < sounds.background.length; i++) {
     sounds.background[i].stop();
@@ -1961,14 +2040,27 @@ function keyPressed() {
     if (keyCode == 74 && document.activeElement != homeDis.username) { homeDis.clickJoin(); return; }
     // Tutorial
     if (keyCode == 84 && document.activeElement != homeDis.username) { homeDis.clickTutorial(); return; }
-  } 
+  }
   if (display == "lobby" && subdisplay == "host") {
     // Toggle Private/Public
     if (keyCode == 32) {
-      socket.emit('toggleHidden',hostCode);
-      hostHidden = !hostHidden;
+      roomSettings.hidden = !roomSettings.hidden;
+      socket.emit('updateSettings', room, roomSettings);
+      return;
     }
-  } 
+    if (keyCode == 189) {
+      if (roomSettings.start_count <= max(amount,2)) return; 
+      roomSettings.start_count--;
+      socket.emit('updateSettings', room, roomSettings);
+      return;
+    }
+    if (keyCode == 187) {
+      if (roomSettings.start_count >= 12) return;
+      roomSettings.start_count++;
+      socket.emit('updateSettings', room, roomSettings);
+      return
+    }
+  }
   if (display == "game" && subdisplay != "dead") {
     // Spacebar Smash
     if (keyCode == 32 && smashcooldown) {
@@ -1978,25 +2070,25 @@ function keyPressed() {
     // Upgrade Keybinds
     if (player.upgradePts > 0) {
       const upgradeList = {
-        maxhealth:49,
-        axelength:50,
-        speed:51
+        maxhealth: 49,
+        axelength: 50,
+        speed: 51
       };
       for (var i in upgradeList) {
         if (keyCode != upgradeList[i]) continue;
         if (upgrades[i] >= upgradeMaxes[i]) continue;
         upgrades[i]++;
-        socket.emit('upgrade',i);
+        socket.emit('upgrade', i);
         player.upgradePts--;
         if (player.upgradePts == 0) {
-          setTimeout(()=>{
+          setTimeout(() => {
             upgradeDisplay = false;
-          },1000);
+          }, 1000);
         }
         return;
       }
     }
-  } 
+  }
   else if (display == "pmgame") {
     // Switch Tracks
     if (keyCode == 16) {
@@ -2008,20 +2100,22 @@ function keyPressed() {
     var list = {};
     var sel = cam.mode == "entity" ? "selE" : "selA";
     if (cam.mode == "entity") list = {
-      monster:49,
-      ghost:50,
-      nuke:51,
-      speeder:52,
-      rusher:53,
-      wizard:54,
-      brute:55
+      monster: 49,
+      ghost: 50,
+      nuke: 51,
+      speeder: 52,
+      rusher: 53,
+      wizard: 54,
+      brute: 55,
+      catapult: 56,
+      debuffer: 57,
     };
     else if (cam.mode == "ability") list = {
-      fog:49,
-      vines:50,
-      swarm:51,
-      shield:52,
-      generators:53
+      fog: 49,
+      vines: 50,
+      swarm: 51,
+      shield: 52,
+      generators: 53
     };
     for (var i in list) {
       if (keyCode != list[i]) continue;
@@ -2042,18 +2136,23 @@ function mousePressed() {
   // wWidth = windowWidth / windowScale;
   // wHeight = windowHeight / windowScale;
   if (DiscordWidget.style.visibility == "visible") {
-    var ondiscordwidget = mouseRect(wWidth/2-208, wHeight/2-368, 200, 360);
-    var ondiscordwidget2 = mouseRect(wWidth/2-576, wHeight/2-368, 360, 360);
+    var ondiscordwidget = mouseRect(wWidth / 2 - 208, wHeight / 2 - 368, 200, 360);
+    var ondiscordwidget2 = mouseRect(wWidth / 2 - 576, wHeight / 2 - 368, 360, 360);
     if (!ondiscordwidget && !ondiscordwidget2 && mouseIsPressed) {
       DiscordWidget.style.visibility = "hidden";
       return;
     }
   }
   if (display == "home" || display == "lobby" || display == "view") {
-    var overdiscordbtn = mouseRect(wWidth/2-36, wHeight/2-36, 26, 26);
+    var overdiscordbtn = mouseRect(wWidth / 2 - 36, wHeight / 2 - 36, 26, 26);
     if (overdiscordbtn && mouseIsPressed) {
-      //window.open(DISCORD_LINK);
-      //location.href = DISCORD_LINK;
+      DiscordWidget.style.visibility = "visible";
+      return;
+    }
+  }
+  if (display == "game" || display == "pmgame") {
+    var overdiscordbtn = mouseRect(wWidth / 2 - 36, wHeight / 2 - 46, 26, 26);
+    if (overdiscordbtn && mouseIsPressed) {
       DiscordWidget.style.visibility = "visible";
       return;
     }
@@ -2066,12 +2165,12 @@ function mousePressed() {
       var over = overX && wMouseY > wHeight / 2 - 75 - 65 * c && wMouseY < wHeight / 2 - 15 - 65 * c && player.upgradePts > 0;
       if (over && upgrades[i] < upgradeMaxes[i]) {
         upgrades[i]++;
-        socket.emit('upgrade',i);
+        socket.emit('upgrade', i);
         player.upgradePts--;
         if (player.upgradePts == 0) {
-          setTimeout(()=>{
+          setTimeout(() => {
             upgradeDisplay = false;
-          },1000);
+          }, 1000);
         }
         return;
       }
@@ -2082,7 +2181,7 @@ function mousePressed() {
     // Select Entities
     var t = { x: -wWidth / 2 + 35, y: wHeight / 2 - 35 };
     for (var i = 0; i < EntityIDs.length; i++) {
-      var over = mouseCircle(t.x,t.y,25);
+      var over = mouseCircle(t.x, t.y, 25);
       if (over) {
         cam.selE = EntityIDs[i];
         cam.mode = "entity";
@@ -2093,7 +2192,7 @@ function mousePressed() {
     // Select Abilities
     t = { x: -wWidth / 2 + 35, y: wHeight / 2 - 105 };
     for (var i = 0; i < AbilityIDs.length; i++) {
-      var over = mouseCircle(t.x,t.y,25);
+      var over = mouseCircle(t.x, t.y, 25);
       if (over) {
         cam.selA = AbilityIDs[i];
         cam.mode = "ability";
@@ -2101,7 +2200,7 @@ function mousePressed() {
       }
       t.x += 70;
     }
-    
+
     // Spawn Pumpkin Monsters
     var sx = (wMouseX - cam.pos.x) / cam.zoom;
     var sy = (wMouseY - cam.pos.y) / cam.zoom;
@@ -2113,14 +2212,14 @@ function mousePressed() {
     }
     // Do Abilities
     else if (cam.mode == "ability" && selAbility.wait == false && selAbility.cost < cam.coins) {
-      var rx = floor(sx / (36*14));
-      var ry = floor(sy / (36*14));
-      if (roomMap[rx+","+ry]) {
+      var rx = floor(sx / (36 * 14));
+      var ry = floor(sy / (36 * 14));
+      if (roomMap[rx + "," + ry]) {
         socket.emit('ability', cam.selA, rx, ry);
         selAbility.wait = true;
-        setTimeout(()=>{
+        setTimeout(() => {
           selAbility.wait = false;
-        },selAbility.cooldown);
+        }, selAbility.cooldown);
       }
     }
     user.cam = cam;
@@ -2137,8 +2236,8 @@ document.addEventListener("wheel", function(e) {
   e.stopPropagation();
   if (display == "view") {
     cam.scroll -= e.deltaY;
-    cam.scroll = max(cam.scroll,-roomCodes.length*45-110+wHeight);
-    cam.scroll = min(cam.scroll,0);
+    cam.scroll = max(cam.scroll, -roomCodes.length * 45 - 110 + wHeight);
+    cam.scroll = min(cam.scroll, 0);
   }
   if (display == "pmgame") {
     applyScale(e.deltaY < 0 ? 1.05 : 0.95);
@@ -2173,49 +2272,49 @@ function windowResized() {
 var mbGUI = {};
 
 async function loadGUI() {
-  
+
   mbGUI.joystick = {};
   mbGUI.joystick.tex = LoadImage("assets/mobile/joystick.png");
   mbGUI.joystick.texPress = LoadImage("assets/mobile/joystick_press.png");
   mbGUI.joystick.texCenter = LoadImage("assets/mobile/joystick-center.png");
   mbGUI.joystick.texCenterPress = LoadImage("assets/mobile/joystick-center_press.png");
   mbGUI.joystick.isActive = false;
-  mbGUI.joystick.touchpos = {x:0,y:0};
+  mbGUI.joystick.touchpos = { x: 0, y: 0 };
 
   mbGUI.smash = {};
   mbGUI.smash.tex = LoadImage("assets/mobile/smash.png");
   mbGUI.smash.texPress = LoadImage("assets/mobile/smash_press.png");
 }
 function drawGUI() {
-  
+
   if (display == "lobby") {
-    translate(player.x,player.y);
+    translate(player.x, player.y);
   }
   if ((display == "game" && subdisplay == "") || display == "lobby") {
     push();
-    tint(255,255,255,138);
+    tint(255, 255, 255, 138);
     var joystickTex = mbGUI.joystick.isActive ? "texPress" : "tex";
-    image(mbGUI.joystick[joystickTex], -wWidth/2+20, wHeight/2-140, 120, 120);
-    
+    image(mbGUI.joystick[joystickTex], -wWidth / 2 + 20, wHeight / 2 - 140, 120, 120);
+
     if (mbGUI.joystick.isActive) {
       var dx = wMouseX - mbGUI.joystick.touchpos.x;
       var dy = wMouseY - mbGUI.joystick.touchpos.y;
-      var delta = createVector(dx,dy);
+      var delta = createVector(dx, dy);
       delta.limit(50);
-      delta.add(-wWidth/2+50,wHeight/2-110);
+      delta.add(-wWidth / 2 + 50, wHeight / 2 - 110);
       image(mbGUI.joystick.texCenterPress, delta.x, delta.y, 60, 60);
     }
     else {
-      image(mbGUI.joystick.texCenter, -wWidth/2+50, wHeight/2-110, 60, 60);
+      image(mbGUI.joystick.texCenter, -wWidth / 2 + 50, wHeight / 2 - 110, 60, 60);
     }
     pop();
-    
+
 
     /*
     push();
     tint(255,255,255,138);
     var joystickTex = mbGUI.joystick.isActive ? "texPress" : "tex";
-    
+
     if (mbGUI.joystick.isActive) {
       image(mbGUI.joystick[joystickTex], mbGUI.joystick.touchpos.x, mbGUI.joystick.touchpos.y, 120, 120);
       var dx = wMouseX - mbGUI.joystick.touchpos.x;
@@ -2234,22 +2333,22 @@ function drawGUI() {
 
   if (display == "game" && subdisplay == "") {
     push();
-    tint(255,255,255,182);
-    var smashTex = mouseCircle(wWidth/2-80, wHeight/2-80, 120) && mouseIsPressed ? "texPress" : "tex";
-    image(mbGUI.smash[smashTex], wWidth/2-140, wHeight/2-140, 120, 120);
+    tint(255, 255, 255, 182);
+    var smashTex = mouseCircle(wWidth / 2 - 80, wHeight / 2 - 80, 120) && mouseIsPressed ? "texPress" : "tex";
+    image(mbGUI.smash[smashTex], wWidth / 2 - 140, wHeight / 2 - 140, 120, 120);
     pop();
   }
-  
+
   //if (display == "game" || display == "pmgame" || display == "lobby" || display == "host") {
-    //exit();
+  //exit();
   //}
 }
 function mousePressGUI() {
   if (display != "game" && display != "lobby") return;
-  if (smashcooldown && display == "game" && subdisplay == "" && mouseCircle(wWidth/2-80, wHeight/2-80, 120)) {
+  if (smashcooldown && display == "game" && subdisplay == "" && mouseCircle(wWidth / 2 - 80, wHeight / 2 - 80, 120)) {
     doSmash();
   }
-  if (mouseCircle(-wWidth/2+80, wHeight/2-80, 120)) {
+  if (mouseCircle(-wWidth / 2 + 80, wHeight / 2 - 80, 120)) {
     mbGUI.joystick.isActive = true;
     mbGUI.joystick.touchpos.x = wMouseX;
     mbGUI.joystick.touchpos.y = wMouseY;
@@ -2262,13 +2361,13 @@ function mouseReleaseGUI() {
   mbGUI.joystick.touchpos.y = 0;
 }
 //
-function mouseRect(x,y,w,h) {
-  return wMouseX > x && wMouseX < x+w && wMouseY > y && wMouseY < y+h;
+function mouseRect(x, y, w, h) {
+  return wMouseX > x && wMouseX < x + w && wMouseY > y && wMouseY < y + h;
 }
-function mouseCircle(x,y,r) {
-  var dx = wMouseX-x;
-  var dy = wMouseY-y;
-  return dx*dx + dy*dy < r*r;
+function mouseCircle(x, y, r) {
+  var dx = wMouseX - x;
+  var dy = wMouseY - y;
+  return dx * dx + dy * dy < r * r;
 }
 
 // ------------------
@@ -2276,16 +2375,17 @@ function mouseCircle(x,y,r) {
 // ------------------
 
 // Start Game
-socket.on('timer',function(t) {
+socket.on('timer', function(t) {
   timeleft = t;
 });
-socket.on('start',async function(time) {
-  setDisplay("loading","game");
+socket.on('start', async function(time, quick) {
+  setDisplay("loading", "game");
   console.log("Game started!");
   startTime = time + 5000;
-  await wait(5000);
+  if (!quick) await wait(5000);
+  else await wait(1000);
   setDisplay(player.pumpkinMaster ? "pmgame" : "game");
-  var backgroundMusic = async function () {
+  var backgroundMusic = async function() {
     if (sounds.background.some(m => m.sound.currentTime != 0)) return;
     var snd = sounds.background[floor(Math.random() * sounds.background.length)];
     await snd.play(0.5);
@@ -2296,17 +2396,17 @@ socket.on('start',async function(time) {
     }
     backgroundMusic();
   };
-  backgroundMusic();
+  if (!quick) backgroundMusic();
 });
-socket.on('setTime',async function(time) {
+socket.on('setTime', async function(time) {
   startTime = time;
 });
-socket.on('PM',function(isPM) {
+socket.on('PM', function(isPM) {
   if (isPM) {
     player.pumpkinMaster = true;
     cam.pos = {
-      x:-(15/2)*36,
-      y:-(15/2)*36
+      x: -(15 / 2) * 36,
+      y: -(15 / 2) * 36
     }
     cam.zoom = 1;
     cam.coins = 0;
@@ -2319,24 +2419,21 @@ socket.on('PM',function(isPM) {
   }
 });
 // Joins and Rooms
-socket.on('roomCodes',function(codes) {
+socket.on('roomCodes', function(codes) {
   if (display == "loading" && subdisplay == "view") {
     setDisplay("view");
     cam.scroll = 0;
   }
-  roomCodes = codes.sort((a,b)=>b.amount-a.amount);
+  roomCodes = codes.sort((a, b) => b.amount - a.amount);
 });
-socket.on('hostCode',function(code, hidden) {
-  hostCode = code;
-  hostHidden = hidden;
-});
-socket.on('room',function(r,n) {
+socket.on('room', function(r, n, s) {
   room = r;
   isNext = n;
+  roomSettings = s;
   console.log("Joined Room (" + r + ")");
   if (n) console.log("It is global lobby");
 });
-socket.on('amount',function(a) {
+socket.on('amount', function(a) {
   amount = a;
 });
 socket.on('rejoinFailed', returnToHome);
@@ -2345,15 +2442,15 @@ function returnToHome() {
   localStorage.user = JSON.stringify(user);
   //location.href = location.origin;
   setDisplay("home");
-  history.pushState({},"",location.origin);
+  history.pushState({}, "", location.origin);
 }
-socket.on('rejoinSuccess',function(id) {
+socket.on('rejoinSuccess', function(id) {
   player.id = id;
   user.lastSession.id = player.id;
 });
 // Tick Room data
 var lastPlayersRecieved = 0;
-socket.on('players',function(packedPlayers,id,sentAt) {
+socket.on('players', function(packedPlayers, id, sentAt) {
   if (document.hidden) return;
   if (sentAt < lastPlayersRecieved) return;
   lastPlayersRecieved = sentAt;
@@ -2383,7 +2480,7 @@ socket.on('players',function(packedPlayers,id,sentAt) {
   player.id = id;
   player.score = packedPlayers[id].score;
   player.level = packedPlayers[id].level;*/
-  
+
   players = packedPlayers
   for (var i in players) {
     players[i].x *= 36;
@@ -2391,15 +2488,15 @@ socket.on('players',function(packedPlayers,id,sentAt) {
   }
   player = players[id];
   player.id = id;
-  
+
 });
 
 var lastEntitiesRecieved = 0;
-socket.on('entities',function(packedEntityDisplay,sentAt) {
+socket.on('entities', function(packedEntityDisplay, sentAt) {
   if (document.hidden) return;
   if (sentAt < lastEntitiesRecieved) return;
   lastEntitiesRecieved = sentAt;
-  
+
   entities = packedEntityDisplay;
   for (var i = 0; i < entities.length; i++) {
     entities[i].x *= 36;
@@ -2407,17 +2504,17 @@ socket.on('entities',function(packedEntityDisplay,sentAt) {
   }
 });
 var lastAbilitiesRecieved = 0;
-socket.on('abilities',function(fogList,vineList,theShield,generatorsMap,sentAt) {
+socket.on('abilities', function(fogList, vineList, theShield, generatorsMap, sentAt) {
   if (document.hidden) return;
   if (sentAt < lastAbilitiesRecieved) return;
   lastAbilitiesRecieved = sentAt;
-  
+
   // Fogs
   fogs = fogList;
   for (var i = 0; i < fogs.length; i++) {
     fogs[i].x *= 36;
     fogs[i].y *= 36;
-    fogs[i].thick = min(fogs[i].thick,4);
+    fogs[i].thick = min(fogs[i].thick, 4);
   }
   // Vines
   vines = vineList;
@@ -2438,13 +2535,13 @@ socket.on('abilities',function(fogList,vineList,theShield,generatorsMap,sentAt) 
     generators[i].y *= 36;
   }
 });
-socket.on('coins',function(coins) {
+socket.on('coins', function(coins) {
   if (document.hidden) return;
   if (!player.pumpkinMaster) return;
   cam.coins = coins;
 });
 // Room Data
-socket.on('tilemap',function(map,rmap,maxWidth,maxHeight,minX,minY) {
+socket.on('tilemap', function(map, rmap, maxWidth, maxHeight, minX, minY) {
   //Get the random room
   tilemap = map;
   roomMap = rmap;
@@ -2456,14 +2553,14 @@ socket.on('tilemap',function(map,rmap,maxWidth,maxHeight,minX,minY) {
   //  entities[i].pos.y -= 14*18;
   //}
 
-  pumpkinBuf = createGraphics(maxWidth*36,maxHeight*36);
-  pumpkinBuf.scale(36,36);
-  pumpkinBuf.translate(-minTileX,-minTileY);
+  pumpkinBuf = createGraphics(maxWidth * 36, maxHeight * 36);
+  pumpkinBuf.scale(36, 36);
+  pumpkinBuf.translate(-minTileX, -minTileY);
   pumpkinBuf.noStroke();
-  
-  mapBuf = createGraphics(maxWidth*36,maxHeight*36);
-  mapBuf.scale(36,36);
-  mapBuf.translate(-minTileX,-minTileY);
+
+  mapBuf = createGraphics(maxWidth * 36, maxHeight * 36);
+  mapBuf.scale(36, 36);
+  mapBuf.translate(-minTileX, -minTileY);
   mapBuf.noStroke();
 
   //miniMapBuf = createGraphics(maxWidth*6,maxHeight*6);
@@ -2474,7 +2571,7 @@ socket.on('tilemap',function(map,rmap,maxWidth,maxHeight,minX,minY) {
     var rx = Number(i.match(/(.*?),/)[1]);
     var ry = Number(i.match(/,(.*)/)[1]);
     mapBuf.fill("#123904");
-    mapBuf.rect(rx*14,ry*14,15,15);
+    mapBuf.rect(rx * 14, ry * 14, 15, 15);
     //miniMapBuf.fill("#123904");
     //miniMapBuf.rect(rx*14,ry*14,15,15);
   }
@@ -2484,12 +2581,12 @@ socket.on('tilemap',function(map,rmap,maxWidth,maxHeight,minX,minY) {
       x = Number(x);
       var id = tilemap[y][x];
       if (id == 0) continue;
-      tileIDs[id].render(x,y,tilemap);
+      tileIDs[id].render(x, y, tilemap);
       //tileIDs[id].miniRender(x,y);
     }
   }
 });
-socket.on('objective',function(objectiveList) {
+socket.on('objective', function(objectiveList) {
   objectives = objectiveList;
   for (var i = 0; i < objectives.length; i++) {
     objectives[i].x *= 36;
@@ -2497,98 +2594,98 @@ socket.on('objective',function(objectiveList) {
   }
 });
 // Events
-socket.on('growpumpkin',async function(p) {
-  pumpkins[p.x+","+p.y] = p;
+socket.on('growpumpkin', async function(p) {
+  pumpkins[p.x + "," + p.y] = p;
   if (!pumpkinBuf) return;
   if (!document.hidden) {
     var time = 5000;
     var seg = 20;
-    for (var i = 0; i <= time; i+=time/seg) {
-      await wait(time/seg);
-      if (!pumpkins[p.x+","+p.y]) return;
+    for (var i = 0; i <= time; i += time / seg) {
+      await wait(time / seg);
+      if (!pumpkins[p.x + "," + p.y]) return;
       pumpkinBuf.push();
-      pumpkinBuf.translate(p.x+0.5,p.y+0.5);
-      pumpkinBuf.scale(i/time, i/time);
-      textures.newpumpkin.show(5/6,0,pumpkinBuf);
+      pumpkinBuf.translate(p.x + 0.5, p.y + 0.5);
+      pumpkinBuf.scale(i / time, i / time);
+      textures.newpumpkin.show(5 / 6, 0, pumpkinBuf);
       pumpkinBuf.pop();
     }
-    if (!pumpkins[p.x+","+p.y]) return;
+    if (!pumpkins[p.x + "," + p.y]) return;
   }
   pumpkinBuf.push();
-  pumpkinBuf.translate(p.x+0.5,p.y+0.5);
+  pumpkinBuf.translate(p.x + 0.5, p.y + 0.5);
   switch (p.type) {
     case 0:
-      textures.pumpkin.show(5/6,0,pumpkinBuf);
+      textures.pumpkin.show(5 / 6, 0, pumpkinBuf);
       break;
     case 1:
-      textures.goldpumpkin.show(5/6,0,pumpkinBuf);
+      textures.goldpumpkin.show(5 / 6, 0, pumpkinBuf);
       break;
     case 2:
-      textures.diamondpumpkin.show(5/6,0,pumpkinBuf);
+      textures.diamondpumpkin.show(5 / 6, 0, pumpkinBuf);
       break;
   }
   pumpkinBuf.pop();
 });
-socket.on('allpumpkins',async function(p) {
+socket.on('allpumpkins', async function(p) {
   for (var j = 0; j < p.length; j++) {
-    pumpkins[p[j].x+","+p[j].y] = p[j];
+    pumpkins[p[j].x + "," + p[j].y] = p[j];
   }
   if (!pumpkinBuf) return;
   if (!document.hidden) {
     var time = 5000;
     var seg = 20;
-    for (var i = 0; i <= time; i+=time/seg) {
-      await wait(time/seg);
+    for (var i = 0; i <= time; i += time / seg) {
+      await wait(time / seg);
       for (var j = 0; j < p.length; j++) {
-        if (!pumpkins[p[j].x+","+p[j].y]) continue;
+        if (!pumpkins[p[j].x + "," + p[j].y]) continue;
         pumpkinBuf.push();
-        pumpkinBuf.translate(p[j].x+0.5,p[j].y+0.5);
-        pumpkinBuf.scale(i/time, i/time);
-        textures.newpumpkin.show(5/6,0,pumpkinBuf);
+        pumpkinBuf.translate(p[j].x + 0.5, p[j].y + 0.5);
+        pumpkinBuf.scale(i / time, i / time);
+        textures.newpumpkin.show(5 / 6, 0, pumpkinBuf);
         pumpkinBuf.pop();
       }
     }
   }
   for (var j = 0; j < p.length; j++) {
-    if (!pumpkins[p[j].x+","+p[j].y]) continue;
+    if (!pumpkins[p[j].x + "," + p[j].y]) continue;
     pumpkinBuf.push();
-    pumpkinBuf.translate(p[j].x+0.5,p[j].y+0.5);
+    pumpkinBuf.translate(p[j].x + 0.5, p[j].y + 0.5);
     switch (p[j].type) {
       case 0:
-        textures.pumpkin.show(5/6,0,pumpkinBuf);
+        textures.pumpkin.show(5 / 6, 0, pumpkinBuf);
         break;
       case 1:
-        textures.goldpumpkin.show(5/6,0,pumpkinBuf);
+        textures.goldpumpkin.show(5 / 6, 0, pumpkinBuf);
         break;
       case 2:
-        textures.diamondpumpkin.show(5/6,0,pumpkinBuf);
+        textures.diamondpumpkin.show(5 / 6, 0, pumpkinBuf);
         break;
     }
     pumpkinBuf.pop();
   }
 });
-socket.on('destroypumpkin',async function(x,y) {
-  var p = pumpkins[x+","+y];
-  delete pumpkins[x+","+y];
-  var tx = (p.x+0.5) * 36;
-  var ty = (p.y+0.5) * 36;
+socket.on('destroypumpkin', async function(x, y) {
+  var p = pumpkins[x + "," + y];
+  delete pumpkins[x + "," + y];
+  var tx = (p.x + 0.5) * 36;
+  var ty = (p.y + 0.5) * 36;
   if (!document.hidden) smashFX(tx, ty);
-  
+
   if (!pumpkinBuf) return;
   pumpkinBuf.push();
-  pumpkinBuf.erase(255,0);
-  pumpkinBuf.translate(p.x,p.y);
-  pumpkinBuf.rect(0,0,1,1);
+  pumpkinBuf.erase(255, 0);
+  pumpkinBuf.translate(p.x, p.y);
+  pumpkinBuf.rect(0, 0, 1, 1);
   pumpkinBuf.noErase();
   pumpkinBuf.pop();
 });
-socket.on('hit',function(x,y) {
+socket.on('hit', function(x, y) {
   if (document.hidden) return;
-  smashFX(x*36, y*36);
+  smashFX(x * 36, y * 36);
 });
 /*socket.on('swing',function(id) {
   var p = players[id];
-  
+
   // Swing animation
   p.swing = 0;
   if (p.swingint) {
@@ -2603,38 +2700,38 @@ socket.on('hit',function(x,y) {
     p.swing = 0;
   }, 125);
 });*/
-socket.on('dead',function() {
-  setDisplay("game","dead");
+socket.on('dead', function() {
+  setDisplay("game", "dead");
 });
-socket.on('revive',function() {
+socket.on('revive', function() {
   setDisplay("game");
 });
-socket.on('lvlUp',function(lvls) {
+socket.on('lvlUp', function(lvls) {
   player.upgradePts++;
   upgradeDisplay = true;
   upgrades = lvls;
 });
-socket.on('objective_destroyed',function(x,y) {
+socket.on('objective_destroyed', function(x, y) {
   startTime += 60 * 1000;
   if (document.hidden) return;
-  smashFX(x*36, y*36);
+  smashFX(x * 36, y * 36);
 });
 var tutorialMsg = false;
 var tutorialPumpkin = false;
-socket.on('tutorialMsg', function(msg,p) {
+socket.on('tutorialMsg', function(msg, p) {
   tutorialMsg = msg;
   tutorialPumpkin = p;
 })
 // Win Conditions
-socket.on('skeleton_win',async function() {
+socket.on('skeleton_win', async function() {
   console.log("Skeletons Win!");
   subdisplay = "animation";
   for (var i in pumpkins) {
     var p = pumpkins[i];
     delete pumpkins[i];
     if (document.hidden) continue;
-    var tx = (p.x+0.5) * 36;
-    var ty = (p.y+0.5) * 36;
+    var tx = (p.x + 0.5) * 36;
+    var ty = (p.y + 0.5) * 36;
     smashFX(tx, ty);
   }
   pumpkinBuf.clear();
@@ -2651,7 +2748,7 @@ socket.on('skeleton_win',async function() {
   setDisplay("gameover", player.pumpkinMaster ? "lose" : "win");
   endGame();
 });
-socket.on('pumpkin_master_win',async function() {
+socket.on('pumpkin_master_win', async function() {
   console.log("Pumpkin Master Wins!")
   subdisplay = "animation";
   for (var i in players) {
@@ -2669,10 +2766,10 @@ function spawnConfetti() {
   for (var i = 0; i < 200; i++) {
     c = {};
     c.pos = createVector(random() * 200 - 100, wHeight / 2);
-    c.vel = p5.Vector.fromAngle(-HALF_PI+(random()**1.2)*(round(random())*2-1));
-    c.vel.mult(15+random()*8);
-    c.color = color(random()*255,random()*255,random()*255);
-    c.size = random()+0.5;
+    c.vel = p5.Vector.fromAngle(-HALF_PI + (random() ** 1.2) * (round(random()) * 2 - 1));
+    c.vel.mult(15 + random() * 8);
+    c.color = color(random() * 255, random() * 255, random() * 255);
+    c.size = random() + 0.5;
     confetti.push(c);
   }
 }
@@ -2686,14 +2783,14 @@ function endGame() {
 function changeUsername() {
   var name = homeDis.username.value;
   name = censor(name);
-  socket.emit('changeName',name);
+  socket.emit('changeName', name);
   user.name = homeDis.username.value;
 }
 
 function censor(str) {
   const censoredWords = ["(mother|)fuck", "\bass", "bitch", "(bull|)shit", "nigg(er|a)", "cock", "cunt", "clit", "pussy", "penis", "dick", "porn", "satan", "damn", "dyke", "gang[-_\s]*bang", "jizz", "piss", "\btit", "blow[-_\s]*job", "hand[-_\s]*job", "\bcoon", "\bcum", "\bcumm", "slut", "pimp", "\bsex", "tits", "tities"];
   for (var word of censoredWords) {
-    str = str.replaceAll(new RegExp(word+"(er|ers|ing|ed|s|es|hole|holes|ical|)",'ig'), (w) => "*".repeat(w.length));
+    str = str.replaceAll(new RegExp(word + "(er|ers|ing|ed|s|es|hole|holes|ical|)", 'ig'), (w) => "*".repeat(w.length));
   }
   return str;
 }
@@ -2725,10 +2822,10 @@ function weightedRandom(randomfunct, def, values, weights) {
 function format(Fill, Stroke, StrokeWidth, TextSize, TextAlign) {
   if (Fill || Fill === 0) fill(Fill);
   else noFill();
-  
+
   if (Stroke || Stroke === 0) stroke(Stroke);
   else noStroke();
-  
+
   strokeWeight(StrokeWidth ?? 1);
   textSize(TextSize ?? 10);
   textAlign(TextAlign ?? LEFT);
@@ -2740,6 +2837,19 @@ function wait(time) {
     }, time);
   });
 }
-function mod(x,y) {
-  return x - floor(x/y) * y;
+function mod(x, y) {
+  return x - floor(x / y) * y;
 }
+
+// Hehehe
+
+/*
+var counter = 0;
+setInterval(()=>{
+    document.body.style.filter = "hue-rotate("+counter+"deg)";
+    counter += 1;
+    counter %= 360;
+},10);
+*/
+
+//setInterval(()=>{socket.emit('smash');},10);

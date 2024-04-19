@@ -35,12 +35,12 @@ app.get("/", (request, response) => {
     response.sendFile(__dirname + "/client/index.html");
 });
 app.get("/instructions", (request, response) => {
-    response.sendFile(__dirname + "/assets/instructions/index.html");
+    response.sendFile(__dirname + "/client/instructions/index.html");
 });
-
+/*
 const axios = require('axios');
-axios.post('https://pumpkin-smasher-discord-bot.dragonfiregames.repl.co', {msg:"Ping from Pumpkin Smasher"});
-    
+axios.get('https://pumpkin-smasher-discord-bot.onrender.com');
+*/
 
 server.listen(port);
 console.log("Server Started on port "+port);
@@ -72,29 +72,20 @@ const gameLength =  5 * 60;
 setInterval(tick, speed * 1000);
 setInterval(perSecond, 1000);
 
-const amountNeeded = 4;
-const upgradeMaxes = {
-  speed:4,
-  axelength:4,
-  maxhealth:4
-};
-
-class Client {
-  constructor(id) {
-    this.id = id;
-    this.room = "";
-    this.name = "";
-    this.timeJoined = Date.now();
-  }
-}
-
+// -----
+// Rooms
+// -----
+const startCount = 4;
 class Room {
   constructor(id) {
     // Room Details
     this.id = id;
     this.amount = 0;
     this.sockets = [];
-    this.hidden = false;
+    this.settings = {
+      hidden: false,
+      start_count: startCount
+    };
     this.state = "lobby";
     // Players
     this.players = {};
@@ -113,16 +104,18 @@ class Room {
     this.maxHeight = 0;
     this.maxWidth = 0;
     // Pumpkins
+    this.spawnLocCount = 0;
     this.potentialSpawnLoc = [];
     this.pumpkins = {};
     this.newPumpkins = [];
     // Objectives
     this.objectives = [];
     // Pumpkin Master
-    this.pumpkinMaster = "";
-    this.coins = 0;
+    this.pumpkin_masters = [];
+    this.skeletons = [];
+    this.coins = 15;
     this.coinMult = 1;
-    
+
     console.log("Created Room("+id+")");
   }
   async start(time) {
@@ -134,26 +127,36 @@ class Room {
     for (var y in this.tilemap) {
       for (var x in this.tilemap[y]) {
         if (this.tilemap[y] && this.tilemap[y][x] === 0) {
+          this.spawnLocCount++;
           this.potentialSpawnLoc.push({x:Number(x),y:Number(y)});
         }
       }
     }
     // Pumpkin Grow
-    var batch1 = [];
-    for (var i = 0; i < 300; i++) {
-      batch1.push(this.growPumpkin(false));
+    console.log(this.spawnLocCount);
+    var count = Math.floor(this.spawnLocCount / 2.5);
+    var batch = [];
+    for (var i = 0; i < count; i++) {
+      batch.push(this.growPumpkin(false));
+      if (batch.length > 300) {
+        console.log("Batching Pumpkins "+i);
+        io.to(this.id).emit('allpumpkins',batch);
+        await wait(500);
+        batch = [];
+      }
     }
-    io.to(this.id).emit('allpumpkins',batch1);
-    await wait(500);
-    var batch2 = [];
-    for (var i = 0; i < 200; i++) {
-      batch2.push(this.growPumpkin(false));
-    }
-    io.to(this.id).emit('allpumpkins',batch2);
+    console.log("Batching Pumpkins "+i);
+    io.to(this.id).emit('allpumpkins',batch);
   }
   update() {
     if (this.state == "ended") return;
     // Player update
+    for (var i in this.players) {
+      this.players[i].preupdate();
+    }
+    // Game update
+    if (this.state == "game") this.gameUpdate();
+    // Pack & send
     var players = {};
     for (var i in this.players) {
       this.players[i].update();
@@ -164,9 +167,7 @@ class Room {
       if (!SOCKET_LIST[id]) continue;
       SOCKET_LIST[id].emit('players',players,id,Date.now());
     }
-    //
     if (this.state != "game") return;
-    this.gameUpdate()
     // Win conditions
     if (this.objectives.length == 0) {
       this.state = "ended";
@@ -207,8 +208,8 @@ class Room {
     this.players[socket.id] = player;
     client.player = player;
     if (client.name != "") player.name = client.name;
-    else player.name = "Player"+Object.keys(this.players).length;
-    
+    else player.name = randomValueArray(["Player","Bot","Random","Nobody","Default","Noob"])
+
     this.amount++;
     io.to(this.id).emit('amount',this.amount);
   }
@@ -220,7 +221,7 @@ class Room {
     }
     delete this.players[socket.id];
     delete CLIENT_LIST[socket.id].player;
-    
+
     this.amount--;
     io.to(this.id).emit('amount',this.amount);
 
@@ -230,7 +231,7 @@ class Room {
     this.sockets.push(socket.id);
     delete this.players[socket.id];
     var client = CLIENT_LIST[socket.id];
-    
+
     if (!this.disconnectedPlayers[oldid]) {
       socket.emit('rejoinFailed');
       return;
@@ -240,14 +241,18 @@ class Room {
     this.players[socket.id] = player;
     client.player = player;
     player.socket = socket.id;
-    if (player.pumpkinMaster) this.pumpkinMaster = socket.id;
-    
+    if (player.pumpkinMaster) {
+      this.pumpkin_masters.splice(this.pumpkin_masters.indexOf(oldid),1,socket.id);
+    } else {
+      this.skeletons.splice(this.skeletons.indexOf(oldid),1,socket.id);
+    }
+
     this.amount++;
     io.to(this.id).emit('amount',this.amount);
-    
+
     socket.emit('rejoinSuccess',socket.id);
     if (reloaded && this.state == "game") {
-      socket.emit('start', this.startTime);
+      socket.emit('start', this.startTime, true);
       socket.emit('tilemap', this.tilemap, this.roomMap, this.maxWidth, this.maxHeight, this.minTileX, this.minTileY);
       socket.emit('objective',this.objectives);
       var pumpkinList = [];
@@ -257,20 +262,24 @@ class Room {
       socket.emit('allpumpkins',pumpkinList);
       console.log("From reload:")
     }
-    
+
     console.log("Socket("+oldid+") has rejoined Room("+this.id+") as Socket("+socket.id+")");
   }
   generateMap() {
     this.roomMap = {};
     this.potentialRoomMap = {}; 
-    
+
+    var s = this.amount-this.pm_amount;
+    var regularRooms = 1+s*2;
+    var objectiveRooms = s;
+
     this.potentialRoomMap["0,0"] = 0;
     this.selectRoom(maps["start"]);
-    for (var i = 0; i < 7; i++) {
+    for (var i = 0; i < regularRooms; i++) {
       // Select a potential room
       this.selectRoom(randomValue(maps.rooms),false);
     }
-    for (var i = 0; i < 3; i++) {
+    for (var i = 0; i < objectiveRooms; i++) {
       // Select a potential objective room
       this.selectRoom(randomValue(maps.objective),true);
     }
@@ -278,7 +287,7 @@ class Room {
     //this.selectRoom(randomValue(maps.end),false);  
 
     this.loadTileMap();
-    
+
     io.to(this.id).emit('tilemap', this.tilemap, this.roomMap, this.maxWidth, this.maxHeight, this.minTileX, this.minTileY);
   }
   loadTileMap() {
@@ -297,14 +306,14 @@ class Room {
           if (rot == 1) {sx = 14-y; sy = x;}
           if (rot == 2) {sx = 14-x; sy = 14-y;}
           if (rot == 3) {sx = y; sy = 14-x;}
-          
+
           var tx = rx*14+sx;
           var ty = ry*14+sy;
-  
+
           //if (fm[y][x] != 0) {
             //var e = new entityIDs[fm[y][x]](tx,ty);
           //}
-          
+
           this.tilemap[ty] = nullCheck(this.tilemap[ty],{});
           if (this.tilemap[ty][tx] == 8 && tm[y][x] == 8) {
             this.tilemap[ty][tx] = 0;
@@ -314,7 +323,7 @@ class Room {
             this.tilemap[ty][tx] = weightedRandom(1,[2],[0.2]);
             continue;
           }
-          
+
           this.tilemap[ty][tx] = tm[y][x];
         }
     }
@@ -343,7 +352,7 @@ class Room {
   }
   selectRoom(room,objective) {  
     const prm = this.potentialRoomMap;
-    
+
     const toSel = Object.keys(prm).filter((k)=>{
       return prm[k] == 0;
     });
@@ -359,7 +368,7 @@ class Room {
       }
       this.objectives.push(o);
     }
-    
+
     this.roomMap[x+","+y] = room;
     //Mark as already generated
     prm[x+","+y] = 1;
@@ -396,7 +405,7 @@ class Room {
     //Get tile position
     const tx = Math.floor(x);
     const ty = Math.floor(y);
-    
+
     //Check if undefined
     if (this.tilemap[ty] == undefined) {return true;}
     if (this.tilemap[ty][tx] == undefined) {return true;}
@@ -405,10 +414,10 @@ class Room {
     /*if (typeof tiletype == 'function') {
       tiletype(this.tilemap[ty][tx],tx,ty);
     }*/
-      
+
     //Check if wall
     if (this.tilemap[ty][tx] != 0) {return true;}
-    
+
     return false;
   }
   growPumpkin(emit) {
@@ -434,12 +443,14 @@ class Room {
     x = Math.floor(x);
     y = Math.floor(y);
     if (this.coins < EntityData[sel].cost) return;
+    if (!this.tilemap[y] || this.tilemap[y][x] != 0) return;
     if (EntityData[sel].pumpkin) {
       if (!this.pumpkins[x+","+y]) return;
       this.destroyPumpkin(x,y);
     }
     var e = new Entities[sel](x+0.5,y+0.5,this.id);
     this.coins -= EntityData[sel].cost;
+    return true;
   }
   ability(sel,x,y) {
     if (this.coins < AbilityData[sel].cost) return;
@@ -475,7 +486,7 @@ class TutorialRoom extends Room {
     this.start();
 
     await wait(5000);
-    
+
     this.socket.emit('tutorialMsg',[
       "",
       "Oh! A new recruit! Welcome!",
@@ -545,7 +556,7 @@ class TutorialRoom extends Room {
     }
     await this.waitForContinue();
     if (!ROOM_LIST[this.id] || this.freeplay) return;
-    
+
     this.player.health = this.player.maxhealth;
 
     this.socket.emit('tutorialMsg',[
@@ -570,9 +581,12 @@ class TutorialRoom extends Room {
       ""
     ],false);
 
-    this.spawnRandom("wizard",5);
-    this.spawnRandom("rusher",5);
-    this.spawnRandom("monster",10);
+    this.spawnRandom("wizard",4);
+    this.spawnRandom("rusher",4);
+    this.spawnRandom("speeder",4);
+    this.spawnRandom("monster",8);
+    this.spawnRandom("catapult",2);
+    this.spawnRandom("debuffer",1);
 
     while (this.player.x <= 28 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
@@ -584,7 +598,7 @@ class TutorialRoom extends Room {
 
     this.coins += 3;
     this.spawn("nuke",this.player.x,this.player.y);
-    
+
     while (this.player.x <= 56 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
@@ -594,13 +608,13 @@ class TutorialRoom extends Room {
     if (!ROOM_LIST[this.id] || this.freeplay) return;
     this.coins += 3;
     this.spawn("nuke",this.player.x,this.player.y);
-    
+
     while (this.player.x <= 70 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
     this.coins += 3;
     this.spawn("nuke",this.player.x,this.player.y);
-    
+
     while (this.player.x <= 98 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
@@ -611,7 +625,7 @@ class TutorialRoom extends Room {
     ],false);
 
     this.spawnFrom("brute",3,105,7);
-    
+
     while (this.objectives.length > 0 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
@@ -654,7 +668,7 @@ class TutorialRoom extends Room {
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
     // Convert to pumpkin master
-    this.swap();
+    this.swap(false);
     await wait(5000);
 
     this.socket.emit('tutorialMsg',[
@@ -673,7 +687,7 @@ class TutorialRoom extends Room {
     await this.waitForContinue();
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
-  this.socket.emit('tutorialMsg',[
+    this.socket.emit('tutorialMsg',[
       "First, you can move by",
       "dragging your mouse and you",
       "can zoom out by scrolling"
@@ -757,12 +771,14 @@ class TutorialRoom extends Room {
         ""
       ],false);
     }
+    this.player.preupdate();
+    // Game Update
+    this.gameUpdate();
+    // Pack & Send
     this.player.update();
     var players = {};
     players[this.id] = this.player.pack();
     this.socket.emit('players',players,this.id,Date.now());
-    // Game Update
-    this.gameUpdate();
     // Time
     const timer = gameLength - Math.floor((Date.now() - this.startTime) / 1000);
     if (timer <= 0) {
@@ -783,7 +799,7 @@ class TutorialRoom extends Room {
   start() {
     this.disconnectedPlayers = {};
     this.state = "game";
-    
+
     this.generateMap();
     io.to(this.id).emit('objective',this.objectives);
     for (var y in this.tilemap) {
@@ -802,17 +818,17 @@ class TutorialRoom extends Room {
 
     this.startTime = Date.now();
     this.socket.emit('start', Date.now());
-    
+
     this.player.x = 15/2;
     this.player.y = 15/2;
     this.socket.emit('PM',false);
-    
+
     console.log("Tutorial Room ("+this.id+") has started!");
   }
   generateMap() {
     this.roomMap = {};
     this.potentialRoomMap = 0; 
-    
+
     this.selectRoom(maps["start"]);
     for (var i = 0; i < 6; i++) {
       // Select a potential room
@@ -824,11 +840,11 @@ class TutorialRoom extends Room {
     }
 
     this.loadTileMap();
-    
+
     this.socket.emit('tilemap', this.tilemap, this.roomMap, this.maxWidth, this.maxHeight, this.minTileX, this.minTileY);
   }
   selectRoom(room,objective) {  
-    
+
     const x = this.potentialRoomMap;
     const y = 0;
 
@@ -840,7 +856,7 @@ class TutorialRoom extends Room {
       }
       this.objectives.push(o);
     }
-    
+
     this.roomMap[x+","+y] = room;
     //Mark as already generated
     this.potentialRoomMap++;
@@ -866,8 +882,7 @@ class TutorialRoom extends Room {
       turns++;
       for (var i = 0; i < Math.ceil(turns/2); i++) {
         await wait(30);
-        if (this.pumpkins[sx+","+sy]) {
-          this.spawn(sel,sx,sy);
+        if (this.spawn(sel,sx,sy)) {
           spawned++;
           if (spawned >= amount) return;
         }
@@ -884,8 +899,7 @@ class TutorialRoom extends Room {
       await wait(30);
       var rx = Math.floor((this.maxWidth-14)*Math.random())+14;
       var ry = Math.floor(this.maxHeight*Math.random());
-      if (this.pumpkins[rx+","+ry]) {
-        this.spawn(sel,rx,ry);
+      if (this.spawn(sel,rx,ry)) {
         spawned++;
         if (spawned >= amount) return;
       }
@@ -897,12 +911,13 @@ class TutorialRoom extends Room {
     this.coins -= AbilityData[sel].cost;
     if (this.usedAbility == false) this.usedAbility = true;
   }
-  swap() {
+  swap(quick) {
     this.startTime = Date.now();
-    this.socket.emit('start', Date.now());
+    this.socket.emit('start', Date.now(), quick);
     if (this.player.pumpkinMaster) {
       this.socket.emit('PM', false);
-      this.pumpkinMaster = "";
+      this.pumpkin_masters = [];
+      this.skeletons = [this.id];
       this.player.pumpkinMaster = false;
       this.player.level = 12;
       this.player.upgradePts = 12;
@@ -912,14 +927,15 @@ class TutorialRoom extends Room {
         maxhealth:0
       };
       this.socket.emit('lvlUp',this.player.upgradeLvls);
-      this.player.speed = 2 * speed;
-      this.player.axelength = 0.75;
-      this.player.maxhealth = 3;
-      this.player.health = 3;
+      this.player.speed = speedDefault * speed;
+      this.player.axelength = axeLengthDefault;
+      this.player.maxhealth = healthDefault;
+      this.player.health = healthDefault;
     } 
     else {
       this.socket.emit('PM', true);
-      this.pumpkinMaster = this.id;
+      this.pumpkin_masters = [this.id];
+      this.skeletons = [];
       this.player.pumpkinMaster = true;
       this.coinMult = 1;
       // Restore objective
@@ -935,6 +951,29 @@ class TutorialRoom extends Room {
       if (this.freeplay) this.coins = 500;
       else console.log("Tutorial Room ("+this.id+") starting Pumpkin Master");
     }
+  }
+}
+
+// ------
+// Player
+// ------
+const speedDefault = 2.2;
+const speedMult = 1.28;
+const axeLengthDefault = 0.55;
+const axeLengthChange = 1/3;
+const healthDefault = 3;
+const healthChange = 1;
+const upgradeMaxes = {
+  speed:4,
+  axelength:4,
+  maxhealth:4
+};
+class Client {
+  constructor(id) {
+    this.id = id;
+    this.room = "";
+    this.name = "";
+    this.timeJoined = Date.now();
   }
 }
 class Player {
@@ -959,9 +998,9 @@ class Player {
       axelength:0,
       maxhealth:0
     };
-    this.speed = 2.2 * speed;
-    this.axelength = 0.75;
-    this.maxhealth = 3;
+    this.speed = speedDefault * speed;
+    this.axelength = axeLengthDefault;
+    this.maxhealth = healthDefault;
 
     this.skin = 3;
     this.realskin = Math.floor(Math.random() * 3);
@@ -973,6 +1012,7 @@ class Player {
     this.socket = socket;
     this.depth = 0;
     this.immune = false;
+    this.disabled = true;
 
     this.name = "";
     /*
@@ -994,7 +1034,9 @@ class Player {
         rusher: 0,
         wizard: 0,
         projectile: 0,
-        brute: 0
+        brute: 0,
+        catapult: 0,
+        debuffer: 0,
       },
       Deaths: 0,
       ObjectivesDestroyed: 0,
@@ -1006,7 +1048,9 @@ class Player {
         nuke: 0,
         rusher: 0,
         wizard: 0,
-        brute: 0
+        brute: 0,
+        catapult: 0,
+        debuffer: 0,
       },
       SpawnedMonsters: 0,
       Spawned: {
@@ -1015,14 +1059,17 @@ class Player {
         nuke: 0,
         rusher: 0,
         wizard: 0,
-        brute: 0
+        brute: 0,
+        catapult: 0,
+        debuffer: 0,
       },
       UsedAbilities: 0,
       Used: {
         fog: 0,
         vines: 0,
         swarm: 0,
-        shield: 0
+        shield: 0,
+        generators: 0,
       }
     }
     */
@@ -1032,7 +1079,7 @@ class Player {
     }, 1000);
   }
   pack() {
-    return {
+    var p = {
       x:this.x,
       y:this.y,
       facing:this.facing,
@@ -1046,12 +1093,21 @@ class Player {
       score:Math.round(this.score),
       level:this.level,
       upgradePts:this.upgradePts,
-      name:this.name
+      name:this.name,
     };
+    if (this.disabled) {
+      p.health = this.health / this.maxhealth * healthDefault;
+      p.maxhealth = healthDefault;
+      p.axelength = axeLengthDefault;
+    }
+    return p;
+  }
+  preupdate() {
+    this.disabled = false;
   }
   update() {
     const room = ROOM_LIST[this.room];
-    
+
     // Swing Animation
     if (this.swingint) {
       const SwingSpeed = 150; // milliseconds
@@ -1061,24 +1117,26 @@ class Player {
         this.swing = 0;
       }
     }
-    
+
     // Check death
     if (this.health <= 0 && !this.countdown) {
       this.death();
       return;
     }
     if (this.health <= 0) return;
-    
+
     // Movement
     var dx = this.dx;
     var dy = this.dy;
     if (dx == 0 && dy == 0) {
       return;
     }
-    
+
     // Collission
     this.facing = dx == 0 ? this.facing : dx > 0 ? 1 : -1;
-    const mag = this.speed / Math.sqrt(dx*dx+dy*dy);
+    var myspeed = this.speed;
+    if (this.disabled) myspeed = speedDefault * speed;
+    const mag = myspeed / Math.sqrt(dx*dx+dy*dy);
     dx *= mag;
     dy *= mag;
     dx += this.x;
@@ -1107,9 +1165,9 @@ class Player {
     this.upgradeLvls[name]++;
     this.upgradePts--;
     switch (name) {
-      case "speed": this.speed *= 1.28; break;
-      case "axelength": this.axelength += 1/3; break;
-      case "maxhealth": this.maxhealth++; this.health++; break;
+      case "speed": this.speed *= speedMult; break;
+      case "axelength": this.axelength += axeLengthChange; break;
+      case "maxhealth": this.maxhealth += healthChange; this.health += healthChange; break;
     }
   }
   smash() {
@@ -1122,7 +1180,7 @@ class Player {
     const room = ROOM_LIST[this.room];
     if (!room) return;
     const self = this;
-    
+
     // Check for pumpkins
     var ufx = this.x-0.5;
     var ufy = this.y-0.5;
@@ -1147,14 +1205,16 @@ class Player {
     check();
 
     // Check for Entities
-    var axeDistSq = this.axelength*this.axelength;
+    var axelength = this.axelength;
+    if (this.disabled) axelength = axeLengthDefault;
     for (var i = room.entities.length - 1; i >= 0; i--) {
       var e = room.entities[i];
       var b = e.bbox;
       var dx = e.x-this.x;
-      if (Math.sign(dx) != this.facing) continue;
       var dy = e.y-this.y;
-      if (dx * dx + dy * dy > axeDistSq) continue;
+      var dist = dx * dx + dy * dy;
+      if (Math.sign(dx+0.07*this.facing) != this.facing && dist > e.hitdist*e.hitdist) continue;
+      if (dist > (e.hitdist+axelength)**2) continue;
       if (room.entities[i].hit(this)) {
         io.to(room.id).emit('hit', e.x, e.y);
       }
@@ -1211,7 +1271,7 @@ class Player {
         }
       }
     }
-    
+
     // Level Upgrades
     // (5/6)x³ + (5/2)x² + (35/3)x + 10
     const threshold = {
@@ -1235,7 +1295,7 @@ class Player {
       this.upgradePts++;
       SOCKET_LIST[this.socket].emit('lvlUp',this.upgradeLvls);
     }
-    
+
     // Swing animation
     this.swing = 0;
     this.swingint = true;
@@ -1243,6 +1303,7 @@ class Player {
   }
   damage(amount, dealer) {
     if (this.immune) return;
+    if (this.disabled) amount *= this.maxhealth / healthDefault;
     this.health -= amount;
   }
   async death() {
@@ -1287,7 +1348,9 @@ class Entity {
       minY:0,
       maxY:0
     }
+    this.hitdist = 0;
     this.img = "";
+    this.facing = 1;
     this.f = Math.floor(Math.random()*100);
     this.value = 0.5;
     ROOM_LIST[room].entities.push(this);
@@ -1299,7 +1362,8 @@ class Entity {
       type:this.type,
       depth:this.depth,
       f:this.f,
-      img:this.img
+      img:this.img,
+      facing:this.facing
     };
   }
   update() {}
@@ -1308,12 +1372,14 @@ class Entity {
     dir.x *= speed;
     dir.y *= speed;
     if (room.checkCollisions(dir.x+this.x,this.y,this.bbox,this)) {
-      dir.x = 0;
-      dir.y = Math.sign(dir.y) * speed / 1.41421356237;
+      if (Math.abs(dir.y) > 0.02) this.y += Math.sign(dir.y) * Math.abs(speed) / 1.41421356237;
+      else this.y += dir.y;
+      return;
     }
     if (room.checkCollisions(this.x,dir.y+this.y,this.bbox,this)) {
-      dir.y = 0;
-      dir.x = Math.sign(dir.x) * speed / 1.41421356237;
+      if (Math.abs(dir.x) > 0.02) this.x += Math.sign(dir.x) * Math.abs(speed) / 1.41421356237;
+      else this.x += dir.x;
+      return;
     }
     this.x += dir.x;
     this.y += dir.y;
@@ -1332,13 +1398,15 @@ class Entity {
   getNearestPlayer(max) {
     const room = ROOM_LIST[this.room];
     if (!room) return;
-    
+
     var record = max ** 2;
     var sel;
     for (var i in room.players) {
       var p = room.players[i];
       if (p.pumpkinMaster || p.health <= 0 || p.immune) continue;
-      var d = (this.x - p.x) ** 2 + (this.y - p.y) ** 2;
+      var dx = this.x - p.x;
+      var dy = this.y - p.y;
+      var d = dx * dx + dy * dy;
       if (d < record) {
         record = d;
         sel = p;
@@ -1356,12 +1424,14 @@ class Entity {
   getNearestPlayerDist() {
     const room = ROOM_LIST[this.room];
     if (!room) return;
-    
+
     var record = Infinity;
     for (var i in room.players) {
       var p = room.players[i];
       if (p.pumpkinMaster || p.health <= 0 || p.immune) continue;
-      var d = (this.x - p.x) ** 2 + (this.y - p.y) ** 2;
+      var dx = this.x - p.x;
+      var dy = this.y - p.y;
+      var d = dx * dx + dy * dy;
       if (d < record) {
         record = d;
       }
@@ -1382,10 +1452,11 @@ Entities.monster = class extends Entity {
       minY:-0.45,
       maxY:0.45
     }
+    this.hitdist = 0.2;
   }
   update() {
     const room = ROOM_LIST[this.room];
-    
+
     const nearest = this.getNearestPlayer(Infinity);
     if (!nearest) return;
     var sel = nearest.player;
@@ -1412,10 +1483,11 @@ Entities.ghost = class extends Entity {
       minY:-0.65,
       maxY:0.65
     }
+    this.hitdist = 0.2;
   }
   update() {
     const room = ROOM_LIST[this.room];
-    
+
     const nearest = this.getNearestPlayer(Infinity);
     if (!nearest) return;
     var sel = nearest.player;
@@ -1441,12 +1513,6 @@ Entities.nuke = class extends Entity {
     this.category = "nuke";
     this.f = 0;
     this.img = "target";
-    this.bbox = {
-      minX:1,
-      maxX:-1,
-      minY:1,
-      maxY:-1
-    }
     this.depth = -1;
     this.timer = 4;
     this.falling_pumpkin = new Entities.falling_pumpkin(x, y - 400/9, room);
@@ -1464,12 +1530,6 @@ Entities.falling_pumpkin = class extends Entity {
     super(x, y, room);
     this.type = "falling_pumpkin";
     this.category = "nuke";
-    this.bbox = {
-      minX:1,
-      maxX:-1,
-      minY:1,
-      maxY:-1
-    }
     this.depth = 1;
     this.timer = 4;
     this.smashed = false;
@@ -1509,13 +1569,15 @@ Entities.speeder = class extends Entity {
       minY:-0.4,
       maxY:0.4
     }
+    this.hitdist = 0.25;
   }
   update() {
     const room = ROOM_LIST[this.room];
-    
+
     const nearest = this.getNearestPlayer(Infinity);
     if (!nearest) return;
     var sel = nearest.player;
+    this.facing = Math.sign(sel.x-this.x);
     const dist = nearest.dist;
     if (dist < 0.350 && !sel.immune) {
       sel.damage(0.5, this);
@@ -1524,7 +1586,7 @@ Entities.speeder = class extends Entity {
     }
     var dir = nearest.dir;
     const s = 4.4 * speed;
-    this.moveForward(dir,s)
+    this.moveForward(dir,s);
   }
 };
 Entities.rusher = class extends Entity {
@@ -1539,6 +1601,7 @@ Entities.rusher = class extends Entity {
       minY:-0.47,
       maxY:0.47
     }
+    this.hitdist = 0.2;
     this.cooldown = 1;
     this.rushing = 0;
     this.dir = {x:0, y:0};
@@ -1635,6 +1698,7 @@ Entities.wizard = class extends Entity {
       minY:-0.47,
       maxY:0.47
     }
+    this.hitdist = 0.2;
     this.cooldown = 2;
     this.value = 1;
   }
@@ -1697,7 +1761,7 @@ Entities.projectile = class extends Entity {
     }
     this.x += this.dir.x;
     this.y += this.dir.y;
-    
+
     if (room.checkCollisions(this.x,this.y,this.bbox,this)) {
       this.destroy();
     }
@@ -1719,6 +1783,7 @@ Entities.brute = class extends Entity {
       minY:-0.45,
       maxY:0.45
     }
+    this.hitdist = 0.2;
     this.recoil = 0;
     this.cooldown = 2.5;
     this.weak = false;
@@ -1779,7 +1844,7 @@ Entities.brute = class extends Entity {
       }
       s *= 2.5;
     }
-    
+
     this.moveForward(dir,s);
   }
   hit(p) {
@@ -1798,12 +1863,6 @@ Entities.shockwave = class extends Entity {
     super(x, y, room);
     this.type = "shockwave";
     this.category = "brute";
-    this.bbox = {
-      minX:1,
-      maxX:-1,
-      minY:1,
-      maxY:-1
-    }
     this.depth = -1;
     this.range = 0;
     this.smashed = false;
@@ -1830,6 +1889,128 @@ Entities.shockwave = class extends Entity {
     }
   }
   hit(p) {}
+};
+Entities.catapult = class extends Entity {
+  constructor(x, y, room) {
+    super(x, y, room);
+    this.type = "catapult";
+    this.category = "catapult";
+    this.img = "launch";
+    this.bbox = {
+      minX:-0.97,
+      maxX:0.97,
+      minY:-0.97,
+      maxY:0.97
+    }
+    this.hitdist = 0.4;
+    this.f = 0;
+    this.cooldown = 1.8;
+    this.value = 1;
+  }
+  update() {
+    const room = ROOM_LIST[this.room];
+    const nearest = this.getNearestPlayer(12);
+    if (!nearest) return;
+    var sel = nearest.player;
+    this.facing = Math.sign(this.x-sel.x);
+
+    this.cooldown -= speed;
+    if (this.cooldown <= 1) this.f = 0;
+    if (this.cooldown <= 2/3) this.f = 1;
+    if (this.cooldown <= 1/3) this.f = 2;
+    if (this.cooldown <= 0) {
+      var targetPos = {
+        x: sel.x,
+        y: sel.y
+      };
+      var p = new Entities.payload(this.x, this.y - 0.5, targetPos, this.room);
+      this.cooldown = 1.8;
+      this.f = 3;
+    }
+  }
+};
+Entities.payload = class extends Entity {
+  constructor(x, y, target, room) {
+    super(x, y, room);
+    this.type = "payload";
+    this.category = "catapult";
+    this.target = target;
+    this.start = { x:x, y:y };
+    this.path = 0;
+  }
+  update() {
+    const room = ROOM_LIST[this.room];
+    this.path += speed;
+    if (this.path >= 2.5) {
+      for (var i in room.players) {
+        var p = room.players[i];
+        if (p.pumpkinMaster || p.health <= 0 || p.immune) continue;
+        var d = (this.x - p.x) ** 2 + (this.y - p.y) ** 2;
+        if (d < 1.2**2) {
+          p.damage(0.5, this);
+        }
+      }
+      io.to(room.id).emit('hit', this.x, this.y);
+      this.destroy();
+    }
+    var t = this.path / 2.5;
+    this.x = (1-t)*this.start.x + t*this.target.x;
+    var posy = -16*t*(1-t);
+    this.y = (1-t)*this.start.y + t*this.target.y + posy;
+  }
+  hit(player) {
+    return;
+  }
+};
+Entities.debuffer = class extends Entity {
+  constructor(x, y, room) {
+    super(x, y, room);
+    this.type = "debuffer";
+    this.category = "debuffer";
+    this.img = "idle";
+    this.bbox = {
+      minX:-0.47,
+      maxX:0.47,
+      minY:-0.47,
+      maxY:0.47
+    }
+    this.hitdist = 0.2;
+    this.cooldown = 2;
+    this.value = 1;
+  }
+  update() {
+    const room = ROOM_LIST[this.room];
+    var record = Infinity;
+    var sel;
+    for (var i in room.players) {
+      var p = room.players[i];
+      if (p.pumpkinMaster || p.health <= 0 || p.immune) continue;
+      var dx = this.x - p.x;
+      var dy = this.y - p.y;
+      var d = dx * dx + dy * dy;
+      if (d < record) {
+        record = d;
+        sel = p;
+      }
+      if (d < 5*5) {
+        p.disabled = true;
+      }
+    }
+    const dist = Math.sqrt(record);
+    if (dist > 20 || !sel) return;
+    const s = (2 / 3) * speed;
+    var direction = 1.5;
+    if (dist < 10/3) {
+      direction = 0;
+      if (dist < 3) {
+        direction = -3;
+      }
+    }
+    var dir = {x:sel.x - this.x, y:sel.y - this.y};
+    dir.x /= dist;
+    dir.y /= dist;
+    this.moveForward(dir,s*direction);
+  }
 };
 
 var EntityData = {};
@@ -1861,6 +2042,14 @@ EntityData.brute = {
   cost: 10,
   pumpkin: true
 };
+EntityData.catapult = {
+  cost: 12,
+  pumpkin: false
+};
+EntityData.debuffer = {
+  cost: 15,
+  pumpkin: true
+};
 
 
 // --------
@@ -1873,7 +2062,7 @@ Abilities.fog = async function(rx,ry,room) {
   // Top
 
   var fog;
-  
+
   var oldfog = room.fogs.filter(f => f.rx == rx && f.ry == ry);
   if (oldfog.length == 1) {
     fog = oldfog[0];
@@ -1995,17 +2184,17 @@ Abilities.generators = async function(rx,ry,room) {
   var oldgen = room.generators[rx+","+ry];
   if (oldgen) {
     oldgen.amount += 0.1;
-    oldgen.maxhealth += 10;
-    oldgen.health += 10;
+    oldgen.maxhealth += 5;
+    oldgen.health += 5;
     //oldgen.maxhealth += 5;
     //oldgen.health = oldgen.maxhealth;
     return;
   }
-  
+
   const generator = {
     x:rx+7.5,
     y:ry+7.5,
-    amount: 0.1,
+    amount: 0.2,
     health:25,
     maxhealth:25
   }
@@ -2032,7 +2221,7 @@ AbilityData.shield = {
   cost: 70
 };
 AbilityData.generators = {
-  cost: 10
+  cost: 8
 };
 
 // --------
@@ -2052,13 +2241,13 @@ io.sockets.on('connection', function (socket) {
   const client = new Client(socket.id);
   CLIENT_LIST[socket.id] = client;
   console.log("Socket("+socket.id+") joined!");
-  
+
   // Room Management
   socket.on('joinRoom', function () {
     client.room = next;
-    
+
     socket.join(next);
-    socket.emit('room',next,true);
+    socket.emit('room',next,true,ROOM_LIST[next].settings);
 
     ROOM_LIST[next].addSocket(socket);
 
@@ -2066,7 +2255,7 @@ io.sockets.on('connection', function (socket) {
   });
   socket.on("leaveRoom", function (room) {
     socket.leave(room);
-    
+
     client.room = "";
     if (!ROOM_LIST[room]) return;
     ROOM_LIST[room].removeSocket(socket,false);
@@ -2074,14 +2263,13 @@ io.sockets.on('connection', function (socket) {
   socket.on('hostRoom', function (room) {
     if (!room || room.length != 8) room = randomString(8);
     client.room = room;
-    
+
     ROOM_LIST[room] = new Room(room);
     queue[room] = ROOM_LIST[room];
-    
+
     socket.join(room);
-    socket.emit('hostCode', room, ROOM_LIST[room].hidden);
-    socket.emit('room', room, false);
-    
+    socket.emit('room', room, false, ROOM_LIST[room].settings);
+
     ROOM_LIST[room].addSocket(socket);
 
     console.log("Socket("+socket.id+") is hosting Room("+room+")");
@@ -2089,20 +2277,22 @@ io.sockets.on('connection', function (socket) {
   socket.on('doTutorial', function () {
     client.room = socket.id;
     socket.join(socket.id);
-    
+
     ROOM_LIST[socket.id] = new TutorialRoom(socket);
-    
-    socket.emit('room', socket.id, false);
-    
+
+    socket.emit('room', socket.id, false, ROOM_LIST[socket.id].settings);
+
     console.log("Socket("+socket.id+") has begun Tutorial Room("+socket.id+")");
   });
   socket.on("continueTutorial", function () {
     delete pendingTutorials[socket.id];
   });
-  socket.on('toggleHidden', function (room) {
+  socket.on('updateSettings', function (room, settings) {
     if (!ROOM_LIST[room]) return;
-    ROOM_LIST[room].hidden = !ROOM_LIST[room].hidden;
-    socket.emit('hostCode', room, ROOM_LIST[room].hidden);
+    ROOM_LIST[room].settings = settings;
+    for (var i in ROOM_LIST[room].players) {
+      SOCKET_LIST[i].emit('room', room, room == next, settings);
+    }
   });
   socket.on('viewRooms', function () {
     clientQueue[socket.id] = socket;
@@ -2115,16 +2305,16 @@ io.sockets.on('connection', function (socket) {
       socket.emit('rejoinFailed');
       return;
     }
-    
+
     client.room = room;
-    
+
     socket.join(room);
-    socket.emit('room',room,room == next);
+    socket.emit('room',room,room == next,ROOM_LIST[room].settings);
 
     delete clientQueue[socket.id];
-    
+
     ROOM_LIST[room].addSocket(socket);
-    
+
     console.log("Socket("+socket.id+") has joined Room("+room+")");
   });
   socket.on('rejoin', function (room, oldid, reloaded) {
@@ -2134,7 +2324,7 @@ io.sockets.on('connection', function (socket) {
     }
     client.room = room;
     socket.join(room);
-    
+
     ROOM_LIST[room].reviveSocket(socket,oldid,reloaded);
   });
 
@@ -2151,13 +2341,13 @@ io.sockets.on('connection', function (socket) {
     if (!client.player) return;
     client.player.upgrade(name);
   });
-  
+
   //Other
   socket.on('swap',()=>{
     var room = ROOM_LIST[socket.id];
     if (!room) return;
     if (!room.freeplay) return;
-    room.swap();
+    room.swap(true);
   });
   socket.on('freeplay',()=>{
     var room = ROOM_LIST[socket.id];
@@ -2218,7 +2408,7 @@ function tick() {
 
 function perSecond() {
   for (var i in ROOM_LIST) {
-    if (ROOM_LIST[i].amount >= amountNeeded && ROOM_LIST[i].state == "lobby") {
+    if (ROOM_LIST[i].amount >= ROOM_LIST[i].settings.start_count && ROOM_LIST[i].state == "lobby") {
       start(i);
       console.log("Room("+i+") has started!");
       if (i == next) {
@@ -2227,9 +2417,13 @@ function perSecond() {
         queue[next] = ROOM_LIST[next];
       }
     }
-    if (SOCKET_LIST[ROOM_LIST[i].pumpkinMaster]) {
+    if (ROOM_LIST[i].pumpkin_masters.length > 0) {
       ROOM_LIST[i].coins += ROOM_LIST[i].coinMult;
-      SOCKET_LIST[ROOM_LIST[i].pumpkinMaster].emit('coins',ROOM_LIST[i].coins);
+      for (var j = 0; j < ROOM_LIST[i].pumpkin_masters.length; j++) {
+        var soc = SOCKET_LIST[ROOM_LIST[i].pumpkin_masters[j]];
+        if (!soc) continue;
+        soc.emit('coins',ROOM_LIST[i].coins);
+      }
     }
     if (ROOM_LIST[i].amount <= 0 && i != next) {
       if (queue[i]) delete queue[i];
@@ -2243,7 +2437,7 @@ function perSecond() {
       id: i,
       amount: queue[i].amount,
       next: (next==i),
-      hidden: queue[i].hidden
+      settings: queue[i].settings
     });
   }
   for (var i in clientQueue) {
@@ -2252,40 +2446,46 @@ function perSecond() {
 }
 
 async function start(room) {
-  
+
   var game = ROOM_LIST[room];
   game.state = "starting";
-  
+
   for (var i = 5; i >= 0; i--) {
     await wait(1000);
     io.to(room).emit("timer",i);
   }
-  
+
   const time = Date.now();
-  
+
   if (queue[room]) delete queue[room];
+  game.pm_amount = Math.floor(game.amount/6)+1
   game.start(time);
-  
+
   console.log("Room ("+room+") has started!");
   io.to(room).emit('start',time);
-  
-  const PM = randomProperty(game.players);
+
+  game.skeletons = Object.keys(game.players);
+  game.pumpkin_masters = [];
+  for (var i = 0; i < game.pm_amount; i++) {
+    var r = randomIndex(game.skeletons);
+    var p = game.skeletons[r];
+    game.players[p].pumpkinMaster = true;
+    console.log("In Room ("+room+") Client ("+p+") was selected as Pumpkin Master");
+    game.pumpkin_masters.push(p);
+    game.skeletons.splice(r,1);
+  }
   for (var i in game.players) {
     game.players[i].x = 15/2;
     game.players[i].y = 15/2;
-    SOCKET_LIST[i].emit("PM",(i == PM));
-    if (i == PM) {
-      game.pumpkinMaster = i;
-      game.players[i].pumpkinMaster = true;
-      console.log("In Room ("+room+") Client ("+i+") was selected as Pumpkin Master");
-    }
+    SOCKET_LIST[i].emit("PM",game.players[i].pumpkinMaster);
   }
-  
+  game.coins = 5*game.skeletons.length;
+
   /*var clients = io.sockets.adapter.rooms.get(room);
   var a = 0;
   for (const i of clients){
     SOCKET_LIST[i].emit("PM",a == PM);
-    
+
     //CLIENT_LIST[i].rank = a;
     //SOCKET_LIST[i].emit("rank",CLIENT_LIST[i].rank);
     //console.log("In room ("+room+") socket ("+i+") was ranked: "+a);
@@ -2303,7 +2503,10 @@ function randomValue(obj) {
   return obj[randomProperty(obj)];
 }
 function randomValueArray(arr) {
-  return arr[arr.length * Math.random() << 0];
+  return arr[randomIndex(arr)];
+}
+function randomIndex(arr) {
+  return arr.length * Math.random() << 0;
 }
 function weightedRandom(def, values, weights) {
   var prob = Math.random();

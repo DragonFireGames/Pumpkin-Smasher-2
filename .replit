@@ -1,6 +1,7 @@
 entrypoint = "index.js"
 
 hidden = [".config"]
+modules = ["nodejs-20:v8-20230920-bd784b9", "nodejs-20:v8-20230920-bd784b9"]
 
 [interpreter]
 command = [
@@ -86,3 +87,7 @@ support = true
 [auth]
 pageEnabled = false
 buttonEnabled = false
+
+[[ports]]
+localPort = 443
+externalPort = 80
