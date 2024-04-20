@@ -378,24 +378,19 @@ EntityDisplay.payload = (function() {
 });
 EntityDisplay.debuffer = (function() {
   var tex = {};
-  tex.idle = new Animation("assets/entities/wizard/idle.png", 14, 12);
-  tex.icon = new FitImage("assets/entities/wizard/icon.png");
-  tex.attack = new Animation("assets/entities/wizard/attack.png", 28, 12);
+  tex.idle = new Animation("assets/entities/debuffer/idle.png", 14, 12);
+  tex.icon = new FitImage("assets/entities/debuffer/icon.png");
   return {
     cost: 15,
     pumpkin: true,
     icon: function() {
-      tint(128, 255, 128);
       tex.icon.show(65, 0);
-      tint(255, 255, 255);
     },
     display: function(e) {
       noStroke();
       fill("rgba(0,255,0,0.25)");
       circle(0,0,10*36);
-      tint(128, 255, 128);
       tex[e.img].show(78, 0, e.f);
-      tint(255, 255, 255);
     }
   };
 });
