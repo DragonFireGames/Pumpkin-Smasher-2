@@ -77,6 +77,14 @@ level up:</p>
       <p class="subtext">Description: A giant pumpkin that falls from the sky onto a desired target and will deal 2 damage to any skeletons it lands on (2 tile radius).</p>
       <div style="height: 3vmin"></div>
 
+      <p class="text">Speeder</p>
+      <div class="hide"><img src="assets/entities/speeder/attack.png" id="speeder" style="position: relative; left: 2.5vmin; top: 0vmin; width: 10vmin"></div>
+      <p class="subtext">Cost: 3 coins</p>
+      <p class="subtext">Pumpkin to place: Yes</p>
+      <p class="subtext">Value: 1/2 a point</p>
+      <p class="subtext">Description: Description: A simple monster that will follow nearby skeletons around and will deal 1 damage to any skeleton it manages to reach. Much quicker than a regular monster.</p>
+      <div style="height: 3vmin"></div>
+
       <p class="text">Rusher</p>
       <div class="hide"><img src="assets/entities/rusher/idle.png" id="rusher" style="position: relative; left: -2.5vmin; top: 0vmin; width: 20vmin"></div>
       <p class="subtext">Cost: 5 coins</p>
@@ -90,7 +98,7 @@ level up:</p>
       <p class="subtext">Cost: 7 coins</p>
       <p class="subtext">Pumpkin to place: Yes</p>
       <p class="subtext">Value: 1 point</p>
-      <p class="subtext">Description: A pumpkin monster who will repeatedly rush the skeletons and deal 1 damage if it hits them. While rushing, it is invincible and cannot be killed by an axe attack, instead it will be launched back a bit. It will attempt to run from the skeletons when it is not rushing but it can be cornered into walls and defeated.</p>
+      <p class="subtext">Description: A pumpkin monster who will repeatedly shoot destructible projectiles at the opponent. It will attempt to run from the skeletons when it is not attacking but it can be cornered into walls and defeated.</p>
       <div style="height: 3vmin"></div>
 
       <p class="text">Brute</p>
@@ -99,6 +107,22 @@ level up:</p>
       <p class="subtext">Pumpkin to place: Yes</p>
       <p class="subtext">Value: 1 point</p>
       <p class="subtext">Description: A pumpkin monster who will repeatedly rush the skeletons and deal 1 damage if it hits them. While rushing, it is invincible and cannot be killed by an axe attack, instead it will be launched back a bit. It will attempt to run from the skeletons when it is not rushing but it can be cornered into walls and defeated.</p>
+      <div style="height: 3vmin"></div>
+
+      <p class="text">Catapult</p>
+      <div class="hide"><img src="assets/entities/debuffer/launch.png" id="catapult" style="position: relative; left: -2.5vmin; top: 0vmin; width: 20vmin"></div>
+      <p class="subtext">Cost: 12 coins</p>
+      <p class="subtext">Pumpkin to place: No</p>
+      <p class="subtext">Value: 1 point</p>
+      <p class="subtext">Description: A catapult that lobs pumpkins at the nearest skeleton. The projectiles cannot be destroyed, however, it launches the pumpkin at the position the skeleton was when it was launched, making running in cirles an effective strategy to defeat it.</p>
+      <div style="height: 3vmin"></div>
+      
+      <p class="text">Debuffer</p>
+      <div class="hide"><img src="assets/entities/debuffer/idle.png" id="debuffer" style="position: relative; left: -2.5vmin; top: 0vmin; width: 20vmin"></div>
+      <p class="subtext">Cost: 15 coins</p>
+      <p class="subtext">Pumpkin to place: Yes</p>
+      <p class="subtext">Value: 1 point</p>
+      <p class="subtext">Description: A pumpkin monster who will remove all skeleton upgrades on skeletons within a certain radius from the debuffer. It will attempt to run from the skeletons but it can be cornered into walls and defeated.</p>
       <div style="height: 3vmin"></div>
 
       <p class="heading">Abilities:</p>
@@ -131,6 +155,13 @@ level up:</p>
       <p class="subtext">Cost: 70 coins</p>
       <p class="subtext">Cooldown: 45 seconds</p>
       <p class="subtext">Description: Spawns a shield in the desired room that will protect all of the objectives from damage. This means the skeletons need to attack it before they can attack the objectives. The shield will disappear after 2 minutes and it can also be destroyed in 50 hits. Hitting a shield rewards 0.1 points. You cannot have 2 shields, spawning another shield will just move the current one to a new location and bring it back to full health.</p>
+      <div style="height: 3vmin"></div>
+
+      <p class="text">Generator</p>
+      <div class="hide"><img src="assets/abilities/generator/icon.png" style="position: relative; left: 1.5vmin; top: 0vmin; width: 12vmin"></div>
+      <p class="subtext">Cost: 8 coins</p>
+      <p class="subtext">Cooldown: None</p>
+      <p class="subtext">Description: Spawns a generator which generates coins for the pumpkin master. Each one placed generates 0.1 coins/sec, each upgrade does the same amount. Each one starts out with 25 health, but that grows by 5 each upgrade. To upgrade, just stack it on the same tile.</p>
       <div style="height: 3vmin"></div>
 
     </div>

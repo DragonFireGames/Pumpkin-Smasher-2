@@ -37,6 +37,7 @@ function createSprite(id, length, frameRate, callback) {
 createSprite("monster", 8, 12);
 createSprite("ghost", 8, 12);
 createSprite("nuke", 12, 12);
+createSprite("speeder", 8, 12);
 createSprite("rusher", 14, 12);
 createSprite("wizard", 14, 12, (frame, canvas, ctx, img) => {
   frame += 6;
@@ -67,6 +68,12 @@ createSprite("brute", 8, 12, (frame, canvas, ctx, img) => {
 
   ctx.drawImage(img, frame * img.width, 0, img.width, img.height, 0, 0, canvas.width, canvas.height);
   ctx.drawImage(buffer, frame * img.width, 0, img.width, img.height, 0, 0, canvas.width, canvas.height);
+});
+createSprite("catapult", 4, 12);
+createSprite("debuffer", 8, 12, (frame, canvas, ctx, img) => {
+  frame += 11;
+  frame %= 14;
+  ctx.drawImage(img, frame * img.width, 0, img.width, img.height, 0, 0, canvas.width, canvas.height);
 });
 
 // Colorful
