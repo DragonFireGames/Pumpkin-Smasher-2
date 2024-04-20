@@ -1372,14 +1372,12 @@ class Entity {
     dir.x *= speed;
     dir.y *= speed;
     if (room.checkCollisions(dir.x+this.x,this.y,this.bbox,this)) {
-      if (Math.abs(dir.y) > 0.02) this.y += Math.sign(dir.y) * Math.abs(speed) / 1.41421356237;
-      else this.y += dir.y;
-      return;
+      if (Math.abs(dir.y) > 0.02) dir.y = Math.sign(dir.y) * Math.abs(speed) / 1.41421356237;
+      dir.x = 0;
     }
     if (room.checkCollisions(this.x,dir.y+this.y,this.bbox,this)) {
-      if (Math.abs(dir.x) > 0.02) this.x += Math.sign(dir.x) * Math.abs(speed) / 1.41421356237;
-      else this.x += dir.x;
-      return;
+      if (Math.abs(dir.x) > 0.02) dir.x = Math.sign(dir.x) * Math.abs(speed) / 1.41421356237;
+      dir.y = 0;
     }
     this.x += dir.x;
     this.y += dir.y;
