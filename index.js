@@ -452,6 +452,40 @@ class Room {
     this.coins -= EntityData[sel].cost;
     return true;
   }
+  async spawnFrom(sel,amount,sx,sy,delay) {
+    sx = Math.floor(sx);
+    sy = Math.floor(sy);
+    var dir = 0;
+    var turns = 0;
+    var spawned = 0;
+    this.coins += EntityData[sel].cost * amount;
+    while (true) {
+      turns++;
+      for (var i = 0; i < Math.ceil(turns/2); i++) {
+        if (delay) await wait(delay);
+        if (this.spawn(sel,sx,sy)) {
+          spawned++;
+          if (spawned >= amount) return;
+        }
+        sx += Math.round(Math.cos(dir));
+        sy += Math.round(Math.sin(dir));
+      }
+      dir += Math.PI / 2;
+    }
+  }
+  async spawnRandom(sel,amount) {
+    this.coins += EntityData[sel].cost * amount;
+    var spawned = 0;
+    while (true) {
+      await wait(30);
+      var rx = Math.floor((this.maxWidth-14)*Math.random())+14;
+      var ry = Math.floor(this.maxHeight*Math.random());
+      if (this.spawn(sel,rx,ry)) {
+        spawned++;
+        if (spawned >= amount) return;
+      }
+    }
+  }
   ability(sel,x,y) {
     if (this.coins < AbilityData[sel].cost) return;
     Abilities[sel](x,y,this);
@@ -536,7 +570,7 @@ class TutorialRoom extends Room {
     await this.waitForContinue();
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
-    await this.spawnFrom("monster",5,this.player.x,this.player.y);
+    await this.spawnFrom("monster",5,this.player.x,this.player.y,30);
 
     while (this.entities.length > 0 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
@@ -591,7 +625,7 @@ class TutorialRoom extends Room {
     while (this.player.x <= 28 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
-    this.spawnFrom("monster",5,this.player.x,this.player.y);
+    this.spawnFrom("monster",5,this.player.x,this.player.y,30);
 
     while (this.player.x <= 42 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
@@ -624,7 +658,7 @@ class TutorialRoom extends Room {
       ""
     ],false);
 
-    this.spawnFrom("brute",3,105,7);
+    this.spawnFrom("brute",3,105,7,30);
 
     while (this.objectives.length > 0 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
@@ -870,40 +904,6 @@ class TutorialRoom extends Room {
     if (pendingTutorials[this.id]) delete pendingTutorials[this.id];
     delete ROOM_LIST[this.id];
     console.log("Deleted Tutorial Room("+this.id+")");
-  }
-  async spawnFrom(sel,amount,sx,sy) {
-    sx = Math.round(sx);
-    sy = Math.round(sy);
-    var dir = 0;
-    var turns = 0;
-    var spawned = 0;
-    this.coins += EntityData[sel].cost * amount;
-    while (true) {
-      turns++;
-      for (var i = 0; i < Math.ceil(turns/2); i++) {
-        await wait(30);
-        if (this.spawn(sel,sx,sy)) {
-          spawned++;
-          if (spawned >= amount) return;
-        }
-        sx += Math.round(Math.cos(dir));
-        sy += Math.round(Math.sin(dir));
-      }
-      dir += Math.PI / 2;
-    }
-  }
-  async spawnRandom(sel,amount) {
-    this.coins += EntityData[sel].cost * amount;
-    var spawned = 0;
-    while (true) {
-      await wait(30);
-      var rx = Math.floor((this.maxWidth-14)*Math.random())+14;
-      var ry = Math.floor(this.maxHeight*Math.random());
-      if (this.spawn(sel,rx,ry)) {
-        spawned++;
-        if (spawned >= amount) return;
-      }
-    }
   }
   ability(sel,x,y) {
     if (this.coins < AbilityData[sel].cost) return;
@@ -1372,11 +1372,11 @@ class Entity {
     dir.x *= speed;
     dir.y *= speed;
     if (room.checkCollisions(dir.x+this.x,this.y,this.bbox,this)) {
-      if (Math.abs(dir.y) > 0.02) dir.y = Math.sign(dir.y) * Math.abs(speed) / 1.41421356237;
+      if (Math.abs(dir.y) > 0.03) dir.y = Math.sign(dir.y) * Math.abs(speed) // 1.41421356237;
       dir.x = 0;
     }
     if (room.checkCollisions(this.x,dir.y+this.y,this.bbox,this)) {
-      if (Math.abs(dir.x) > 0.02) dir.x = Math.sign(dir.x) * Math.abs(speed) / 1.41421356237;
+      if (Math.abs(dir.x) > 0.03) dir.x = Math.sign(dir.x) * Math.abs(speed) // 1.41421356237;
       dir.y = 0;
     }
     this.x += dir.x;
@@ -2364,7 +2364,7 @@ io.sockets.on('connection', function (socket) {
   // Pumpkin Master actions
   socket.on('spawn',(sel,x,y) => {
     if (!client.room) return;
-    ROOM_LIST[client.room].spawn(sel,x,y);
+    ROOM_LIST[client.room].spawnFrom(sel,1,x,y);
   });
   socket.on('ability',(sel,x,y) => {
     if (!client.room) return;
