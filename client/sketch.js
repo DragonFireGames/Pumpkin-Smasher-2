@@ -1461,6 +1461,7 @@ Displays.lobby = function() {
       "Press +/- in a room you are hosting to change the player amount required to start.",
       "Private rooms cannot be seen in the join menu.",
       "Press F while in the tutorial to enter freeplay mode!",
+      "Placing generators early game is a good way to get more coins.",
       "Made by DragonFireGames!"
     ];
     currentTip = tips[floor(random() * tips.length)];
