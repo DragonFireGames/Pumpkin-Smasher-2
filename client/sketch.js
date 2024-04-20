@@ -1412,7 +1412,7 @@ Displays.lobby = function() {
     var p = roomSettings.hidden ? "Private" : "Public";
     text("Room Code: " + room + " " + p, 0, 180);
   }
-  format("#ffffff", false, 1, 10, LEFT);
+  format("#ffffff", false, 1, 10, LEFT, BOTTOM);
   if (!currentTip) {
     var tips = [
       "The goal of the pumpkin master is to protect the objectives.",
@@ -1469,7 +1469,7 @@ Displays.lobby = function() {
       currentTip = false;
     }, 5 * 1000);
   }
-  text("Tip: " + currentTip, -wWidth / 2 + 5, wHeight / 2 + 7);
+  text("Tip: " + currentTip, -wWidth / 2 + 3, wHeight / 2 - 3);
   pop();
 
   // Leave
