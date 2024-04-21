@@ -180,6 +180,20 @@ class Room {
     }
   }
   gameUpdate() {
+    /* Random Entity Spawns
+    if (Math.random() < 0.05*speed) {
+      var r = Math.random();
+      var sel = "monster";
+      if (r < 0.3) sel = "ghost";
+      if (r < 0.2) sel = "speeder";
+      if (r < 0.12) sel = "rusher";
+      if (r < 0.08) sel = "wizard";
+      if (r < 0.04) sel = "brute";
+      if (r < 0.01) sel = "debuffer";
+      this.spawnRandom(sel,1);
+    };
+    //*/
+    
     // Entity update
     var entities = [];
     for (var i = 0; i < this.entities.length; i++) {
@@ -439,20 +453,21 @@ class Room {
     delete this.pumpkins[x+","+y];
     this.growPumpkin(true);
   }
-  spawn(sel,x,y) {
+  spawn(sel,x,y,free) {
     x = Math.floor(x);
     y = Math.floor(y);
-    if (this.coins < EntityData[sel].cost) return;
+    if (!free && this.coins < EntityData[sel].cost) return;
     if (!this.tilemap[y] || this.tilemap[y][x] != 0) return;
     if (EntityData[sel].pumpkin) {
       if (!this.pumpkins[x+","+y]) return;
       this.destroyPumpkin(x,y);
     }
     var e = new Entities[sel](x+0.5,y+0.5,this.id);
+    if (free) return true;
     this.coins -= EntityData[sel].cost;
     return true;
   }
-  async spawnFrom(sel,amount,sx,sy,delay) {
+  async spawnFrom(sel,amount,sx,sy,delay,free) {
     sx = Math.floor(sx);
     sy = Math.floor(sy);
     var dir = 0;
@@ -463,7 +478,7 @@ class Room {
       turns++;
       for (var i = 0; i < Math.ceil(turns/2); i++) {
         if (delay) await wait(delay);
-        if (this.spawn(sel,sx,sy)) {
+        if (this.spawn(sel,sx,sy,free)) {
           spawned++;
           if (spawned >= amount) return;
         }
@@ -473,14 +488,14 @@ class Room {
       dir += Math.PI / 2;
     }
   }
-  async spawnRandom(sel,amount) {
+  async spawnRandom(sel,amount,free) {
     this.coins += EntityData[sel].cost * amount;
     var spawned = 0;
     while (true) {
       await wait(30);
       var rx = Math.floor((this.maxWidth-14)*Math.random())+14;
       var ry = Math.floor(this.maxHeight*Math.random());
-      if (this.spawn(sel,rx,ry)) {
+      if (this.spawn(sel,rx,ry,free)) {
         spawned++;
         if (spawned >= amount) return;
       }
@@ -570,7 +585,7 @@ class TutorialRoom extends Room {
     await this.waitForContinue();
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
-    await this.spawnFrom("monster",5,this.player.x,this.player.y,30);
+    await this.spawnFrom("monster",5,this.player.x,this.player.y,30,true);
 
     while (this.entities.length > 0 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
@@ -615,39 +630,39 @@ class TutorialRoom extends Room {
       ""
     ],false);
 
-    this.spawnRandom("wizard",4);
-    this.spawnRandom("rusher",4);
-    this.spawnRandom("speeder",4);
-    this.spawnRandom("monster",8);
-    this.spawnRandom("catapult",2);
-    this.spawnRandom("debuffer",1);
+    this.spawnRandom("wizard",4,true);
+    this.spawnRandom("rusher",4,true);
+    this.spawnRandom("speeder",4,true);
+    this.spawnRandom("monster",8,true);
+    this.spawnRandom("catapult",2,true);
+    this.spawnRandom("debuffer",1,true);
 
     while (this.player.x <= 28 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
-    this.spawnFrom("monster",5,this.player.x,this.player.y,30);
+    this.spawnFrom("monster",5,this.player.x,this.player.y,30,true);
 
     while (this.player.x <= 42 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
     this.coins += 3;
-    this.spawn("nuke",this.player.x,this.player.y);
+    this.spawn("nuke",this.player.x,this.player.y,true);
 
     while (this.player.x <= 56 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
-    this.spawnRandom("ghost",10);
+    this.spawnRandom("ghost",10,true);
 
     while (this.player.x <= 62 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
     this.coins += 3;
-    this.spawn("nuke",this.player.x,this.player.y);
+    this.spawn("nuke",this.player.x,this.player.y,true);
 
     while (this.player.x <= 70 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
     this.coins += 3;
-    this.spawn("nuke",this.player.x,this.player.y);
+    this.spawn("nuke",this.player.x,this.player.y,true);
 
     while (this.player.x <= 98 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
@@ -658,7 +673,7 @@ class TutorialRoom extends Room {
       ""
     ],false);
 
-    this.spawnFrom("brute",3,105,7,30);
+    this.spawnFrom("brute",3,105,7,30,true);
 
     while (this.objectives.length > 0 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
@@ -1203,6 +1218,9 @@ class Player {
     check();
     x = Math.floor(ufx);
     check();
+    if (this.axelength > 1.25) {
+      
+    }
 
     // Check for Entities
     var axelength = this.axelength;
@@ -2364,7 +2382,8 @@ io.sockets.on('connection', function (socket) {
   // Pumpkin Master actions
   socket.on('spawn',(sel,x,y) => {
     if (!client.room) return;
-    ROOM_LIST[client.room].spawnFrom(sel,1,x,y);
+    //ROOM_LIST[client.room].spawnFrom(sel,1,x,y);
+    ROOM_LIST[client.room].spawn(sel,x,y);
   });
   socket.on('ability',(sel,x,y) => {
     if (!client.room) return;
