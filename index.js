@@ -1216,10 +1216,10 @@ class Player {
       check(Math.floor(x),Math.floor(y));
     }
     check2(ufx,ufy);
-    if (this.upgradeLvls.axelength >= 2) {
+    if (!this.disabled && this.upgradeLvls.axelength >= 2) {
       check2(ufx+this.facing,ufy);
     }
-    if (this.upgradeLvls.axelength >= 4) {
+    if (!this.disabled && this.upgradeLvls.axelength >= 4) {
       check2(ufx+this.facing,ufy+1);
       check2(ufx+this.facing,ufy-1);
     }
