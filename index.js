@@ -1199,9 +1199,7 @@ class Player {
     // Check for pumpkins
     var ufx = this.x-0.5;
     var ufy = this.y-0.5;
-    var x = Math.floor(ufx);
-    var y = Math.floor(ufy);
-    var check = function() {
+    var check = function(x,y) {
       if (room.pumpkins[x+","+y]) {
         switch (room.pumpkins[x+","+y].type) {
           case 0: self.score += 1; break;
@@ -1211,15 +1209,19 @@ class Player {
         room.destroyPumpkin(x,y);
       }
     };
-    check();
-    x = Math.ceil(ufx);
-    check();
-    y = Math.ceil(ufy);
-    check();
-    x = Math.floor(ufx);
-    check();
-    if (this.axelength > 1.25) {
-      
+    var check2 = function(x,y) {
+      check(Math.floor(x),Math.ceil(y));
+      check(Math.ceil(x),Math.ceil(y));
+      check(Math.ceil(x),Math.floor(y));
+      check(Math.floor(x),Math.floor(y));
+    }
+    check2(ufx,ufy);
+    if (this.upgradeLvls.axelength >= 2) {
+      check2(ufx+this.facing,ufy);
+    }
+    if (this.upgradeLvls.axelength >= 4) {
+      check2(ufx+this.facing,ufy+1);
+      check2(ufx+this.facing,ufy-1);
     }
 
     // Check for Entities
