@@ -1219,6 +1219,10 @@ class Player {
     if (!this.disabled && this.upgradeLvls.axelength >= 2) {
       check2(ufx+this.facing,ufy);
     }
+    if (!this.disabled && this.upgradeLvls.axelength >= 3) {
+      check2(ufx,ufy+1);
+      check2(ufx,ufy-1);
+    }
     if (!this.disabled && this.upgradeLvls.axelength >= 4) {
       check2(ufx+this.facing,ufy+1);
       check2(ufx+this.facing,ufy-1);
