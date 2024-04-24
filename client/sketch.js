@@ -2838,7 +2838,6 @@ function mod(x, y) {
 }
 
 // Hehehe
-
 /*
 var counter = 0;
 setInterval(()=>{
@@ -2847,5 +2846,4 @@ setInterval(()=>{
     counter %= 360;
 },10);
 */
-
 //setInterval(()=>{socket.emit('smash');},10);
