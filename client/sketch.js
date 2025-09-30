@@ -537,10 +537,114 @@ CandyDisplay.candy_corn = (function() {
   var candy = new FitImage("assets/candies/candy-corn.png");
   return {
     show: function() {
-      icon.show(40, 40);
+      candy.show(40, 40);
+    },
+    active: function(p,f) {
+      tint(255, 200, 128);
+      f();
+      tint(255, 255, 255);
+    }
+  };
+});
+CandyDisplay.smarties = (function() {
+  var candy = new FitImage("assets/candies/smarties.png");
+  return {
+    show: function() {
+      candy.show(40, 40);
+    },
+    active: function(p,f) {
+      tint(255, 200, 200);
+      f();
+      tint(255, 255, 255);
+    }
+  };
+});
+CandyDisplay.peppermint = (function() {
+  var candy = new FitImage("assets/candies/peppermint.png");
+  return {
+    show: function() {
+      candy.show(40, 40);
     },
     active: function(p,f) {
       tint(255, 128, 128);
+      f();
+      tint(255, 255, 255);
+    }
+  };
+});
+CandyDisplay.lolipop = (function() {
+  var candy = new FitImage("assets/candies/lolipop.png");
+  return {
+    show: function() {
+      candy.show(40, 40);
+    },
+    active: function(p,f) {
+      tint(255, 170, 255);
+      f();
+      tint(255, 255, 255);
+    }
+  };
+});
+CandyDisplay.hot_tamale = (function() {
+  var candy = new FitImage("assets/candies/hot-tamale.png");
+  return {
+    show: function() {
+      candy.show(40, 40);
+    },
+    active: function(p,f) {
+      tint(255, 128, 128);
+      f();
+      tint(255, 255, 255);
+    }
+  };
+});
+CandyDisplay.ghost_chew = (function() {
+  var candy = new FitImage("assets/candies/ghost-chew.png");
+  return {
+    show: function() {
+      candy.show(40, 40);
+    },
+    active: function(p,f) {
+      tint(255, 255, 255, 128);
+      f();
+      tint(255, 255, 255, 255);
+    }
+  };
+});
+CandyDisplay.chocolate = (function() {
+  var candy = new FitImage("assets/candies/chocolate.png");
+  return {
+    show: function() {
+      candy.show(40, 40);
+    },
+    active: function(p,f) {
+      tint(160, 120, 100);
+      f();
+      tint(255, 255, 255);
+    }
+  };
+});
+CandyDisplay.candied_apple = (function() {
+  var candy = new FitImage("assets/candies/candied-apple.png");
+  return {
+    show: function() {
+      candy.show(40, 40);
+    },
+    active: function(p,f) {
+      tint(150, 200, 150);
+      f();
+      tint(255, 255, 255);
+    }
+  };
+});
+CandyDisplay.blue_candy = (function() {
+  var candy = new FitImage("assets/candies/blue_candy.png");
+  return {
+    show: function() {
+      candy.show(40, 40);
+    },
+    active: function(p,f) {
+      tint(170, 170, 255);
       f();
       tint(255, 255, 255);
     }
