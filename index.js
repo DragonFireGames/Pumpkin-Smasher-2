@@ -153,7 +153,7 @@ class Room {
     this.TrickOrTreat();
   }
   async TrickOrTreat() {
-    await wait((Math.random()*180+30)*1000);
+    await wait((Math.random()*60+30)*1000);
     io.to(this.id).emit('trick-or-treat');
     //
     this.spawnCandies(1+2*this.amount);
@@ -169,12 +169,12 @@ class Room {
     }
     //
     await wait(10*1000);
-    for (var p of players) {
+    for (var p of this.players) {
       if (Math.random() < 0.5) continue;
       this.spawnFrom("monster",5,p.x,p.y,30,true);
     }
     await wait(5*1000);
-    if (Math.random() < 0.4) for (var p of players) p.upgradePts += 1;
+    if (Math.random() < 0.4) for (var p of this.players) p.upgradePts += 1;
     //
     await wait(10*1000);
     if (Math.random() < 0.6) this.spawnRandom("ghost",2*this.amount,true);
@@ -184,7 +184,7 @@ class Room {
     if (Math.random() < 0.5) this.spawnCandies(this.amount);
     //
     await wait(5*1000);
-    for (var p of players) {
+    for (var p of this.players) {
       if (Math.random() < 0.3) continue;
       this.spawn("nuke",p.x,p.y,true);
     }
@@ -202,7 +202,7 @@ class Room {
     }
     //
     await wait(5*1000);
-    for (var p of players) {
+    for (var p of this.players) {
       if (Math.random() < 0.3) continue;
       this.spawn("nuke",p.x,p.y,true);
     }
