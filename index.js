@@ -174,6 +174,7 @@ class Room {
       if (Math.random() < 0.5) continue;
       this.spawnFrom("monster",5,p.x,p.y,30,true);
     }
+    //
     await wait(5*1000);
     if (Math.random() < 0.4) for (var i in this.players) this.players[i].upgradePts += 1;
     //
@@ -211,7 +212,14 @@ class Room {
     }
     //
     await wait(10*1000);
-    if (Math.random() < 0.8) this.spawnRandom("catapult",Math.floor(this.amount/2),true);
+    for (var i in this.generators) {
+      var g = this.generators[i];
+      if (Math.random() < 0.7) continue;
+      this.spawnFrom("brute",2,g.x,g.y,30,true);
+    }
+    //
+    await wait(10*1000);
+    if (Math.random() < 0.8) this.spawnRandom("catapult",this.amount,true);
     // Wipe Candies
     //this.candies = {};
     //io.to(this.id).emit('candies',this.candies);
@@ -552,6 +560,7 @@ class Room {
     this.growPumpkin(true);
   }
   spawn(sel,x,y,free) {
+    if (!ROOM_LIST[this.id]) return false;
     x = Math.floor(x);
     y = Math.floor(y);
     if (!free && this.coins < EntityData[sel].cost) return;
