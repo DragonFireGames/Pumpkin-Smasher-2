@@ -531,6 +531,22 @@ AbilityDisplay.generators = (function() {
   };
 });
 
+// Candies
+var CandyDisplay = {};
+CandyDisplay.candy_corn = (function() {
+  var candy = new FitImage("assets/candies/candy-corn.png");
+  return {
+    show: function() {
+      icon.show(40, 40);
+    },
+    active: function(p,f) {
+      tint(255, 128, 128);
+      f();
+      tint(255, 255, 255);
+    }
+  };
+});
+
 // Tiles
 var tileIDs = {};
 class Tile {
@@ -857,6 +873,8 @@ var roomMap = {};
 // Pumpkins
 var pumpkinBuf;
 var pumpkins = {};
+// Candies
+var candies = {};
 // Objectives
 var objectives = [];
 
@@ -1736,6 +1754,15 @@ function show() {
   // Show Pumpkin Image
   image(pumpkinBuf, minTileX * 36, minTileY * 36, pumpkinBuf.width, pumpkinBuf.height);
 
+  // Candies
+  for (var i in candies) {
+    var c = candies[i];
+    push();
+    translate(c.x, c.y);
+    CandyDisplay[c.type].show();
+    pop();
+  }
+
   // Abilities
   for (var i = 0; i < vines.length; i++) {
     if (vines[i].health <= 0) continue;
@@ -1809,7 +1836,12 @@ function show() {
     rotate(-p.swing);
     translate(-(w - aw) / 2, -off);
     // Skeleton
-    textures.skeleton[p.skin].show(w, 46);
+    var skele = () => textures.skeleton[p.skin].show(w, 46);
+    if (p.activeCandy) {
+      var time = p.candyDuration-Date.now();
+      if (time < 5000 && time % 500 < 250) skele();
+      else CandyDisplay[p.activeCandy].active(p,skele);
+    } else skele();
   };
   for (var i = 0; i < entities.length; i++) {
     var e = entities[i];
@@ -1845,6 +1877,7 @@ function show() {
             v.y - l < max.x);
   });
   //*/
+
   // Sort
   //*
   showing.sort((a, b) => {
@@ -1871,29 +1904,17 @@ function show() {
   /*
   for (var i = 0; i < entities.length; i++) {
     var e = entities[i];
+    push();
     translate(e.x, e.y);
     EntityDisplay[s.data.type].display(e);
+    pop();
   }
   for (var i in players) {
     var p = players[i];
-    if (p.pumpkinMaster) continue;
+    push();
     translate(p.x, p.y);
-    if (p.health <= 0) {
-      textures.bone_pile.show(0, 46);
-      continue;
-    }
-    scale(p.facing, 1);
-    // Axe
-    var w = textures.skeleton[p.skin].calc(0, 46).w;
-    var aw = textures.axe.calc(0, 46).w;
-    var off = p.swing ? 5 : 0;
-    translate((w - aw) / 2, off);
-    rotate(p.swing * 18);
-    textures.axe.show(0, 62*p.axelength);
-    rotate(-p.swing * 18);
-    translate(-(w - aw) / 2, -off);
-    // Skeleton
-    textures.skeleton[p.skin].show(w, 46);
+    showplayer(p);
+    pop();
   }
   //*/
 
@@ -1904,7 +1925,7 @@ function show() {
     push();
     translate(p.x, p.y);
     format("#ffffff", false, 0, 12, CENTER);
-    if (p.name == "DragonFire7z") fill("#ff0000");
+    if (p.name == "DragonFire7z" || p.name == "DragonFireGames") fill("#ff0000");
     text(p.name, -4 * p.facing, -20);
     pop();
   }
@@ -2590,6 +2611,13 @@ socket.on('objective', function(objectiveList) {
   }
 });
 // Events
+socket.on('candies', function(candies) {
+  candies = candies;
+  for (var i in candies) {
+    candies[i].x *= 36;
+    candies[i].y *= 36;
+  }
+});
 socket.on('growpumpkin', async function(p) {
   pumpkins[p.x + "," + p.y] = p;
   if (!pumpkinBuf) return;
