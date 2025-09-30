@@ -2715,7 +2715,8 @@ socket.on('objective', function(objectiveList) {
   }
 });
 // Events
-socket.on('candies', function(candies) {
+socket.on('candies', function(packedCandies) {
+  alert(JSON.stringify(packedCandies));
   candies = candies;
   for (var i in candies) {
     candies[i].x *= 36;
@@ -2979,3 +2980,6 @@ setInterval(()=>{
 },10);
 */
 //setInterval(()=>{socket.emit('smash');},10);
+
+
+
