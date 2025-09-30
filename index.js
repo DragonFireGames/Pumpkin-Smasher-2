@@ -485,7 +485,7 @@ class Room {
   async checkCandies(player) {
     const tx = Math.floor(player.x);
     const ty = Math.floor(player.y);
-    var index = tx+","+ty;
+    var i = tx+","+ty;
     var c = this.candies[i];
     if (!c) return;
     delete this.candies[i];
