@@ -2715,9 +2715,9 @@ socket.on('objective', function(objectiveList) {
   }
 });
 // Events
-socket.on('candies', function(candies) {
-  alert(JSON.stringify(candies));
-  candies = candies;
+socket.on('candies', function(packedCandies) {
+  alert(JSON.stringify(packedCandies));
+  candies = packedCandies;
   for (var i in candies) {
     candies[i].x *= 36;
     candies[i].y *= 36;
