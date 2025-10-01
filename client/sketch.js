@@ -44,7 +44,7 @@ socket.on("disconnect", async () => {
     await wait(1000);
     if (socket.connected) return;
   }
-  __cpLocation.reload();
+  location.reload();
 });
 //^^Connects to the socket.io server
 
@@ -1642,7 +1642,7 @@ homeDis.clickTutorial = function() {
 homeDis.clickInstructions = function() {
   setDisplay("instructions");
   //cam.scroll = 0;
-  //__cpLocation.href = __cpLocation.origin+"/instructions";
+  //location.href = location.origin+"/instructions";
 }
 homeDis.clickSettings = function() {
   alert("Coming soon!");
@@ -1782,10 +1782,10 @@ function setDisplay(d, sd) {
   subdisplay = sd ?? "";
   DiscordWidget.style.visibility = "hidden";
   user.lastSession = {};
-  history.pushState({}, "", __cpLocation.origin);
+  history.pushState({}, "", location.origin);
   if (display == "lobby") {
-    history.pushState({}, "", __cpLocation.origin + "?room=" + room);
-    if (isNext) history.pushState({}, "", __cpLocation.origin + "?room=next");
+    history.pushState({}, "", location.origin + "?room=" + room);
+    if (isNext) history.pushState({}, "", location.origin + "?room=next");
     return;
   }
   if (display == "home" || display == "loading") return;
@@ -1805,7 +1805,7 @@ function endAssetLoad() {
   }
 
   // Get params
-  var params_str = __cpLocation.href.split('?')[1];
+  var params_str = location.href.split('?')[1];
   if (params_str) {
     var params_arr = params_str.split('&');
 
@@ -2565,9 +2565,9 @@ socket.on('rejoinFailed', returnToHome);
 function returnToHome() {
   user.lastSession = {};
   localStorage.user = JSON.stringify(user);
-  //__cpLocation.href = __cpLocation.origin;
+  //location.href = location.origin;
   setDisplay("home");
-  history.pushState({}, "", __cpLocation.origin);
+  history.pushState({}, "", location.origin);
 }
 socket.on('rejoinSuccess', function(id) {
   player.id = id;
