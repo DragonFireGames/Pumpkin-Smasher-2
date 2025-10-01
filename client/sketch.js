@@ -2725,8 +2725,8 @@ socket.on('candies', function(packedCandies) {
   //alert(JSON.stringify(packedCandies));
   candies = packedCandies;
   for (var i in candies) {
-    candies[i].x *= 36 + 36/2;
-    candies[i].y *= 36 + 36/2;
+    candies[i].x = (candies[i].x + 0.5) * 36;
+    candies[i].y = (candies[i].y + 0.5) * 36;
   }
 });
 socket.on('growpumpkin', async function(p) {
