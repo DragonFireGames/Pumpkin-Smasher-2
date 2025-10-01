@@ -638,7 +638,7 @@ CandyDisplay.candied_apple = (function() {
   };
 });
 CandyDisplay.blue_candy = (function() {
-  var candy = new FitImage("assets/candies/blue_candy.png");
+  var candy = new FitImage("assets/candies/blue-candy.png");
   return {
     show: function() {
       candy.show(36, 36);
