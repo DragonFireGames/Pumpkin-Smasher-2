@@ -154,7 +154,7 @@ class Room {
   }
   async TrickOrTreat() {
     await wait((Math.random()*60+30)*1000);
-    io.to(this.id).emit('trick-or-treat');
+    io.to(this.id).emit('trick-or-treat',Date.now());
     //
     this.spawnCandies(1+2*this.amount);
     this.coins += 5+10*this.amount;
@@ -516,8 +516,7 @@ class Room {
       }
       c.timestamp = Date.now();
       c.type = RandomCandy();
-      this.pumpkins[c.x+","+c.y] = c;
-      return c;
+      this.candies[c.x+","+c.y] = c;
     }
     io.to(this.id).emit('candies',this.candies);
   }
