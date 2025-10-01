@@ -537,7 +537,7 @@ CandyDisplay.candy_corn = (function() {
   var candy = new FitImage("assets/candies/candy-corn.png");
   return {
     show: function() {
-      candy.show(40, 40);
+      candy.show(36, 36);
     },
     active: function(p,f) {
       tint(255, 200, 128);
@@ -546,12 +546,11 @@ CandyDisplay.candy_corn = (function() {
     }
   };
 });
-/*
 CandyDisplay.smarties = (function() {
   var candy = new FitImage("assets/candies/smarties.png");
   return {
     show: function() {
-      candy.show(40, 40);
+      candy.show(36, 36);
     },
     active: function(p,f) {
       tint(255, 200, 200);
@@ -564,7 +563,7 @@ CandyDisplay.peppermint = (function() {
   var candy = new FitImage("assets/candies/peppermint.png");
   return {
     show: function() {
-      candy.show(40, 40);
+      candy.show(36, 36);
     },
     active: function(p,f) {
       tint(255, 128, 128);
@@ -577,7 +576,7 @@ CandyDisplay.lolipop = (function() {
   var candy = new FitImage("assets/candies/lolipop.png");
   return {
     show: function() {
-      candy.show(40, 40);
+      candy.show(36, 36);
     },
     active: function(p,f) {
       tint(255, 170, 255);
@@ -590,7 +589,7 @@ CandyDisplay.hot_tamale = (function() {
   var candy = new FitImage("assets/candies/hot-tamale.png");
   return {
     show: function() {
-      candy.show(40, 40);
+      candy.show(36, 36);
     },
     active: function(p,f) {
       tint(255, 128, 128);
@@ -603,7 +602,7 @@ CandyDisplay.ghost_chew = (function() {
   var candy = new FitImage("assets/candies/ghost-chew.png");
   return {
     show: function() {
-      candy.show(40, 40);
+      candy.show(36, 36);
     },
     active: function(p,f) {
       tint(255, 255, 255, 128);
@@ -616,7 +615,7 @@ CandyDisplay.chocolate = (function() {
   var candy = new FitImage("assets/candies/chocolate.png");
   return {
     show: function() {
-      candy.show(40, 40);
+      candy.show(36, 36);
     },
     active: function(p,f) {
       tint(160, 120, 100);
@@ -629,7 +628,7 @@ CandyDisplay.candied_apple = (function() {
   var candy = new FitImage("assets/candies/candied-apple.png");
   return {
     show: function() {
-      candy.show(40, 40);
+      candy.show(36, 36);
     },
     active: function(p,f) {
       tint(150, 200, 150);
@@ -642,7 +641,7 @@ CandyDisplay.blue_candy = (function() {
   var candy = new FitImage("assets/candies/blue_candy.png");
   return {
     show: function() {
-      candy.show(40, 40);
+      candy.show(36, 36);
     },
     active: function(p,f) {
       tint(170, 170, 255);
@@ -650,7 +649,7 @@ CandyDisplay.blue_candy = (function() {
       tint(255, 255, 255);
     }
   };
-});*/
+});
 
 // Tiles
 var tileIDs = {};
@@ -2720,14 +2719,14 @@ socket.on('objective', function(objectiveList) {
 });
 // Events
 socket.on('trick-or-treat', function(date) {
-  alert("Trick or Treat!");
+  //alert("Trick or Treat!");
 });
 socket.on('candies', function(packedCandies) {
-  alert(JSON.stringify(packedCandies));
+  //alert(JSON.stringify(packedCandies));
   candies = packedCandies;
   for (var i in candies) {
-    candies[i].x *= 36;
-    candies[i].y *= 36;
+    candies[i].x *= 36 + 36/2;
+    candies[i].y *= 36 + 36/2;
   }
 });
 socket.on('growpumpkin', async function(p) {
