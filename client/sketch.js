@@ -893,6 +893,9 @@ async function loadAssets() {
   for (var i in AbilityDisplay) {
     AbilityDisplay[i] = AbilityDisplay[i]();
   }
+  for (var i in CandyDisplay) {
+    CandyDisplay[i] = CandyDisplay[i]();
+  }
 
   // Gui
 
