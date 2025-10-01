@@ -1578,7 +1578,7 @@ Displays.lobby = function() {
       "Every time an objective is destroyed, the Pumpkin Master gets an additional half a coin per second.",
       "Shields can win the game when used properly.",
       "Split up and attack all three objectives at once, there is no way to defend from all of you.",
-      "Fog the entire map to hide the location of your shield.",
+      "Fog the entire map to hide the position of your shield.",
       "Press space in a room you are hosting to switch from public to private.",
       "Press +/- in a room you are hosting to change the player amount required to start.",
       "Private rooms cannot be seen in the join menu.",
@@ -2715,9 +2715,12 @@ socket.on('objective', function(objectiveList) {
   }
 });
 // Events
+socket.on('trick-or-treat', function(date) {
+  alert("Trick or Treat!");
+});
 socket.on('candies', function(packedCandies) {
   alert(JSON.stringify(packedCandies));
-  candies = candies;
+  candies = packedCandies;
   for (var i in candies) {
     candies[i].x *= 36;
     candies[i].y *= 36;
