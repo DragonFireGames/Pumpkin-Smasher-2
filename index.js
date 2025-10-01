@@ -109,7 +109,7 @@ class Room {
     this.pumpkins = {};
     this.newPumpkins = [];
     // Candies
-    this.candies = [];
+    this.candies = {};
     // Objectives
     this.objectives = [];
     // Pumpkin Master
