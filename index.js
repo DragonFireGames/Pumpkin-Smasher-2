@@ -692,7 +692,8 @@ class TutorialRoom extends Room {
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
     await this.spawnFrom("monster",5,this.player.x,this.player.y,30,true);
-
+    clearInterval(this.healVines);
+    
     while (this.entities.length > 0 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
@@ -737,7 +738,6 @@ class TutorialRoom extends Room {
     ],Date.now(),false);
 
     this.vines = [];
-    clearInterval(this.healVines);
 
     this.spawnRandom("wizard",4,true);
     this.spawnRandom("rusher",4,true);
