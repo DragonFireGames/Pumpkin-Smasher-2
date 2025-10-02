@@ -155,7 +155,49 @@ class Room {
   async TrickOrTreat() {
     await wait((Math.random()*60+30)*1000);
     io.to(this.id).emit('trick-or-treat',Date.now());
-    //
+
+    this.spawnCandies(1+2*this.amount);
+
+    var self = this;
+    var buffPM = function() {
+      if (Math.random() < 0.15) {
+        self.spawnRandom("wizard",self.amount,true);
+        self.spawnRandom("rusher",self.amount,true);
+        self.spawnRandom("debuffer",Math.round(self.amount/4),true);
+      } else if (Math.random() < 0.3) {
+        self.spawnRandom("speeder",self.amount*2,true);
+        self.spawnRandom("monster",self.amount*4,true);
+      } else if (Math.random() < 0.4) {
+        for (var i in self.players) {
+          var p = self.players[i];
+          self.spawnFrom("monster",5,p.x,p.y,30,true);
+        }
+      } else if (Math.random() < 0.5) {
+        for (var i in self.players) {
+          var p = self.players[i];
+          self.spawn("nuke",p.x,p.y,true);
+        }
+      } else if (Math.random() < 0.6) {
+        self.spawnRandom("ghost",2*self.amount,true);
+      } else if (Math.random() < 0.7) {
+        self.spawnRandom("catapult",self.amount,true);
+      } else if (Math.random() < 0.8) {
+        for (var i in self.generators) {
+          var g = self.generators[i];
+          self.spawnFrom("brute",2,g.x,g.y,30,true);
+        }
+      } else {
+        self.coins += 5+10*self.amount;
+      }
+    }
+
+    buffPM();
+    await wait(5000);
+    buffPM();
+    await wait(5000);
+    buffPM();
+
+    /*
     this.spawnCandies(1+2*this.amount);
     this.coins += 5+10*this.amount;
     //
@@ -223,7 +265,7 @@ class Room {
     // Wipe Candies
     //this.candies = {};
     //io.to(this.id).emit('candies',this.candies);
-    //
+    //*/
     this.TrickOrTreat();
   }
   update() {
@@ -502,8 +544,16 @@ class Room {
     delete this.candies[i];
     io.to(this.id).emit('candies',this.candies);
     player.activeCandy = c.type;
-    await Candies[c.type](player,this,tx,ty);
-    player.activeCandy = false;
+    var candy = CandyData[c.type];
+    candy.collect(player,this,tx,ty);
+    if (candy.duration) {
+      player.candyDuration = Date.now() + candy.duration*1000;
+      await wait(candy.duration*1000);
+    }
+    if (player.activeCandy) {
+      player.activeCandy = false;
+      candy.expire(player,this);
+    }
   }
   spawnCandies(n) {
     for (var i = 0; i < n; i++) {
@@ -1306,15 +1356,21 @@ class Player {
     }
   }
   smash() {
+    const room = ROOM_LIST[this.room];
+    if (!room) return;
+    const self = this;
+
+    var candy = CandyData[this.activeCandy];
+    if (candy && candy.loseonswing) {
+      candy.expire(player,room);
+      this.activeCandy = false;
+    }
+
     // Undo Immunity
     if (this.immune) {
       this.immune = false;
       this.skin = this.realskin;
     }
-
-    const room = ROOM_LIST[this.room];
-    if (!room) return;
-    const self = this;
 
     // Check for pumpkins
     var ufx = this.x-0.5;
@@ -1322,9 +1378,9 @@ class Player {
     var check = function(x,y) {
       if (room.pumpkins[x+","+y]) {
         switch (room.pumpkins[x+","+y].type) {
-          case 0: self.score += 1; break;
-          case 1: self.score += 2; break;
-          case 2: self.score += 5; break;
+          case 0: self.addScore(1); break;
+          case 1: self.addScore(2); break;
+          case 2: self.addScore(5); break;
         }
         room.destroyPumpkin(x,y);
       }
@@ -1383,7 +1439,7 @@ class Player {
       var dx = gen.x-this.x;
       var dy = gen.y-this.y;
       if (dx * dx + dy * dy < 3.2*3.2) {
-        this.score += 0.2;
+        this.addScore(0.2);
         gen.health--;
         if (gen.health <= 0) {
           delete room.generators[i];
@@ -1396,7 +1452,7 @@ class Player {
       var dx = room.shield.x-this.x;
       var dy = room.shield.y-this.y;
       if (dx * dx + dy * dy < 3.2*3.2) {
-        this.score += 0.2;
+        this.addScore(0.2);
         room.shield.health--;
         if (room.shield.health <= 0) {
           room.shield = false;
@@ -1409,7 +1465,7 @@ class Player {
         var dx = room.objectives[i].x-this.x;
         var dy = room.objectives[i].y-this.y;
         if (dx * dx + dy * dy < 3.2*3.2) {
-          this.score += 0.2;
+          this.addScore(0.2);
           room.objectives[i].health--;
           io.to(room.id).emit('objective',room.objectives);
         }
@@ -1447,8 +1503,17 @@ class Player {
   }
   damage(amount, dealer) {
     if (this.immune) return;
+    var candy = CandyData[this.activeCandy];
+    if (candy && candy.loseondamaged) {
+      candy.expire(player,room);
+      this.activeCandy = false;
+    }
     if (this.disabled) amount *= this.maxhealth / healthDefault;
     this.health -= amount;
+  }
+  addScore(n) {
+    if (this.activeCandy == "candy_corn") n *= 3;
+    this.score += n;
   }
   async death() {
     SOCKET_LIST[this.socket].emit('dead');
@@ -1527,7 +1592,7 @@ class Entity {
     this.y += dir.y;
   }
   hit(player) {
-    player.score += this.value;
+    player.addScore(this.value);
     this.destroy();
     return true;
   }
@@ -1823,7 +1888,7 @@ Entities.rusher = class extends Entity {
     }
     if (this.rushing == 2) return true;
 
-    p.score += this.value;
+    p.addScore(this.value);
     this.destroy();
     return true;
   }
@@ -1991,7 +2056,7 @@ Entities.brute = class extends Entity {
   }
   hit(p) {
     if (this.weak) {
-      p.score += this.value;
+      p.addScore(this.value);
       this.destroy();
       return true;
     }
@@ -2367,13 +2432,61 @@ AbilityData.generators = {
 };
 
 // Candies
-var Candies = {};
-Candies.candy_corn = async function(player) {
-  player.candyDuration = Date.now() + 30*1000;
-  await wait(30*1000);
+var CandyData = {};
+CandyData.candy_corn = {
+  loseondamaged: true,
+  duration: 60,
+  collect: function(player) {
+    player.score += 50;
+  },
+};
+CandyData.smarties = {
+  duration: 20,
+  loseonswing: true,
+  collect: function(player) {
+    player.immune = true;
+  },
+  expire: function() {
+    player.immune = false;
+  }
+};
+CandyData.peppermint = {
+  collect: async function(player,room) {
+    this.startTime += 15 * 1000;
+  },
+};
+CandyData.lolipop = {
+  collect: async function(player) {
+    
+  },
+};
+CandyData.hot_tamale = {
+  collect: async function(player) {
+    
+  },
+};
+CandyData.ghost_chew = {
+  collect: async function(player) {
+    
+  }
+};
+CandyData.chocolate = {
+  collect: async function(player) {
+    
+  }
+};
+CandyData.candied_apple = {
+  collect: async function(player) {
+    
+  }
+};
+CandyData.blue_candy = {
+  collect: async function(player) {
+    player.upgradePts++;
+  }
 };
 function RandomCandy() {
-  return "candy_corn";
+  return randomValueArray(["candy_corn","smarties","peppermint","blue_candy"]);
 }
 
 // --------
