@@ -156,14 +156,14 @@ class Room {
       self.TrickOrTreat();
     },(Math.random()*25+5)*1000);
     // Init Coins
-    this.coins = 40+10*(this.amount-this.pm_amount);
+    this.coins = 20+10*(this.amount-this.pm_amount);
     this.coinMult = this.pm_amount;
   }
   async TrickOrTreat() {
     io.to(this.id).emit('trick-or-treat',Date.now());
 
     var s = this.amount-this.pm_amount;
-    self.spawnCandies(1+s);
+    this.spawnCandies(1+s);
 
     var self = this;
     var buffPM = function() {
