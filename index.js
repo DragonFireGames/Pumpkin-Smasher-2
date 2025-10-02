@@ -2335,7 +2335,7 @@ Abilities.generators = async function(rx,ry,room) {
   ry = ry * 14;
 
   var oldgen = room.generators[rx+","+ry];
-  if (oldgen.amount >= 1.2) {
+  if (oldgen && oldgen.amount >= 1.2) {
     room.coins += AbilityData.generators.cost;
   }
   if (oldgen) {
@@ -2377,7 +2377,7 @@ AbilityData.shield = {
   cost: 85
 };
 AbilityData.generators = {
-  cost: 10
+  cost: 16
 };
 
 // Candies
