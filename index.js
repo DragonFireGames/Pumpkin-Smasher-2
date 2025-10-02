@@ -115,7 +115,7 @@ class Room {
     // Pumpkin Master
     this.pumpkin_masters = [];
     this.skeletons = [];
-    this.coins = 15;
+    this.coins = 0;
     this.coinMult = 1;
 
     console.log("Created Room("+id+")");
@@ -151,12 +151,14 @@ class Room {
     io.to(this.id).emit('allpumpkins',batch);
     // Candies
     this.TrickOrTreat();
+    //
+    this.coins = 50;
   }
   async TrickOrTreat() {
     await wait((Math.random()*60+30)*1000);
     io.to(this.id).emit('trick-or-treat',Date.now());
 
-    this.spawnCandies(1+2*this.amount);
+    this.spawnCandies(1+this.amount);
 
     var self = this;
     var buffPM = function() {
@@ -2476,28 +2478,28 @@ CandyData.hot_tamale = {
 CandyData.ghost_chew = {
   collect: async function(player) {
     
-  }
+  },
   expire: function() {
   }
 };
 CandyData.chocolate = {
   collect: async function(player) {
     
-  }
+  },
   expire: function() {
   }
 };
 CandyData.candied_apple = {
   collect: async function(player) {
     
-  }
+  },
   expire: function() {
   }
 };
 CandyData.blue_candy = {
   collect: async function(player) {
     player.upgradePts++;
-  }
+  },
   expire: function() {
   }
 };
