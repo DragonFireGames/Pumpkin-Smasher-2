@@ -515,10 +515,10 @@ AbilityDisplay.generators = (function() {
       var seconds = 1000 / g.amount;
       var percent = fract(Date.now() / seconds);
       translate(0, -25 * percent + 10);
-      if (percent >= 0.9) {
-        if (g.amount >= 0.8) {
+      if (percent >= 0.85) {
+        if (g.amount >= 1.2) {
           textures.diamondpumpkin.show(percent * 60);
-        } else if (g.amount >= 0.4) {
+        } else if (g.amount >= 0.85) {
           textures.goldpumpkin.show(percent * 60);
         } else {
           textures.pumpkin.show(percent * 60);
@@ -887,6 +887,10 @@ async function loadAssets() {
 
   textures.objective = new FitImage("assets/pumpkins/objective.png");
 
+  // Hats
+  textures.hats = {};
+  textures.hats.santa = new FitImage("assets/hats/santa.png");
+
   for (var i in EntityDisplay) {
     EntityDisplay[i] = EntityDisplay[i]();
   }
@@ -914,6 +918,8 @@ async function loadAssets() {
 
   gui.blur = new FitImage("assets/gui/blur.png");
   gui.blur2 = new FitImage("assets/gui/blur2.png");
+
+  gui.trick_or_treat = new FitImage("assets/candies/trick-or-treat.png");
 
   if (isMobile) await loadGUI();
 }
@@ -1153,8 +1159,10 @@ function draw() {
     for (var i = 0; i < tutorialMsg.length; i++) {
       text(tutorialMsg[i], -103, -12 + 18 * i);
     }
-    format("#ffa500", false, 1, 8, RIGHT);
-    text("ENTER to continue", 145, 33);
+    if (Date.now()-tutorialDate > 1000) {
+      format("#ffa500", false, 1, 8, RIGHT);
+      text("ENTER to continue", 145, 33);
+    }
     // Speaker
     if (tutorialPumpkin) {
       translate(-125, 0);
@@ -1165,7 +1173,8 @@ function draw() {
     }
     pop();
     // Continue
-    if (keyIsDown(13)) {
+    if (keyIsDown(13) && Date.now()-tutorialDate > 1000) {
+      tutorialDate = Date.now();
       tutorialMsg = false;
       socket.emit("continueTutorial");
     }
@@ -1287,6 +1296,19 @@ Displays.game = function() {
       pop();
     }
 
+    // Trick or Treat
+    var time = Date.now()-TrickOrTreatDate;
+    if (time < 5000) {
+      push();
+      format(255, false, 1, 12, CENTER);
+      if (time > 3000) {
+        var opacity = Math.floor((time-3000)/2000*255);
+        fill(255,opacity);
+      }
+      text("Trick or Treat!", 0, wHeight / 2 - 50);
+      pop();
+    }
+
     // Upgrades
     if (upgradeDisplay) {
       push();
@@ -1364,6 +1386,9 @@ Displays.pmgame = function() {
         push();
         scale(36, 36);
         fill(255, 255, 255, 128);
+        if (cam.selA == "generators" && generators[rx+","+ry] && generators[rx+","+ry].amount >= 1.2) {
+          fill(255, 128, 128, 128);
+        }
         rect(rx * 14, ry * 14, 15, 15);
         pop();
       }
@@ -2718,7 +2743,9 @@ socket.on('objective', function(objectiveList) {
   }
 });
 // Events
+var TrickOrTreatDate = 0;
 socket.on('trick-or-treat', function(date) {
+  TrickOrTreatDate = date;
   //alert("Trick or Treat!");
 });
 socket.on('candies', function(packedCandies) {
@@ -2853,8 +2880,10 @@ socket.on('objective_destroyed', function(x, y) {
 });
 var tutorialMsg = false;
 var tutorialPumpkin = false;
-socket.on('tutorialMsg', function(msg, p) {
+var tutorialDate = 0;
+socket.on('tutorialMsg', function(msg, date, p) {
   tutorialMsg = msg;
+  tutorialDate = date;
   tutorialPumpkin = p;
 })
 // Win Conditions
@@ -2986,6 +3015,3 @@ setInterval(()=>{
 },10);
 */
 //setInterval(()=>{socket.emit('smash');},10);
-
-
-
