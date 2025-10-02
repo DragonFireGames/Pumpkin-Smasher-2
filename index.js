@@ -2369,7 +2369,7 @@ AbilityData.fog = {
   cost: 5
 };
 AbilityData.vines = {
-  cost: 7
+  cost: 8
 };
 AbilityData.swarm = {
   cost: 22
