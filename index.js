@@ -626,6 +626,7 @@ class TutorialRoom extends Room {
     this.amount = 1;
     this.freeplay = false;
     this.tutorial();
+    this.healVines = null;
   }
   async tutorial() {
     // Start game
@@ -633,6 +634,11 @@ class TutorialRoom extends Room {
 
     // Place vines
     this.ability("vines",0,0,true);
+    var self = this;
+    this.healVines = setInterval(()=>{
+      if (!self.vines[0]) return;
+      self.vines[0].health = 25;
+    },1000);
 
     await wait(5000);
 
@@ -729,6 +735,9 @@ class TutorialRoom extends Room {
       "Good Luck!",
       ""
     ],Date.now(),false);
+
+    this.vines = [];
+    clearInterval(this.healVines);
 
     this.spawnRandom("wizard",4,true);
     this.spawnRandom("rusher",4,true);
@@ -2570,6 +2579,8 @@ io.sockets.on('connection', function (socket) {
         "Swap by pressing P",
         "Leave with ESCAPE"
       ],Date.now(),false);
+      room.vines = [];
+      clearInterval(room.healVines);
       console.log("Tutorial Room("+room.id+") has activated freeplay!")
     }
     room.freeplay = true;
