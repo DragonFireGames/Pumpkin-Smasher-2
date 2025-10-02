@@ -81,6 +81,7 @@ class Room {
     // Room Details
     this.id = id;
     this.amount = 0;
+    this.pm_amount = 0;
     this.sockets = [];
     this.settings = {
       hidden: false,
@@ -150,25 +151,29 @@ class Room {
     console.log("Batching Pumpkins "+i);
     io.to(this.id).emit('allpumpkins',batch);
     // Candies
-    this.TrickOrTreat();
-    //
-    this.coins = 50;
+    var self = this;
+    setTimeout(()=>{
+      self.TrickOrTreat();
+    },(Math.random()*25+5)*1000);
+    // Init Coins
+    this.coins = 40+10*(this.amount-this.pm_amount);
+    this.coinMult = this.pm_amount;
   }
   async TrickOrTreat() {
-    await wait((Math.random()*60+30)*1000);
     io.to(this.id).emit('trick-or-treat',Date.now());
 
-    this.spawnCandies(1+this.amount);
+    var s = this.amount-this.pm_amount;
+    self.spawnCandies(1+s);
 
     var self = this;
     var buffPM = function() {
       if (Math.random() < 0.15) {
-        self.spawnRandom("wizard",self.amount,true);
-        self.spawnRandom("rusher",self.amount,true);
-        self.spawnRandom("debuffer",Math.round(self.amount/4),true);
+        self.spawnRandom("wizard",1+s,true);
+        self.spawnRandom("rusher",1+s,true);
+        self.spawnRandom("debuffer",1+Math.floor(s/4),true);
       } else if (Math.random() < 0.3) {
-        self.spawnRandom("speeder",self.amount*2,true);
-        self.spawnRandom("monster",self.amount*4,true);
+        self.spawnRandom("speeder",1+s*2,true);
+        self.spawnRandom("monster",2+s*4,true);
       } else if (Math.random() < 0.4) {
         for (var i in self.players) {
           var p = self.players[i];
@@ -180,94 +185,26 @@ class Room {
           self.spawn("nuke",p.x,p.y,true);
         }
       } else if (Math.random() < 0.6) {
-        self.spawnRandom("ghost",2*self.amount,true);
+        self.spawnRandom("ghost",1+2*s,true);
       } else if (Math.random() < 0.7) {
-        self.spawnRandom("catapult",self.amount,true);
+        self.spawnRandom("catapult",1+s,true);
       } else if (Math.random() < 0.8) {
-        for (var i in self.generators) {
-          var g = self.generators[i];
-          self.spawnFrom("brute",2,g.x,g.y,30,true);
+        for (var i = 0; i < self.objectives.length; i++) {
+          var o = self.objectives[i];
+          self.spawnFrom("brute",3,o.x,o.y,30,true);
         }
       } else {
-        self.coins += 5+10*self.amount;
+        self.coins += 5+5*s;
       }
     }
 
     buffPM();
     await wait(5000);
-    buffPM();
+    if (Math.random() < 0.5) buffPM();
     await wait(5000);
-    buffPM();
+    if (Math.random() < 0.5) buffPM();
 
-    /*
-    this.spawnCandies(1+2*this.amount);
-    this.coins += 5+10*this.amount;
-    //
-    if (Math.random() < 0.5) {
-      this.spawnRandom("wizard",this.amount,true);
-      this.spawnRandom("rusher",this.amount,true);
-      this.spawnRandom("debuffer",Math.round(this.amount/4),true);
-    } else {
-      this.spawnRandom("speeder",this.amount*2,true);
-      this.spawnRandom("monster",this.amount*4,true);
-    }
-    //
-    await wait(10*1000);
-    for (var i in this.players) {
-      var p = this.players[i];
-      if (Math.random() < 0.5) continue;
-      this.spawnFrom("monster",5,p.x,p.y,30,true);
-    }
-    //
-    await wait(5*1000);
-    if (Math.random() < 0.4) for (var i in this.players) this.players[i].upgradePts += 1;
-    //
-    await wait(10*1000);
-    if (Math.random() < 0.6) this.spawnRandom("ghost",2*this.amount,true);
-    //
-    await wait(5*1000);
-    if (Math.random() < 0.5) this.coins += 5*this.amount;
-    if (Math.random() < 0.5) this.spawnCandies(this.amount);
-    //
-    await wait(5*1000);
-    for (var i in this.players) {
-      var p = this.players[i];
-      if (Math.random() < 0.3) continue;
-      this.spawn("nuke",p.x,p.y,true);
-    }
-    //
-    await wait(10*1000);
-    if (Math.random() < 0.5) {
-      if (Math.random() < 0.5) {
-        this.spawnRandom("wizard",this.amount,true);
-        this.spawnRandom("rusher",this.amount,true);
-        this.spawnRandom("debuffer",Math.floor(this.amount/4),true);
-      } else {
-        this.spawnRandom("speeder",this.amount*2,true);
-        this.spawnRandom("monster",this.amount*4,true);
-      }
-    }
-    //
-    await wait(5*1000);
-    for (var i in this.players) {
-      var p = this.players[i];
-      if (Math.random() < 0.3) continue;
-      this.spawn("nuke",p.x,p.y,true);
-    }
-    //
-    await wait(10*1000);
-    for (var i in this.generators) {
-      var g = this.generators[i];
-      if (Math.random() < 0.7) continue;
-      this.spawnFrom("brute",2,g.x,g.y,30,true);
-    }
-    //
-    await wait(10*1000);
-    if (Math.random() < 0.8) this.spawnRandom("catapult",this.amount,true);
-    // Wipe Candies
-    //this.candies = {};
-    //io.to(this.id).emit('candies',this.candies);
-    //*/
+    await wait((Math.random()*60+30)*1000);
     this.TrickOrTreat();
   }
   update() {
@@ -406,8 +343,8 @@ class Room {
     this.potentialRoomMap = {}; 
 
     var s = this.amount-this.pm_amount;
-    var regularRooms = 1+s*2;
-    var objectiveRooms = s;
+    var regularRooms = 3+Math.floor(s*2.5);
+    var objectiveRooms = 1+s;
 
     this.potentialRoomMap["0,0"] = 0;
     this.selectRoom(maps["start"]);
@@ -659,10 +596,12 @@ class Room {
       }
     }
   }
-  ability(sel,x,y) {
-    if (this.coins < AbilityData[sel].cost) return;
-    Abilities[sel](x,y,this);
+  ability(sel,x,y,free) {
+    if (this.coins < AbilityData[sel].cost && !free) return;
+    Abilities[sel](x,y,this,free);
+    if (free) return;
     this.coins -= AbilityData[sel].cost;
+    if (this.usedAbility == false) this.usedAbility = true;
   }
   /*loadData(sx,sy,data) {
     for (var x = 0; x < 15; x++) {
@@ -692,13 +631,16 @@ class TutorialRoom extends Room {
     // Start game
     this.start();
 
+    // Place vines
+    this.ability("vines",0,0,true);
+
     await wait(5000);
 
     this.socket.emit('tutorialMsg',[
       "",
       "Oh! A new recruit! Welcome!",
       ""
-    ],false);
+    ],Date.now(),false);
     await this.waitForContinue();
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
@@ -706,7 +648,7 @@ class TutorialRoom extends Room {
       "As you know...",
       "(Insert story here)",
       "...so we smash pumpkins"
-    ],false);
+    ],Date.now(),false);
     await this.waitForContinue();
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
@@ -714,7 +656,7 @@ class TutorialRoom extends Room {
       "WASD or Arrow Keys to move",
       "SPACE to smash!",
       "Now, smash a few pumpkins!"
-    ],false);
+    ],Date.now(),false);
 
     while (this.player.level < 1 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
@@ -723,7 +665,7 @@ class TutorialRoom extends Room {
       "Upgrades Upgrades Upgrades...",
       "Click one of the boxes to upgrade",
       "Choose wisely!"
-    ],false);
+    ],Date.now(),false);
     while (this.player.upgradePts != 0 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
@@ -731,7 +673,7 @@ class TutorialRoom extends Room {
       "",
       "Good choice!",
       ""
-    ],false);
+    ],Date.now(),false);
     await this.waitForContinue();
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
@@ -739,7 +681,7 @@ class TutorialRoom extends Room {
       "Watch out for pumpkin monsters,",
       "they spawn from pumpkins and",
       "they kill you if given the chance."
-    ],false);
+    ],Date.now(),false);
     await this.waitForContinue();
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
@@ -753,13 +695,13 @@ class TutorialRoom extends Room {
         "",
         "Wow, I'm impressed.",
         ""
-      ],false);
+      ],Date.now(),false);
     } else {
       this.socket.emit('tutorialMsg',[
         "YIKES!",
         "Here, let me restore you to ",
         "full health."
-      ],false);
+      ],Date.now(),false);
     }
     await this.waitForContinue();
     if (!ROOM_LIST[this.id] || this.freeplay) return;
@@ -770,7 +712,7 @@ class TutorialRoom extends Room {
       "Now, you see that little orange",
       "arrow to the side of you? That",
       "points to the objectives."
-    ],false);
+    ],Date.now(),false);
     await this.waitForContinue();
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
@@ -778,7 +720,7 @@ class TutorialRoom extends Room {
       "Our goal is to destroy those",
       "objectives before the timer",
       "runs out."
-    ],false);
+    ],Date.now(),false);
     await this.waitForContinue();
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
@@ -786,7 +728,7 @@ class TutorialRoom extends Room {
       "",
       "Good Luck!",
       ""
-    ],false);
+    ],Date.now(),false);
 
     this.spawnRandom("wizard",4,true);
     this.spawnRandom("rusher",4,true);
@@ -803,7 +745,6 @@ class TutorialRoom extends Room {
     while (this.player.x <= 42 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
-    this.coins += 3;
     this.spawn("nuke",this.player.x,this.player.y,true);
 
     while (this.player.x <= 56 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
@@ -813,13 +754,11 @@ class TutorialRoom extends Room {
 
     while (this.player.x <= 62 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
-    this.coins += 3;
     this.spawn("nuke",this.player.x,this.player.y,true);
 
     while (this.player.x <= 70 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
-    this.coins += 3;
     this.spawn("nuke",this.player.x,this.player.y,true);
 
     while (this.player.x <= 98 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
@@ -829,7 +768,7 @@ class TutorialRoom extends Room {
       "Look!",
       "There it is!",
       ""
-    ],false);
+    ],Date.now(),false);
 
     this.spawnFrom("brute",3,105,7,30,true);
 
@@ -846,7 +785,7 @@ class TutorialRoom extends Room {
       "",
       "Good Job!",
       ""
-    ],false);
+    ],Date.now(),false);
     await this.waitForContinue();
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
@@ -854,7 +793,7 @@ class TutorialRoom extends Room {
       "Ack!",
       "You got our objective.",
       ""
-    ],true);
+    ],Date.now(),true);
     await this.waitForContinue();
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
@@ -862,7 +801,7 @@ class TutorialRoom extends Room {
       "Let me show you the power of",
       "the Pumpkin Masters.",
       ""
-    ],true);
+    ],Date.now(),true);
     await this.waitForContinue();
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
@@ -870,7 +809,7 @@ class TutorialRoom extends Room {
       "No!",
       "Don't listen to him!",
       ""
-    ],false);
+    ],Date.now(),false);
     await this.waitForContinue();
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
@@ -882,7 +821,7 @@ class TutorialRoom extends Room {
       "So, hello there.",
       "Can't you just feel the power",
       "coursing through your veins?"
-    ],true);
+    ],Date.now(),true);
     await this.waitForContinue();
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
@@ -890,7 +829,7 @@ class TutorialRoom extends Room {
       "You can't?!",
       "Oh, well...",
       "Let me show you the power!"
-    ],true);
+    ],Date.now(),true);
     await this.waitForContinue();
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
@@ -898,7 +837,7 @@ class TutorialRoom extends Room {
       "First, you can move by",
       "dragging your mouse and you",
       "can zoom out by scrolling"
-    ],true);
+    ],Date.now(),true);
     await this.waitForContinue();
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
@@ -906,7 +845,7 @@ class TutorialRoom extends Room {
       "Why dont you try placing a few",
       "entities?",
       "Click an entity then click a pumpkin."
-    ],true);
+    ],Date.now(),true);
 
      while (this.entities.length < 5 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
@@ -915,7 +854,7 @@ class TutorialRoom extends Room {
       "See! It's so easy!",
       "You will use these guys to protect",
       "the objective."
-    ],true);
+    ],Date.now(),true);
     await this.waitForContinue();
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
@@ -923,7 +862,7 @@ class TutorialRoom extends Room {
       "So, every second you get new",
       "pumpkin coins (upper left hand",
       "corner of your screen)"
-    ],true);
+    ],Date.now(),true);
     await this.waitForContinue();
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
@@ -931,7 +870,7 @@ class TutorialRoom extends Room {
       "They allow you to purchase",
       "abilities and entities to defend",
       "the objectives until time runs out."
-    ],true);
+    ],Date.now(),true);
     await this.waitForContinue();
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
@@ -939,7 +878,7 @@ class TutorialRoom extends Room {
       "Now, lets try an ability.",
       "Select an ability above the ",
       "entities. Then, click a room."
-    ],true);
+    ],Date.now(),true);
 
     this.usedAbility = false
     while (!this.usedAbility && this.entities&& ROOM_LIST[this.id]) await wait(100);
@@ -949,7 +888,7 @@ class TutorialRoom extends Room {
       "Nice.",
       "Now, I think you're ready to",
       "play in an actual match."
-    ],true);
+    ],Date.now(),true);
     await this.waitForContinue();
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
@@ -957,7 +896,7 @@ class TutorialRoom extends Room {
       "Yeah, I do too.",
       "Press ESCAPE to leave the",
       "tutorial."
-    ],false);
+    ],Date.now(),false);
     await this.waitForContinue();
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
@@ -965,7 +904,7 @@ class TutorialRoom extends Room {
       "Or stay, I guess...",
       "Press P to swap between skeleton",
       "and pumpkin master, have fun!"
-    ],false);
+    ],Date.now(),false);
     this.freeplay = true;
     console.log("Tutorial Room("+this.id+") has finished and activated freeplay!")
   }
@@ -976,7 +915,7 @@ class TutorialRoom extends Room {
         "Ouch!",
         "Dying is bad.",
         ""
-      ],false);
+      ],Date.now(),false);
     }
     this.player.preupdate();
     // Game Update
@@ -993,12 +932,12 @@ class TutorialRoom extends Room {
         "Times Up!",
         "In a real game, you would've",
         "just won, but here I'll reset it."
-      ],true);
+      ],Date.now(),true);
       else this.socket.emit('tutorialMsg',[
         "Times Up!",
         "In a real game, you would've",
         "just lost, but here I'll reset it."
-      ],false);
+      ],Date.now(),false);
       this.socket.emit('setTime',Date.now());
       this.startTime = Date.now();
     }
@@ -1054,7 +993,6 @@ class TutorialRoom extends Room {
     this.socket.emit('tilemap', this.tilemap, this.roomMap, this.maxWidth, this.maxHeight, this.minTileX, this.minTileY);
   }
   selectRoom(room,objective) {  
-
     const x = this.potentialRoomMap;
     const y = 0;
 
@@ -1081,12 +1019,6 @@ class TutorialRoom extends Room {
     if (pendingTutorials[this.id]) delete pendingTutorials[this.id];
     delete ROOM_LIST[this.id];
     console.log("Deleted Tutorial Room("+this.id+")");
-  }
-  ability(sel,x,y) {
-    if (this.coins < AbilityData[sel].cost) return;
-    Abilities[sel](x,y,this);
-    this.coins -= AbilityData[sel].cost;
-    if (this.usedAbility == false) this.usedAbility = true;
   }
   swap(quick) {
     this.startTime = Date.now();
@@ -2295,7 +2227,7 @@ Abilities.fog = async function(rx,ry,room) {
     room.fogs.splice(index,1);
   }
 }
-Abilities.vines = async function(rx,ry,room) {
+Abilities.vines = async function(rx,ry,room,free) {
   rx = rx * 14;
   ry = ry * 14;
   var v = [];
@@ -2320,6 +2252,8 @@ Abilities.vines = async function(rx,ry,room) {
     room.vines.push(v4); v.push(v4);
   }
 
+  if (free) return;
+
   await wait(60*1000);
   for (var i = 0; i < v.length; i++) {
     const index = room.vines.indexOf(v[i]);
@@ -2332,7 +2266,7 @@ Abilities.newVine = function(x,y,orient) {
     x:x,
     y:y,
     orient:orient,
-    health:20
+    health:25
   };
   if (orient == "horiz") {
     v.bbox = {
@@ -2391,10 +2325,13 @@ Abilities.generators = async function(rx,ry,room) {
   ry = ry * 14;
 
   var oldgen = room.generators[rx+","+ry];
+  if (oldgen.amount >= 1.2) {
+    room.coins += AbilityData.generators.cost;
+  }
   if (oldgen) {
-    oldgen.amount += 0.1;
-    oldgen.maxhealth += 5;
-    oldgen.health += 5;
+    oldgen.amount += 0.35;
+    oldgen.maxhealth += 15;
+    oldgen.health += 15;
     //oldgen.maxhealth += 5;
     //oldgen.health = oldgen.maxhealth;
     return;
@@ -2403,9 +2340,9 @@ Abilities.generators = async function(rx,ry,room) {
   const generator = {
     x:rx+7.5,
     y:ry+7.5,
-    amount: 0.2,
-    health:25,
-    maxhealth:25
+    amount:0.5,
+    health:35,
+    maxhealth:35,
   }
   room.generators[rx+","+ry] = generator;
 
@@ -2427,10 +2364,10 @@ AbilityData.swarm = {
   cost: 20
 };
 AbilityData.shield = {
-  cost: 70
+  cost: 85
 };
 AbilityData.generators = {
-  cost: 8
+  cost: 10
 };
 
 // Candies
@@ -2441,8 +2378,7 @@ CandyData.candy_corn = {
   collect: function(player) {
     player.score += 50;
   },
-  expire: function() {
-  }
+  expire: async function(player) {},
 };
 CandyData.smarties = {
   duration: 20,
@@ -2458,53 +2394,46 @@ CandyData.peppermint = {
   collect: async function(player,room) {
     this.startTime += 15 * 1000;
   },
-  expire: function() {
-  }
+  expire: async function(player) {},
 };
 CandyData.lolipop = {
-  collect: async function(player) {
-    
-  },
-  expire: function() {
-  }
+  duration: 30,
+  collect: async function(player) {},
+  expire: async function(player) {},
 };
 CandyData.hot_tamale = {
-  collect: async function(player) {
-    
-  },
-  expire: function() {
-  }
+  duration: 30,
+  collect: async function(player) {},
+  expire: async function(player) {},
 };
 CandyData.ghost_chew = {
-  collect: async function(player) {
-    
-  },
-  expire: function() {
-  }
+  duration: 30,
+  collect: async function(player) {},
+  expire: async function(player) {},
 };
 CandyData.chocolate = {
+  duration: 20,
   collect: async function(player) {
-    
+    player.axelength += 1;
   },
-  expire: function() {
-  }
+  expire: async function(player) {
+    player.axelength -= 1;
+  },
 };
 CandyData.candied_apple = {
   collect: async function(player) {
-    
+    player.health += 3;
   },
-  expire: function() {
-  }
+  expire: async function(player) {},
 };
 CandyData.blue_candy = {
   collect: async function(player) {
     player.upgradePts++;
   },
-  expire: function() {
-  }
+  expire: async function(player) {},
 };
 function RandomCandy() {
-  return randomValueArray(["candy_corn","smarties","peppermint","blue_candy"]);
+  return weightedRandom(0,["candy_corn","smarties","peppermint","blue_candy"],[0.5,0.2,0.2,0.1]);
 }
 
 // --------
@@ -2640,7 +2569,7 @@ io.sockets.on('connection', function (socket) {
         "Entering freeplay!",
         "Swap by pressing P",
         "Leave with ESCAPE"
-      ],false);
+      ],Date.now(),false);
       console.log("Tutorial Room("+room.id+") has activated freeplay!")
     }
     room.freeplay = true;
@@ -2742,7 +2671,7 @@ async function start(room) {
   const time = Date.now();
 
   if (queue[room]) delete queue[room];
-  game.pm_amount = Math.floor(game.amount/6)+1
+  game.pm_amount = Math.floor(game.amount/6)+1;
   game.start(time);
 
   console.log("Room ("+room+") has started!");
