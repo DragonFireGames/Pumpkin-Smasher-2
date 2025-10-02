@@ -1900,10 +1900,10 @@ function show() {
     if (vines[i].health <= 0) continue;
     push();
     translate(vines[i].x, vines[i].y);
-    //var alpha = lerp(128,255,vines[i].health/20);
+    //var alpha = lerp(128,255,vines[i].health/25);
     //tint(255,255,255,floor(alpha));
     AbilityDisplay.vines[vines[i].orient]();
-    healthBar(40, 14, vines[i].health / 20);
+    healthBar(40, 14, vines[i].health / 25);
     pop();
   }
   if (shield) {
