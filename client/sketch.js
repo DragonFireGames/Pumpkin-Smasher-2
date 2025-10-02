@@ -2151,6 +2151,7 @@ async function exit() {
   pumpkins = {};
   objectives = [];
   entities = [];
+  candies = [];
   cam = {};
   timer = 0;
   startTime = 0;
