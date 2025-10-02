@@ -2439,6 +2439,8 @@ CandyData.candy_corn = {
   collect: function(player) {
     player.score += 50;
   },
+  expire: function() {
+  }
 };
 CandyData.smarties = {
   duration: 20,
@@ -2446,7 +2448,7 @@ CandyData.smarties = {
   collect: function(player) {
     player.immune = true;
   },
-  expire: function() {
+  expire: function(player) {
     player.immune = false;
   }
 };
@@ -2454,35 +2456,49 @@ CandyData.peppermint = {
   collect: async function(player,room) {
     this.startTime += 15 * 1000;
   },
+  expire: function() {
+  }
 };
 CandyData.lolipop = {
   collect: async function(player) {
     
   },
+  expire: function() {
+  }
 };
 CandyData.hot_tamale = {
   collect: async function(player) {
     
   },
+  expire: function() {
+  }
 };
 CandyData.ghost_chew = {
   collect: async function(player) {
     
+  }
+  expire: function() {
   }
 };
 CandyData.chocolate = {
   collect: async function(player) {
     
   }
+  expire: function() {
+  }
 };
 CandyData.candied_apple = {
   collect: async function(player) {
     
   }
+  expire: function() {
+  }
 };
 CandyData.blue_candy = {
   collect: async function(player) {
     player.upgradePts++;
+  }
+  expire: function() {
   }
 };
 function RandomCandy() {
