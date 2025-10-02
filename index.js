@@ -1305,7 +1305,7 @@ class Player {
 
     var candy = CandyData[this.activeCandy];
     if (candy && candy.loseonswing) {
-      candy.expire(player,room);
+      candy.expire(this,room);
       this.activeCandy = false;
     }
 
@@ -1445,10 +1445,11 @@ class Player {
     //socket.emit('swing',this.id)
   }
   damage(amount, dealer) {
+    const room = ROOM_LIST[this.room];
     if (this.immune) return;
     var candy = CandyData[this.activeCandy];
     if (candy && candy.loseondamaged) {
-      candy.expire(player,room);
+      candy.expire(this,room);
       this.activeCandy = false;
     }
     if (this.disabled) amount *= this.maxhealth / healthDefault;
