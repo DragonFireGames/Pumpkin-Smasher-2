@@ -625,8 +625,8 @@ class TutorialRoom extends Room {
     this.state = "tutorial";
     this.amount = 1;
     this.freeplay = false;
-    this.tutorial();
     this.healVines = null;
+    this.tutorial();
   }
   async tutorial() {
     // Start game
