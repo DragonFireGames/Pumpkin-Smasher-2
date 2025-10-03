@@ -2366,19 +2366,24 @@ Abilities.generators = async function(rx,ry,room) {
 
 var AbilityData = {};
 AbilityData.fog = {
-  cost: 5
+  cost: 5,
+  cooldown: 1,
 };
 AbilityData.vines = {
-  cost: 8
+  cost: 8,
+  cooldown: 1,
 };
 AbilityData.swarm = {
-  cost: 22
+  cost: 22,
+  cooldown: 10 * 1000,
 };
 AbilityData.shield = {
-  cost: 85
+  cost: 75,
+  cooldown: 90 * 1000,
 };
 AbilityData.generators = {
-  cost: 18
+  cost: 18,
+  cooldown: 1,
 };
 
 // Candies
