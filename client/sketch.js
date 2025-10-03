@@ -460,7 +460,7 @@ AbilityDisplay.vines = (function() {
   var horizVines = new FitImage("assets/abilities/vines/horizontal.png");
   var vertVines = new FitImage("assets/abilities/vines/vertical.png");
   return {
-    cost: 7,
+    cost: 8,
     cooldown: 1,
     wait: false,
     icon: function() {
@@ -477,7 +477,7 @@ AbilityDisplay.vines = (function() {
 AbilityDisplay.swarm = (function() {
   var icon = new FitImage("assets/abilities/swarm/icon.png");
   return {
-    cost: 20,
+    cost: 22,
     cooldown: 10 * 1000,
     wait: false,
     icon: function() {
@@ -489,7 +489,7 @@ AbilityDisplay.shield = (function() {
   var icon = new FitImage("assets/abilities/shield/icon.png");
   var shieldImg = new Animation("assets/abilities/shield/shield.png", 3, 8);
   return {
-    cost: 70,
+    cost: 75,
     cooldown: 90 * 1000,
     wait: false,
     icon: function() {
@@ -504,7 +504,7 @@ AbilityDisplay.generators = (function() {
   var icon = new FitImage("assets/abilities/generator/icon.png");
   var generatorImg = new FitImage("assets/abilities/generator/generator.png");
   return {
-    cost: 8,
+    cost: 18,
     cooldown: 1,
     wait: false,
     icon: function() {
@@ -1386,7 +1386,8 @@ Displays.pmgame = function() {
         push();
         scale(36, 36);
         fill(255, 255, 255, 128);
-        if (cam.selA == "generators" && generators[rx+","+ry] && generators[rx+","+ry].amount >= 1.2) {
+        var oldgen = generators[(rx*14)+","+(ry*14)];
+        if (cam.selA == "generators" && oldgen && oldgen.amount >= 1.2) {
           fill(255, 128, 128, 128);
         }
         rect(rx * 14, ry * 14, 15, 15);
