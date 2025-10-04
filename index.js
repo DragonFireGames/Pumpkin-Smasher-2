@@ -1371,7 +1371,7 @@ class Player {
       var dy = v.y-this.y;
       if (dx * dx + dy * dy > 2.25) continue;
       room.vines[i].health--;
-      if (room.vines[i].health <= 0) {
+      if (room.vines[i].health <= 0 || Date.now()-room.vines[i].spawnedAt < 1000) {
         room.vines.splice(i,1);
       }
     }
@@ -2264,19 +2264,20 @@ Abilities.vines = async function(rx,ry,room,free) {
 
   if (free) return;
 
-  await wait(60*1000);
+  /*await wait(60*1000);
   for (var i = 0; i < v.length; i++) {
     const index = room.vines.indexOf(v[i]);
     if (index == -1) continue;
     room.vines.splice(index,1);
-  }
+  }*/
 }
 Abilities.newVine = function(x,y,orient) {
   var v = {
     x:x,
     y:y,
     orient:orient,
-    health:25
+    health:25,
+    spawnedAt:Date.now()
   };
   if (orient == "horiz") {
     v.bbox = {
@@ -2341,8 +2342,8 @@ Abilities.generators = async function(rx,ry,room) {
   }
   if (oldgen) {
     oldgen.amount += 0.35;
-    oldgen.maxhealth += 15;
-    oldgen.health += 15;
+    oldgen.maxhealth += 10;
+    oldgen.health += 10;
     //oldgen.maxhealth += 5;
     //oldgen.health = oldgen.maxhealth;
     return;
@@ -2352,8 +2353,8 @@ Abilities.generators = async function(rx,ry,room) {
     x:rx+7.5,
     y:ry+7.5,
     amount:0.5,
-    health:35,
-    maxhealth:35,
+    health:25,
+    maxhealth:25,
   }
   room.generators[rx+","+ry] = generator;
 
