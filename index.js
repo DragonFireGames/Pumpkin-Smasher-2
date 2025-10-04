@@ -1461,6 +1461,13 @@ class Player {
   }
   async death() {
     SOCKET_LIST[this.socket].emit('dead');
+    // Candy Reset
+    const room = ROOM_LIST[this.room];
+    var candy = CandyData[this.activeCandy];
+    if (candy) {
+      candy.expire(this,room);
+      this.activeCandy = false;
+    }
     // Countdown
     for (this.countdown = 10; this.countdown >= 1; this.countdown--) {
       await wait(1000);
@@ -2420,8 +2427,12 @@ CandyData.lolipop = {
 };
 CandyData.hot_tamale = {
   duration: 30,
-  collect: async function(player) {},
-  expire: async function(player) {},
+  collect: async function(player) {
+    player.smashInt = setInterval(()=>{player.smash();},100);
+  },
+  expire: async function(player) {
+    clearInterval(player.smashInt);
+  },
 };
 CandyData.ghost_chew = {
   duration: 30,
@@ -2450,7 +2461,7 @@ CandyData.blue_candy = {
   expire: async function(player) {},
 };
 function RandomCandy() {
-  return weightedRandom(0,["candy_corn","smarties","peppermint","blue_candy"],[0.5,0.2,0.2,0.1]);
+  return weightedRandom(0,["candy_corn","smarties","peppermint","blue_candy","candied_apple","hot_tamale","ghost_chew","chocolate"],[0.25,0.2,0.2,0.1,0.1,0.05,0.05,0.05]);
 }
 
 // --------
