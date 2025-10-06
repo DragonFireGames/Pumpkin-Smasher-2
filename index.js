@@ -261,16 +261,6 @@ class Room {
     io.to(this.id).emit('entities',entities,Date.now());
     // Ability Update
     io.to(this.id).emit('abilities',this.fogs,this.vines,this.shield,this.generators,Date.now());
-    // Objectives
-    for (var i = this.objectives.length-1; i >= 0; i--) {
-      var o = this.objectives[i];
-      if (o.health <= 0) {
-        this.coinMult += 0.5;
-        this.objectives.splice(i,1);
-        this.startTime += 60 * 1000;
-        io.to(this.id).emit('objective_destroyed', o.x, o.y);
-      }
-    }
   }
   addSocket(socket) {
     this.sockets.push(socket.id);
@@ -1310,11 +1300,11 @@ class Player {
     var ufy = this.y-0.5;
     var check = function(x,y) {
       if (room.pumpkins[x+","+y]) {
-        this.gamestats.Smashed++;
+        self.gamestats.Smashed++;
         switch (room.pumpkins[x+","+y].type) {
           case 0: self.addScore(1); break;
-          case 1: self.addScore(2); this.gamestats.SmashedGold++; break;
-          case 2: self.addScore(5); this.gamestats.SmashedDiamond++; break;
+          case 1: self.addScore(2); self.gamestats.SmashedGold++; break;
+          case 2: self.addScore(5); self.gamestats.SmashedDiamond++; break;
         }
         room.destroyPumpkin(x,y);
       }
@@ -1401,14 +1391,21 @@ class Player {
     }
     // Check for objectives
     else {
-      for (var i = 0; i < room.objectives.length; i++) {
-        var dx = room.objectives[i].x-this.x;
-        var dy = room.objectives[i].y-this.y;
+      for (var i = room.objectives.length - 1; i >= 0; i--) {
+        var o = room.objectives[i];
+        var dx = o.x-this.x;
+        var dy = o.y-this.y;
         if (dx * dx + dy * dy < 3.2*3.2) {
           this.addScore(0.2);
-          room.objectives[i].health--;
+          o.health--;
           this.gamestats.ObjectiveDamage++;
-          if (room.objectives[i].health <= 0) this.gamestats.ObjectivesDestroyed++;
+          if (o.health <= 0) {
+            this.gamestats.ObjectivesDestroyed++;
+            room.coinMult += 0.5;
+            room.objectives.splice(i,1);
+            room.startTime += 60 * 1000;
+            io.to(room.id).emit('objective_destroyed', o.x, o.y);
+          }
           io.to(room.id).emit('objective',room.objectives);
         }
       }
