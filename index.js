@@ -112,19 +112,21 @@ class Room {
     // Candies
     this.candies = {};
     // Objectives
+    this.objectiveRooms = 0;
     this.objectives = [];
     // Pumpkin Master
     this.pumpkin_masters = [];
     this.skeletons = [];
-    this.coins = 0;
+    this.coins = {};
     this.coinMult = 1;
-
+    
     console.log("Created Room("+id+")");
   }
   async start(time) {
     this.disconnectedPlayers = {};
     this.state = "game";
     this.startTime = time + 5000;
+    this.trueStartTime = time + 5000;
     this.generateMap();
     io.to(this.id).emit('objective',this.objectives);
     for (var y in this.tilemap) {
@@ -150,59 +152,49 @@ class Room {
     }
     console.log("Batching Pumpkins "+i);
     io.to(this.id).emit('allpumpkins',batch);
-    // Candies
-    var self = this;
-    setTimeout(()=>{
-      self.TrickOrTreat();
-    },(Math.random()*25+5)*1000);
-    // Init Coins
-    this.coins = 20+10*(this.amount-this.pm_amount);
-    this.coinMult = this.pm_amount;
   }
   async TrickOrTreat() {
     io.to(this.id).emit('trick-or-treat',Date.now());
 
     var s = this.amount-this.pm_amount;
-    this.spawnCandies(1+s);
+    this.Candies(1+s);
 
     var self = this;
     var buffPM = function() {
       if (Math.random() < 0.15) {
-        self.spawnRandom("wizard",1+s,true);
-        self.spawnRandom("rusher",1+s,true);
-        self.spawnRandom("debuffer",1+Math.floor(s/4),true);
+        self.spawnRandom("wizard",1+s);
+        self.spawnRandom("rusher",1+s);
+        self.spawnRandom("debuffer",1+Math.floor(s/4));
       } else if (Math.random() < 0.3) {
-        self.spawnRandom("speeder",1+s*2,true);
-        self.spawnRandom("monster",2+s*4,true);
+        self.spawnRandom("speeder",1+s*2);
+        self.spawnRandom("monster",2+s*4);
       } else if (Math.random() < 0.4) {
-        for (var i in self.players) {
-          var p = self.players[i];
-          self.spawnFrom("monster",5,p.x,p.y,30,true);
+        for (var i = 0; i < self.skeletons.length; i++) {
+          var p = self.players[self.skeletons[i]];
+          self.spawnFrom("monster",5,p.x,p.y,30);
         }
       } else if (Math.random() < 0.5) {
-        for (var i in self.players) {
-          var p = self.players[i];
-          self.spawn("nuke",p.x,p.y,true);
+        for (var i = 0; i < self.skeletons.length; i++) {
+          var p = self.players[self.skeletons[i]];
+          self.spawn("nuke",p.x,p.y);
         }
       } else if (Math.random() < 0.6) {
-        self.spawnRandom("ghost",1+2*s,true);
+        self.spawnRandom("ghost",1+2*s);
       } else if (Math.random() < 0.7) {
-        self.spawnRandom("catapult",1+s,true);
+        self.spawnRandom("catapult",1+s);
       } else if (Math.random() < 0.8) {
         for (var i = 0; i < self.objectives.length; i++) {
           var o = self.objectives[i];
-          self.spawnFrom("brute",3,o.x,o.y,30,true);
+          self.spawnFrom("brute",3,o.x,o.y,30);
         }
       } else {
-        self.coins += 5+5*s;
+        for (var i in self.coins) self.coins[i] += 5+5*s;
       }
     }
 
     buffPM();
     await wait(5000);
-    if (Math.random() < 0.5) buffPM();
-    await wait(5000);
-    if (Math.random() < 0.5) buffPM();
+    buffPM();
 
     await wait((Math.random()*60+30)*1000);
     this.TrickOrTreat();
@@ -230,12 +222,18 @@ class Room {
     // Win conditions
     if (this.objectives.length == 0) {
       this.state = "ended";
-      io.to(this.id).emit('skeleton_win');
+      this.broadcastWin('skeleton_win');
     }
     const timer = gameLength - Math.floor((Date.now() - this.startTime) / 1000);
     if (timer <= 0) {
       this.state = "ended";
-      io.to(this.id).emit('pumpkin_master_win');
+      this.broadcastWin('pumpkin_master_win');
+    }
+  }
+  broadcastWin(win) {
+    for (var i in this.players) {
+      var p = this.players[i];
+      SOCKET_LIST[p.socket].emit(win,p.generateStats(this));
     }
   }
   gameUpdate() {
@@ -281,8 +279,7 @@ class Room {
     this.players[socket.id] = player;
     client.player = player;
     if (client.name != "") player.name = client.name;
-    else player.name = randomValueArray(["Player","Bot","Random","Nobody","Default","Noob"])
-
+    else player.name = randomValueArray(["Player","Bot","Random","Nobody","Default","Noob"]);
     this.amount++;
     io.to(this.id).emit('amount',this.amount);
   }
@@ -344,7 +341,7 @@ class Room {
 
     var s = this.amount-this.pm_amount;
     var regularRooms = 3+Math.floor(s*2.5);
-    var objectiveRooms = 1+s;
+    this.objectiveRooms = 1+s;
 
     this.potentialRoomMap["0,0"] = 0;
     this.selectRoom(maps["start"]);
@@ -352,7 +349,7 @@ class Room {
       // Select a potential room
       this.selectRoom(randomValue(maps.rooms),false);
     }
-    for (var i = 0; i < objectiveRooms; i++) {
+    for (var i = 0; i < this.objectiveRooms; i++) {
       // Select a potential objective room
       this.selectRoom(randomValue(maps.objective),true);
     }
@@ -484,6 +481,7 @@ class Room {
     io.to(this.id).emit('candies',this.candies);
     player.activeCandy = c.type;
     var candy = CandyData[c.type];
+    player.gamestats.CandiesCollected[c.type]++;
     candy.collect(player,this,tx,ty);
     if (candy.duration) {
       player.candyDuration = Date.now() + candy.duration*1000;
@@ -547,35 +545,36 @@ class Room {
     delete this.pumpkins[x+","+y];
     this.growPumpkin(true);
   }
-  spawn(sel,x,y,free) {
+  spawn(sel,x,y,spawnedBy,condition) {
     if (!ROOM_LIST[this.id]) return false;
     x = Math.floor(x);
     y = Math.floor(y);
-    if (!free && this.coins < EntityData[sel].cost) return;
+    if (typeof condition == "function" && !condition(x,y,sel)) return;
+    if (spawnedBy && room.coins[spawnedBy] < EntityData[sel].cost) return;
     if (!this.tilemap[y] || this.tilemap[y][x] != 0) return;
     if (EntityData[sel].pumpkin) {
       if (!this.pumpkins[x+","+y]) return;
       this.destroyPumpkin(x,y);
     }
     var e = new Entities[sel](x+0.5,y+0.5,this.id);
-    if (free) return true;
-    this.coins -= EntityData[sel].cost;
-    return true;
+    if (!spawnedBy) return e;
+    room.coins[spawnedBy] -= EntityData[sel].cost;
+    return e;
   }
-  async spawnFrom(sel,amount,sx,sy,delay,free) {
+  async spawnFrom(sel,amount,sx,sy,delay,spawnedBy,condition) {
     sx = Math.floor(sx);
     sy = Math.floor(sy);
     var dir = 0;
     var turns = 0;
-    var spawned = 0;
-    this.coins += EntityData[sel].cost * amount;
+    var spawned = [];
     while (true) {
       turns++;
       for (var i = 0; i < Math.ceil(turns/2); i++) {
         if (delay) await wait(delay);
-        if (this.spawn(sel,sx,sy,free)) {
-          spawned++;
-          if (spawned >= amount) return;
+        var e = this.spawn(sel,sx,sy,spawnedBy,condition);
+        if (e) {
+          spawned.push(e);
+          if (spawned.length >= amount) return spawned;
         }
         sx += Math.round(Math.cos(dir));
         sy += Math.round(Math.sin(dir));
@@ -583,24 +582,24 @@ class Room {
       dir += Math.PI / 2;
     }
   }
-  async spawnRandom(sel,amount,free) {
-    this.coins += EntityData[sel].cost * amount;
-    var spawned = 0;
+  async spawnRandom(sel,amount,spawnedBy,condition) {
+    var spawned = [];
     while (true) {
       await wait(30);
       var rx = Math.floor((this.maxWidth-14)*Math.random())+14;
       var ry = Math.floor(this.maxHeight*Math.random());
-      if (this.spawn(sel,rx,ry,free)) {
-        spawned++;
-        if (spawned >= amount) return;
+      var e = this.spawn(sel,sx,sy,spawnedBy,condition);
+      if (e) {
+        spawned.push(e);
+        if (spawned.length >= amount) return spawned;
       }
     }
   }
-  ability(sel,x,y,free) {
-    if (this.coins < AbilityData[sel].cost && !free) return;
-    Abilities[sel](x,y,this,free);
-    if (free) return;
-    this.coins -= AbilityData[sel].cost;
+  ability(sel,x,y,spawnedBy) {
+    if (spawnedBy && room.coins[spawnedBy] < AbilityData[sel].cost) return;
+    Abilities[sel](x,y,this,spawnedBy);
+    if (!spawnedBy) return;
+    room.coins[spawnedBy] -= AbilityData[sel].cost;
     if (this.usedAbility == false) this.usedAbility = true;
   }
   /*loadData(sx,sy,data) {
@@ -633,7 +632,7 @@ class TutorialRoom extends Room {
     this.start();
 
     // Place vines
-    this.ability("vines",0,0,true);
+    this.ability("vines",0,0,null);
     var self = this;
     this.healVines = setInterval(()=>{
       if (!self.vines[0]) return;
@@ -691,8 +690,7 @@ class TutorialRoom extends Room {
     await this.waitForContinue();
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
-    await this.spawnFrom("monster",5,this.player.x,this.player.y,30,true);
-    clearInterval(this.healVines);
+    await this.spawnFrom("monster",5,this.player.x,this.player.y,30,null,(x,y)=>x<14);
     
     while (this.entities.length > 0 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
@@ -738,37 +736,40 @@ class TutorialRoom extends Room {
     ],Date.now(),false);
 
     this.vines = [];
+    clearInterval(this.healVines);
 
-    this.spawnRandom("wizard",4,true);
-    this.spawnRandom("rusher",4,true);
-    this.spawnRandom("speeder",4,true);
-    this.spawnRandom("monster",8,true);
-    this.spawnRandom("catapult",2,true);
-    this.spawnRandom("debuffer",1,true);
+    this.spawnCandies(5);
+
+    this.spawnRandom("wizard",4);
+    this.spawnRandom("rusher",4);
+    this.spawnRandom("speeder",4);
+    this.spawnRandom("monster",8);
+    this.spawnRandom("catapult",2);
+    this.spawnRandom("debuffer",1);
 
     while (this.player.x <= 28 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
-    this.spawnFrom("monster",5,this.player.x,this.player.y,30,true);
+    this.spawnFrom("monster",5,this.player.x,this.player.y,30);
 
     while (this.player.x <= 42 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
-    this.spawn("nuke",this.player.x,this.player.y,true);
+    this.spawn("nuke",this.player.x,this.player.y);
 
     while (this.player.x <= 56 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
-    this.spawnRandom("ghost",10,true);
+    this.spawnRandom("ghost",10);
 
     while (this.player.x <= 62 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
-    this.spawn("nuke",this.player.x,this.player.y,true);
+    this.spawn("nuke",this.player.x,this.player.y);
 
     while (this.player.x <= 70 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
-    this.spawn("nuke",this.player.x,this.player.y,true);
+    this.spawn("nuke",this.player.x,this.player.y);
 
     while (this.player.x <= 98 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
@@ -779,7 +780,7 @@ class TutorialRoom extends Room {
       ""
     ],Date.now(),false);
 
-    this.spawnFrom("brute",3,105,7,30,true);
+    this.spawnFrom("brute",3,105,7,30);
 
     while (this.objectives.length > 0 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
@@ -947,8 +948,8 @@ class TutorialRoom extends Room {
         "In a real game, you would've",
         "just lost, but here I'll reset it."
       ],Date.now(),false);
-      this.socket.emit('setTime',Date.now());
       this.startTime = Date.now();
+      this.socket.emit('setTime',this.startTime);
     }
   }
   start() {
@@ -970,9 +971,6 @@ class TutorialRoom extends Room {
       batch1.push(this.growPumpkin(false));
     }
     this.socket.emit('allpumpkins',batch1);
-
-    // Candies
-    this.spawnCandies(3);
 
     this.startTime = Date.now();
     this.socket.emit('start', Date.now());
@@ -1065,11 +1063,11 @@ class TutorialRoom extends Room {
           health:100,
           x: this.maxWidth-15/2,
           y: 15/2
-        }
+        };
         this.objectives.push(o);
         this.socket.emit('objective',this.objectives);
       }
-      if (this.freeplay) this.coins = 500;
+      if (this.freeplay) this.coins[this.id] = 500;
       else console.log("Tutorial Room ("+this.id+") starting Pumpkin Master");
     }
   }
@@ -1138,65 +1136,43 @@ class Player {
     this.activeCandy = false;
     this.candyDuration = 0;
 
+    this.hat = "santa";
+
     this.name = "";
-    /*
     this.gamestats = {
       // Skeleton
       Smashed: 0,
       SmashedGold: 0,
       SmashedDiamond: 0,
-      Upgraded: 0,
-      Upgrade: {
-        health: 0,
-        axerange: 0,
-        speed: 0
-      },
-      KilledMonsters: 0,
-      Killed: {
-        monster: 0,
-        ghost: 0,
-        rusher: 0,
-        wizard: 0,
-        projectile: 0,
-        brute: 0,
-        catapult: 0,
-        debuffer: 0,
-      },
+      EntitiesKilled: {},
       Deaths: 0,
+      ObjectiveDamage: 0,
       ObjectivesDestroyed: 0,
+      AbilityDamage: {},
+      AbilitiesDestroyed: {},
+      CandiesCollected: {},
       // Pumpkin Master
-      KilledSkeletons: 0,
-      KilledSkeletonsWith: {
-        monster: 0,
-        ghost: 0,
-        nuke: 0,
-        rusher: 0,
-        wizard: 0,
-        brute: 0,
-        catapult: 0,
-        debuffer: 0,
-      },
-      SpawnedMonsters: 0,
-      Spawned: {
-        monster: 0,
-        ghost: 0,
-        nuke: 0,
-        rusher: 0,
-        wizard: 0,
-        brute: 0,
-        catapult: 0,
-        debuffer: 0,
-      },
-      UsedAbilities: 0,
-      Used: {
-        fog: 0,
-        vines: 0,
-        swarm: 0,
-        shield: 0,
-        generators: 0,
-      }
+      DamagedSkeletonsWith: {},
+      KilledSkeletonsWith: {},
+      EntitiesSpawned: {},
+      AbilitiesUsed: {},
+      CoinsGenerated: 0,
+    };
+    for (var t in EntityData) {
+      this.gamestats.EntitiesKilled[t] = 0;
+      this.gamestats.DamagedSkeletonsWith[t] = 0;
+      this.gamestats.KilledSkeletonsWith[t] = 0;
+      this.gamestats.EntitiesSpawned[t] = 0;
     }
-    */
+    for (var t in AbilityData) {
+      this.gamestats.AbilityDamage[t] = 0;
+      this.gamestats.AbilitiesDestroyed[t] = 0;
+      this.gamestats.AbilitiesUsed[t] = 0;
+    }
+    for (var t in CandyData) {
+      this.gamestats.CandiesCollected[t] = 0;
+    }
+
     var self = this;
     setTimeout(() => {
       self.skin = self.realskin;
@@ -1219,7 +1195,8 @@ class Player {
       upgradePts:this.upgradePts,
       name:this.name,
       activeCandy:this.activeCandy,
-      candyDuration:this.candyDuration
+      candyDuration:this.candyDuration,
+      hat:this.hat,
     };
     if (this.disabled) {
       p.health = this.health / this.maxhealth * healthDefault;
@@ -1227,6 +1204,19 @@ class Player {
       p.axelength = axeLengthDefault;
     }
     return p;
+  }
+  generateStats(room) {
+    var stats = this.gamestats;
+    if (this.pumpkinMaster) {
+      stats.CoinsLeft = room.coins[this.id];
+      stats.ObjectivesLost = room.objectiveRooms - room.objectives.length;
+    } else {
+      stats.Upgrades = this.upgradeLvls;
+      stats.Score = this.score;
+      stats.Level = this.level;
+    }
+    stats.PlayTime = Date.now()-room.trueStartTime;
+    return stats;
   }
   preupdate() {
     this.disabled = false;
@@ -1320,10 +1310,11 @@ class Player {
     var ufy = this.y-0.5;
     var check = function(x,y) {
       if (room.pumpkins[x+","+y]) {
+        this.gamestats.Smashed++;
         switch (room.pumpkins[x+","+y].type) {
           case 0: self.addScore(1); break;
-          case 1: self.addScore(2); break;
-          case 2: self.addScore(5); break;
+          case 1: self.addScore(2); this.gamestats.SmashedGold++; break;
+          case 2: self.addScore(5); this.gamestats.SmashedDiamond++; break;
         }
         room.destroyPumpkin(x,y);
       }
@@ -1371,7 +1362,9 @@ class Player {
       var dy = v.y-this.y;
       if (dx * dx + dy * dy > 2.25) continue;
       room.vines[i].health--;
+      this.gamestats.AbilityDamage.vines++;
       if (room.vines[i].health <= 0 || Date.now()-room.vines[i].spawnedAt < 1000) {
+        this.gamestats.AbilitiesDestroyed.vines++;
         room.vines.splice(i,1);
       }
     }
@@ -1384,7 +1377,9 @@ class Player {
       if (dx * dx + dy * dy < 3.2*3.2) {
         this.addScore(0.2);
         gen.health--;
+        this.gamestats.AbilityDamage.generators++;
         if (gen.health <= 0) {
+          this.gamestats.AbilitiesDestroyed.generators++;
           delete room.generators[i];
         }
       }
@@ -1397,7 +1392,9 @@ class Player {
       if (dx * dx + dy * dy < 3.2*3.2) {
         this.addScore(0.2);
         room.shield.health--;
+        this.gamestats.AbilityDamage.shield++;
         if (room.shield.health <= 0) {
+          this.gamestats.AbilitiesDestroyed.shield++;
           room.shield = false;
         }
       }
@@ -1410,6 +1407,8 @@ class Player {
         if (dx * dx + dy * dy < 3.2*3.2) {
           this.addScore(0.2);
           room.objectives[i].health--;
+          this.gamestats.ObjectiveDamage++;
+          if (room.objectives[i].health <= 0) this.gamestats.ObjectivesDestroyed++;
           io.to(room.id).emit('objective',room.objectives);
         }
       }
@@ -1454,6 +1453,13 @@ class Player {
     }
     if (this.disabled) amount *= this.maxhealth / healthDefault;
     this.health -= amount;
+    // Stats
+    var pm = room.players[dealer.spawnedBy];
+    if (!pm) return;
+    pm.gamestats.DamagedSkeletonsWith[dealer.category] += amount;
+    if (this.health < 0) { 
+      pm.gamestats.KilledSkeletonsWith[dealer.category]++;
+    }
   }
   addScore(n) {
     if (this.activeCandy == "candy_corn") n *= 3;
@@ -1461,6 +1467,7 @@ class Player {
   }
   async death() {
     SOCKET_LIST[this.socket].emit('dead');
+    this.gamestats.Deaths++;
     // Candy Reset
     const room = ROOM_LIST[this.room];
     var candy = CandyData[this.activeCandy];
@@ -1495,7 +1502,7 @@ class Player {
 // Entities
 // --------
 class Entity {
-  constructor(x, y, room) {
+  constructor(x, y, room, spawnedBy) {
     this.x = x;
     this.y = y;
     this.room = room;
@@ -1513,6 +1520,7 @@ class Entity {
     this.facing = 1;
     this.f = Math.floor(Math.random()*100);
     this.value = 1;
+    this.spawnedBy = spawnedBy;
     ROOM_LIST[room].entities.push(this);
   }
   pack() {
@@ -1544,6 +1552,7 @@ class Entity {
   }
   hit(player) {
     player.addScore(this.value);
+    player.gamestats.EntitiesKilled[this.type]++;
     this.destroy();
     return true;
   }
@@ -1559,9 +1568,9 @@ class Entity {
 
     var record = max ** 2;
     var sel;
-    for (var i in room.players) {
-      var p = room.players[i];
-      if (p.pumpkinMaster || p.health <= 0 || p.immune) continue;
+    for (var i = 0; i < room.skeletons.length; i++) {
+      var p = room.players[room.skeletons[i]];
+      if (p.health <= 0 || p.immune) continue;
       var dx = this.x - p.x;
       var dy = this.y - p.y;
       var d = dx * dx + dy * dy;
@@ -1584,9 +1593,9 @@ class Entity {
     if (!room) return;
 
     var record = Infinity;
-    for (var i in room.players) {
-      var p = room.players[i];
-      if (p.pumpkinMaster || p.health <= 0 || p.immune) continue;
+    for (var i = 0; i < room.skeletons.length; i++) {
+      var p = room.players[room.skeletons[i]];
+      if (p.health <= 0 || p.immune) continue;
       var dx = this.x - p.x;
       var dy = this.y - p.y;
       var d = dx * dx + dy * dy;
@@ -1599,8 +1608,8 @@ class Entity {
 }
 var Entities = {};
 Entities.monster = class extends Entity {
-  constructor(x, y, room) {
-    super(x, y, room);
+  constructor(x, y, room, spawnedBy) {
+    super(x, y, room, spawnedBy);
     this.type = "monster";
     this.category = "monster";
     this.img = "attack";
@@ -1630,8 +1639,8 @@ Entities.monster = class extends Entity {
   }
 };
 Entities.ghost = class extends Entity {
-  constructor(x, y, room) {
-    super(x, y, room);
+  constructor(x, y, room, spawnedBy) {
+    super(x, y, room, spawnedBy);
     this.type = "ghost";
     this.category = "ghost";
     this.img = "attack";
@@ -1665,15 +1674,15 @@ Entities.ghost = class extends Entity {
   }
 };
 Entities.nuke = class extends Entity {
-  constructor(x, y, room) {
-    super(x, y, room);
+  constructor(x, y, room, spawnedBy) {
+    super(x, y, room, spawnedBy);
     this.type = "nuke";
     this.category = "nuke";
     this.f = 0;
     this.img = "target";
     this.depth = -1;
     this.timer = 4;
-    this.falling_pumpkin = new Entities.falling_pumpkin(x, y - 400/9, room);
+    this.falling_pumpkin = new Entities.falling_pumpkin(x, y - 400/9, room, spawnedBy);
   }
   update() {
     this.timer -= speed;
@@ -1684,8 +1693,8 @@ Entities.nuke = class extends Entity {
   hit(p) {}
 };
 Entities.falling_pumpkin = class extends Entity {
-  constructor(x, y, room) {
-    super(x, y, room);
+  constructor(x, y, room, spawnedBy) {
+    super(x, y, room, spawnedBy);
     this.type = "falling_pumpkin";
     this.category = "nuke";
     this.depth = 1;
@@ -1716,8 +1725,8 @@ Entities.falling_pumpkin = class extends Entity {
   hit(p) {}
 };
 Entities.speeder = class extends Entity {
-  constructor(x, y, room) {
-    super(x, y, room);
+  constructor(x, y, room, spawnedBy) {
+    super(x, y, room, spawnedBy);
     this.type = "speeder";
     this.category = "speeder";
     this.img = "attack";
@@ -1748,8 +1757,8 @@ Entities.speeder = class extends Entity {
   }
 };
 Entities.rusher = class extends Entity {
-  constructor(x, y, room) {
-    super(x, y, room);
+  constructor(x, y, room, spawnedBy) {
+    super(x, y, room, spawnedBy);
     this.type = "rusher";
     this.category = "rusher";
     this.img = "idle";
@@ -1839,14 +1848,12 @@ Entities.rusher = class extends Entity {
     }
     if (this.rushing == 2) return true;
 
-    p.addScore(this.value);
-    this.destroy();
-    return true;
+    return super.hit(p);
   }
 };
 Entities.wizard = class extends Entity {
-  constructor(x, y, room) {
-    super(x, y, room);
+  constructor(x, y, room, spawnedBy) {
+    super(x, y, room, spawnedBy);
     this.type = "wizard";
     this.category = "wizard";
     this.img = "idle";
@@ -1878,7 +1885,7 @@ Entities.wizard = class extends Entity {
         x: dir.x * s * 4,
         y: dir.y * s * 4
       };
-      var p = new Entities.projectile(this.x, this.y, pdir, this.room);
+      var p = new Entities.projectile(this.x, this.y, pdir, this.room, this.spawnedBy);
       this.img = "idle";
       this.cooldown = 2;
     }
@@ -1893,8 +1900,8 @@ Entities.wizard = class extends Entity {
   }
 };
 Entities.projectile = class extends Entity {
-  constructor(x, y, dir, room) {
-    super(x, y, room);
+  constructor(x, y, dir, room, spawnedBy) {
+    super(x, y, room, spawnedBy);
     this.type = "projectile";
     this.category = "wizard";
     this.bbox = {
@@ -1924,14 +1931,14 @@ Entities.projectile = class extends Entity {
       this.destroy();
     }
   }
-  hit(player) {
+  hit(p) {
     this.destroy();
     return true;
   }
 };
 Entities.brute = class extends Entity {
-  constructor(x, y, room) {
-    super(x, y, room);
+  constructor(x, y, room, spawnedBy) {
+    super(x, y, room, spawnedBy);
     this.type = "brute";
     this.category = "brute";
     this.img = "attack";
@@ -1963,7 +1970,7 @@ Entities.brute = class extends Entity {
       this.leapcount += speed;
       if (this.weak == false) {
         this.vely = 0;
-        var shockwave = new Entities.shockwave(this.x,this.y,this.room);
+        var shockwave = new Entities.shockwave(this.x,this.y,this.room,this.spawnedBy);
         this.img = "icon";
         this.weak = true;
       }
@@ -2006,19 +2013,15 @@ Entities.brute = class extends Entity {
     this.moveForward(dir,s);
   }
   hit(p) {
-    if (this.weak) {
-      p.addScore(this.value);
-      this.destroy();
-      return true;
-    }
+    if (this.weak) return super.hit(p);
     if (this.leaping) return;
     this.recoil = 0.5;
     return true;
   }
 };
 Entities.shockwave = class extends Entity {
-  constructor(x, y, room) {
-    super(x, y, room);
+  constructor(x, y, room, spawnedBy) {
+    super(x, y, room, spawnedBy);
     this.type = "shockwave";
     this.category = "brute";
     this.depth = -1;
@@ -2049,8 +2052,8 @@ Entities.shockwave = class extends Entity {
   hit(p) {}
 };
 Entities.catapult = class extends Entity {
-  constructor(x, y, room) {
-    super(x, y, room);
+  constructor(x, y, room, spawnedBy) {
+    super(x, y, room, spawnedBy);
     this.type = "catapult";
     this.category = "catapult";
     this.img = "launch";
@@ -2081,15 +2084,15 @@ Entities.catapult = class extends Entity {
         x: sel.x,
         y: sel.y
       };
-      var p = new Entities.payload(this.x, this.y - 0.5, targetPos, this.room);
+      var p = new Entities.payload(this.x, this.y - 0.5, targetPos, this.room, this.spawnedBy);
       this.cooldown = 1.8;
       this.f = 3;
     }
   }
 };
 Entities.payload = class extends Entity {
-  constructor(x, y, target, room) {
-    super(x, y, room);
+  constructor(x, y, target, room, spawnedBy) {
+    super(x, y, room, spawnedBy);
     this.type = "payload";
     this.category = "catapult";
     this.target = target;
@@ -2121,8 +2124,8 @@ Entities.payload = class extends Entity {
   }
 };
 Entities.debuffer = class extends Entity {
-  constructor(x, y, room) {
-    super(x, y, room);
+  constructor(x, y, room, spawnedBy) {
+    super(x, y, room, spawnedBy);
     this.type = "debuffer";
     this.category = "debuffer";
     this.img = "idle";
@@ -2304,7 +2307,7 @@ Abilities.newVine = function(x,y,orient) {
   }
   return v;
 }
-Abilities.swarm = async function(rx,ry,room) {
+Abilities.swarm = async function(rx,ry,room,free,spawnedBy) {
   rx = rx * 14;
   ry = ry * 14;
   var swarm = [];
@@ -2312,7 +2315,7 @@ Abilities.swarm = async function(rx,ry,room) {
     for (var y = ry; y < ry + 15; y++) {
       if (!room.pumpkins[x+","+y]) continue;
       room.destroyPumpkin(x,y);
-      swarm.push(new Entities.monster(x+0.5,y+0.5,room.id));
+      swarm.push(new Entities.monster(x+0.5,y+0.5,room.id,spawnedBy));
     }
   }
   await wait(20*1000);
@@ -2322,7 +2325,7 @@ Abilities.swarm = async function(rx,ry,room) {
     swarm[i].destroy();
   }
 }
-Abilities.shield = async function(rx,ry,room) {
+Abilities.shield = async function(rx,ry,room,free,spawnedBy) {
   rx = rx * 14;
   ry = ry * 14;
   // Top
@@ -2338,13 +2341,13 @@ Abilities.shield = async function(rx,ry,room) {
     room.shield = false;
   }
 }
-Abilities.generators = async function(rx,ry,room) {
+Abilities.generators = async function(rx,ry,room,free,spawnedBy) {
   rx = rx * 14;
   ry = ry * 14;
 
   var oldgen = room.generators[rx+","+ry];
-  if (oldgen && oldgen.amount >= 1.2) {
-    room.coins += AbilityData.generators.cost;
+  if ((oldgen && oldgen.amount >= 1.2) || spawnedBy != oldgen.spawnedBy) {
+    room.coins[spawnedBy] += AbilityData.generators.cost;
     return;
   }
   if (oldgen) {
@@ -2362,13 +2365,16 @@ Abilities.generators = async function(rx,ry,room) {
     amount:0.5,
     health:25,
     maxhealth:25,
+    spawnedBy: spawnedBy
   }
   room.generators[rx+","+ry] = generator;
 
   while (true) {
     await wait(1000);
     if (!room.generators[rx+","+ry]) return;
-    room.coins += generator.amount;
+    room.coins[spawnedBy] += generator.amount;
+    var p = room.players[spawnedBy];
+    if (p) p.gamestats.CoinsGenerated += generator.amount;
   }
 }
 
@@ -2400,7 +2406,7 @@ CandyData.candy_corn = {
   loseondamaged: true,
   duration: 60,
   collect: function(player) {
-    player.score += 50;
+    player.addScore(10);
   },
   expire: async function(player) {},
 };
@@ -2416,7 +2422,8 @@ CandyData.smarties = {
 };
 CandyData.peppermint = {
   collect: async function(player,room) {
-    this.startTime += 15 * 1000;
+    room.startTime += 30 * 1000;
+    io.to(room.id).emit('setTime',room.startTime);
   },
   expire: async function(player) {},
 };
@@ -2608,12 +2615,20 @@ io.sockets.on('connection', function (socket) {
   // Pumpkin Master actions
   socket.on('spawn',(sel,x,y) => {
     if (!client.room) return;
-    //ROOM_LIST[client.room].spawnFrom(sel,1,x,y);
-    ROOM_LIST[client.room].spawn(sel,x,y);
+    const room = ROOM_LIST[client.room];
+    if (!room) return;
+    //ROOM_LIST[client.room].spawnFrom(sel,1,x,y,socket.id);
+    var e = room.spawn(sel,x,y,socket.id);
+    var p = room.players[socket.id];
+    p.gamestats.EntitiesSpawned[sel]++;
   });
   socket.on('ability',(sel,x,y) => {
     if (!client.room) return;
-    ROOM_LIST[client.room].ability(sel,x,y);
+    const room = ROOM_LIST[client.room];
+    if (!room) return;
+    room.ability(sel,x,y,socket.id);
+    var p = room.players[socket.id];
+    p.gamestats.AbilitiesUsed[sel]++;
   });
 
   // Misc
@@ -2651,7 +2666,8 @@ function tick() {
 
 function perSecond() {
   for (var i in ROOM_LIST) {
-    if (ROOM_LIST[i].amount >= ROOM_LIST[i].settings.start_count && ROOM_LIST[i].state == "lobby") {
+    var room = ROOM_LIST[i];
+    if (room.amount >= room.settings.start_count && room.state == "lobby") {
       start(i);
       console.log("Room("+i+") has started!");
       if (i == next) {
@@ -2660,15 +2676,13 @@ function perSecond() {
         queue[next] = ROOM_LIST[next];
       }
     }
-    if (ROOM_LIST[i].pumpkin_masters.length > 0) {
-      ROOM_LIST[i].coins += ROOM_LIST[i].coinMult;
-      for (var j = 0; j < ROOM_LIST[i].pumpkin_masters.length; j++) {
-        var soc = SOCKET_LIST[ROOM_LIST[i].pumpkin_masters[j]];
-        if (!soc) continue;
-        soc.emit('coins',ROOM_LIST[i].coins);
-      }
+    for (var j in room.coins) {
+      room.coins[j] += room.coinMult;
+      var soc = SOCKET_LIST[j];
+      if (!soc) continue;
+      soc.emit('coins',room.coins[j]);
     }
-    if (ROOM_LIST[i].amount <= 0 && i != next) {
+    if (room.amount <= 0 && i != next) {
       if (queue[i]) delete queue[i];
       delete ROOM_LIST[i];
       console.log("Deleted Room("+i+")");
@@ -2689,7 +2703,6 @@ function perSecond() {
 }
 
 async function start(room) {
-
   var game = ROOM_LIST[room];
   game.state = "starting";
 
@@ -2722,7 +2735,15 @@ async function start(room) {
     game.players[i].y = 15/2;
     SOCKET_LIST[i].emit("PM",game.players[i].pumpkinMaster);
   }
-  game.coins = 5*game.skeletons.length;
+  // Candies
+  setTimeout(()=>{
+    game.TrickOrTreat();
+  },(Math.random()*30+15)*1000);
+  // Init Coins
+  var starting_amount = 15+7.5*game.skeletons.length;
+  game.coins = {};
+  for (var i = 0; i < game.pumpkin_masters.length; i++) game.coins[game.pumpkin_masters[i]] = starting_amount;
+  game.coinMult = 1;
 
   /*var clients = io.sockets.adapter.rooms.get(room);
   var a = 0;
