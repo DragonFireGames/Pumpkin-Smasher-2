@@ -1930,12 +1930,15 @@ function show() {
     rotate(-p.swing);
     translate(-(w - aw) / 2, -off);
     // Skeleton
-    var skele = sel => textures.skeleton[sel].show(w, 46);
+    var skele = function(sel) {
+      textures.skeleton[sel].show(w, 46);
+      //if (p.hat) HatDisplay[p.hat].show();
+    }
     if (p.activeCandy) {
       var time = p.candyDuration-Date.now();
       if (time < 5000 && time % 500 < 250) skele(p.skin);
       else CandyDisplay[p.activeCandy].active(p,skele,p.skin);
-    } else skele();
+    } else skele(p.skin);
   };
   for (var i = 0; i < entities.length; i++) {
     var e = entities[i];
