@@ -44,7 +44,7 @@ socket.on("disconnect", async () => {
     await wait(1000);
     if (socket.connected) return;
   }
-  location.reload();
+  __cpLocation.reload();
 });
 //^^Connects to the socket.io server
 
@@ -1337,7 +1337,7 @@ Displays.pmgame = function() {
         scale(36, 36);
         fill(255, 255, 255, 128);
         var oldgen = generators[(rx*14)+","+(ry*14)];
-        if (cam.selA == "generators" && oldgen && oldgen.amount >= 1.2) {
+        if (cam.selA == "generators" && ((oldgen && oldgen.amount >= 1.2) || player.id != oldgen.spawnedBy)) {
           fill(255, 128, 128, 128);
         }
         rect(rx * 14, ry * 14, 15, 15);
@@ -1617,7 +1617,7 @@ homeDis.clickTutorial = function() {
 homeDis.clickInstructions = function() {
   setDisplay("instructions");
   //cam.scroll = 0;
-  //location.href = location.origin+"/instructions";
+  //__cpLocation.href = __cpLocation.origin+"/instructions";
 }
 homeDis.clickSettings = function() {
   alert("Coming soon!");
@@ -1768,10 +1768,10 @@ function setDisplay(d, sd) {
   subdisplay = sd ?? "";
   DiscordWidget.style.visibility = "hidden";
   user.lastSession = {};
-  history.pushState({}, "", location.origin);
+  history.pushState({}, "", __cpLocation.origin);
   if (display == "lobby") {
-    history.pushState({}, "", location.origin + "?room=" + room);
-    if (isNext) history.pushState({}, "", location.origin + "?room=next");
+    history.pushState({}, "", __cpLocation.origin + "?room=" + room);
+    if (isNext) history.pushState({}, "", __cpLocation.origin + "?room=next");
     return;
   }
   if (display == "home" || display == "loading") return;
@@ -1791,7 +1791,7 @@ function endAssetLoad() {
   }
 
   // Get params
-  var params_str = location.href.split('?')[1];
+  var params_str = __cpLocation.href.split('?')[1];
   if (params_str) {
     var params_arr = params_str.split('&');
 
@@ -2552,9 +2552,9 @@ socket.on('rejoinFailed', returnToHome);
 function returnToHome() {
   user.lastSession = {};
   localStorage.user = JSON.stringify(user);
-  //location.href = location.origin;
+  //__cpLocation.href = __cpLocation.origin;
   setDisplay("home");
-  history.pushState({}, "", location.origin);
+  history.pushState({}, "", __cpLocation.origin);
 }
 socket.on('rejoinSuccess', function(id) {
   player.id = id;
