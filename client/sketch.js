@@ -85,71 +85,17 @@ var defaultUser = {};
 defaultUser.lastSession = {};
 defaultUser.name = "";
 defaultUser.doneTutorial = false;
-/*defaultUser.stats = {
-  // Overall
-  SkeletonWins: 0,
-  SkeletonLosses: 0,
-  PumpkinMasterWins: 0,
-  PumpkinMasterLosses: 0,
-  // Skeleton
-  Smashed: 0,
-  SmashedGold: 0,
-  SmashedDiamond: 0,
-  Upgraded: 0,
-  Upgrade: {
-    health: 0,
-    axerange: 0,
-    speed: 0
+defaultUser.stats = {};
+user.achievements = {};
+var AchievementData = [
+  {
+    name: "No Deaths",
+    hat: false,
+    test: function(match, cumulative) {
+      return match.deaths == 0
+    }
   }
-  KilledMonsters: 0,
-  Killed: {
-    monster: 0,
-    ghost: 0,
-    speeder: 0,
-    rusher: 0,
-    wizard: 0,
-    projectile: 0,
-    brute: 0,
-    catapult: 0,
-    debuffer: 0,
-  },
-  Deaths: 0,
-  ObjectivesDestroyed: 0,
-  // Pumpkin Master
-  KilledSkeletons: 0,
-  KilledSkeletonsWith: {
-    monster: 0,
-    ghost: 0,
-    nuke: 0,
-    speeder: 0,
-    rusher: 0,
-    wizard: 0,
-    brute: 0,
-    catapult: 0,
-    debuffer: 0,
-  },
-  SpawnedMonsters: 0,
-  Spawned: {
-    monster: 0,
-    ghost: 0,
-    nuke: 0,
-    speeder: 0,
-    rusher: 0,
-    wizard: 0,
-    brute: 0,
-    catapult: 0,
-    debuffer: 0,
-  },
-  UsedAbilities: 0,
-  Used: {
-    fog: 0,
-    vines: 0,
-    swarm: 0,
-    shield: 0,
-    generators: 0,
-  }
-}
-user.achivements = {
+  /*
   // Skeleton
   MaxedHealth: false,
   MaxedAxeRange: false,
@@ -157,7 +103,6 @@ user.achivements = {
   Killed50EnemiesInMatch: false,
   Smashed200PumpkinsInMatch: false,
   Smashed10DiamondPumpkinsInMatch: false,
-  NoDeaths: false,
   DestroyedObjective: false,
   DestroyedAllObjectives: false,
   DestroyedShield: false,
@@ -165,7 +110,8 @@ user.achivements = {
   Killed10Skeletons: false,
   KilledSkeletonWithSwarm: false,
   Used10AbilitiesInMatch: false
-}*/
+  */
+];
 for (var i in defaultUser) {
   if (!user[i]) user[i] = defaultUser[i];
 }
@@ -459,6 +405,11 @@ AbilityDisplay.vines = (function() {
   var icon = new FitImage("assets/abilities/vines/icon.png");
   var horizVines = new FitImage("assets/abilities/vines/horizontal.png");
   var vertVines = new FitImage("assets/abilities/vines/vertical.png");
+  var grow = function(v) {
+    var t = (Date.now()-v.spawnedAt())/1000;
+    if (t > 1) return 36;
+    return 36*Math.sqrt(t);
+  };
   return {
     cost: 8,
     cooldown: 1,
@@ -466,11 +417,11 @@ AbilityDisplay.vines = (function() {
     icon: function() {
       icon.show(0, 40);
     },
-    horiz: function() {
-      horizVines.show(0, 36);
+    horiz: function(v) {
+      horizVines.show(0, grow(v));
     },
-    vert: function() {
-      vertVines.show(36, 0);
+    vert: function(v) {
+      vertVines.show(grow(v), 0);
     }
   };
 });
@@ -539,9 +490,9 @@ CandyDisplay.candy_corn = (function() {
     show: function() {
       candy.show(36, 36);
     },
-    active: function(p,f) {
+    active: function(p,f,s) {
       tint(255, 200, 128);
-      f();
+      f(s);
       tint(255, 255, 255);
     }
   };
@@ -552,10 +503,8 @@ CandyDisplay.smarties = (function() {
     show: function() {
       candy.show(36, 36);
     },
-    active: function(p,f) {
-      tint(255, 200, 200);
-      f();
-      tint(255, 255, 255);
+    active: function(p,f,s) {
+      f(3);
     }
   };
 });
@@ -565,10 +514,8 @@ CandyDisplay.peppermint = (function() {
     show: function() {
       candy.show(36, 36);
     },
-    active: function(p,f) {
-      tint(255, 128, 128);
-      f();
-      tint(255, 255, 255);
+    active: function(p,f,s) {
+      f(s);
     }
   };
 });
@@ -578,9 +525,9 @@ CandyDisplay.lolipop = (function() {
     show: function() {
       candy.show(36, 36);
     },
-    active: function(p,f) {
+    active: function(p,f,s) {
       tint(255, 170, 255);
-      f();
+      f(s);
       tint(255, 255, 255);
     }
   };
@@ -591,9 +538,9 @@ CandyDisplay.hot_tamale = (function() {
     show: function() {
       candy.show(36, 36);
     },
-    active: function(p,f) {
+    active: function(p,f,s) {
       tint(255, 128, 128);
-      f();
+      f(s);
       tint(255, 255, 255);
     }
   };
@@ -604,9 +551,9 @@ CandyDisplay.ghost_chew = (function() {
     show: function() {
       candy.show(36, 36);
     },
-    active: function(p,f) {
+    active: function(p,f,s) {
       tint(255, 255, 255, 128);
-      f();
+      f(s);
       tint(255, 255, 255, 255);
     }
   };
@@ -617,9 +564,9 @@ CandyDisplay.chocolate = (function() {
     show: function() {
       candy.show(36, 36);
     },
-    active: function(p,f) {
+    active: function(p,f,s) {
       tint(160, 120, 100);
-      f();
+      f(s);
       tint(255, 255, 255);
     }
   };
@@ -630,9 +577,9 @@ CandyDisplay.candied_apple = (function() {
     show: function() {
       candy.show(36, 36);
     },
-    active: function(p,f) {
+    active: function(p,f,s) {
       tint(150, 200, 150);
-      f();
+      f(s);
       tint(255, 255, 255);
     }
   };
@@ -643,9 +590,9 @@ CandyDisplay.blue_candy = (function() {
     show: function() {
       candy.show(36, 36);
     },
-    active: function(p,f) {
+    active: function(p,f,s) {
       tint(170, 170, 255);
-      f();
+      f(s);
       tint(255, 255, 255);
     }
   };
@@ -1304,8 +1251,11 @@ Displays.game = function() {
       if (time > 3000) {
         var opacity = Math.floor((time-3000)/2000*255);
         fill(255,opacity);
+        tint(255,opacity);
       }
       text("Trick or Treat!", 0, wHeight / 2 - 50);
+      //translate(-100, wHeight / 2 - 50);
+      //gui.trick_or_treat.show(30,0);
       pop();
     }
 
@@ -1760,6 +1710,17 @@ Displays.gameover = function() {
   rect(-37.5, 0, 75, 50);
   format("#ffa500", false, 1, 20, CENTER);
   text("Leave", 0, 30);
+  // Display code
+  push();
+  format("#ffa500", false, 1, 20, LEFT);
+  textAlign(LEFT, BOTTOM);
+  if (player.pumpkinMaster) {
+    text(`Skeleton Kills: ${MatchStats.SkeletonKills}`,20-wWidth/2,20-wHeight/2);
+  } else {
+    text(`Pumpkins Smashed: ${MatchStats.Smashed}`,20-wWidth/2,20-wHeight/2);
+  }
+  pop();
+  //
   if ((keyIsDown(13) || (isMobile && mouseIsPressed) || (overbutton && mouseIsPressed))) {
     exit();
   }
@@ -1903,7 +1864,7 @@ function show() {
     translate(vines[i].x, vines[i].y);
     //var alpha = lerp(128,255,vines[i].health/25);
     //tint(255,255,255,floor(alpha));
-    AbilityDisplay.vines[vines[i].orient]();
+    AbilityDisplay.vines[vines[i].orient](vines[i]);
     healthBar(40, 14, vines[i].health / 25);
     pop();
   }
@@ -1912,7 +1873,7 @@ function show() {
     translate(shield.x, shield.y);
     //var alpha = lerp(128,255,shield.health/50);
     //tint(255,255,255,floor(alpha));
-    AbilityDisplay.shield.show();
+    AbilityDisplay.shield.show(shield);
     translate(0, -75);
     healthBar(60, 20, shield.health / 50);
     pop();
@@ -1969,11 +1930,11 @@ function show() {
     rotate(-p.swing);
     translate(-(w - aw) / 2, -off);
     // Skeleton
-    var skele = () => textures.skeleton[p.skin].show(w, 46);
+    var skele = sel => textures.skeleton[sel].show(w, 46);
     if (p.activeCandy) {
       var time = p.candyDuration-Date.now();
-      if (time < 5000 && time % 500 < 250) skele();
-      else CandyDisplay[p.activeCandy].active(p,skele);
+      if (time < 5000 && time % 500 < 250) skele(p.skin);
+      else CandyDisplay[p.activeCandy].active(p,skele,p.skin);
     } else skele();
   };
   for (var i = 0; i < entities.length; i++) {
@@ -2889,7 +2850,7 @@ socket.on('tutorialMsg', function(msg, date, p) {
   tutorialPumpkin = p;
 })
 // Win Conditions
-socket.on('skeleton_win', async function() {
+socket.on('skeleton_win', async function(stats) {
   console.log("Skeletons Win!");
   subdisplay = "animation";
   for (var i in pumpkins) {
@@ -2911,10 +2872,11 @@ socket.on('skeleton_win', async function() {
     spawnConfetti();
   }
   await wait(5000);
+  processStats(stats,player.pumpkinMaster,true);
   setDisplay("gameover", player.pumpkinMaster ? "lose" : "win");
   endGame();
 });
-socket.on('pumpkin_master_win', async function() {
+socket.on('pumpkin_master_win', async function(stats) {
   console.log("Pumpkin Master Wins!")
   subdisplay = "animation";
   for (var i in players) {
@@ -2924,6 +2886,7 @@ socket.on('pumpkin_master_win', async function() {
     spawnConfetti();
   }
   await wait(5000);
+  processStats(stats,player.pumpkinMaster,true);
   setDisplay("gameover", player.pumpkinMaster ? "win" : "lose");
   endGame();
 });
@@ -2943,6 +2906,46 @@ function endGame() {
   confetti = [];
   for (var i in sounds.background.length) {
     sounds.background[i].stop();
+  }
+}
+var MatchStats = {};
+function processStats(stats,is_pm,pm_win) {
+  var total = function(obj){
+    var c = 0;
+    for (var i in obj) c += obj[i];
+    return c;
+  };
+  stats.GamesPlayed = 1;
+  if (is_pm) {
+    if (pm_win) { stats.Wins++; stats.PumpkinMasterWins++; }
+    else { stats.Losses++; stats.PumpkinMasterLosses++; }
+    stats.SkeletonDamage = total(stats.DamagedSkeletonsWith);
+    stats.SkeletonKills = total(stats.KilledSkeletonsWith);
+    stats.TotalMonstersSpawned = total(stats.MonstersSpawned);
+    stats.TotalAbilitiesUsed = total(stats.AbilitiesUsed);
+    stats.CoinsSpent = 0;
+    for (var i in stats.MonstersSpawned) stats.CoinsSpent += EntityDisplay[i].cost * stats.MonstersSpawned[i];
+    for (var i in stats.AbilitiesUsed) stats.CoinsSpent += AbilityDisplay[i].cost * stats.AbilitiesUsed[i];
+    stats.TotalCoins = stats.CoinsSpent + Stats.CoinsLeft;
+  } else {
+    if (pm_win) { stats.Losses++; stats.SkeletonLosses++; }
+    else { stats.Wins++; stats.SkeletonWins++; }
+    stats.TotalUpgrades = total(stats.Upgrades);
+    stats.TotalCandiesCollected = total(stats.CandiesCollected);
+  }
+  MatchStats = stats;
+  var add = function(c,o) {
+    c = c || {};
+    for (var i in o) {
+      if (o[i] instanceof object) c[i] = add(c[i],o[i]);
+      c[i] = (c[i]||0)+o[i];
+    }
+  };
+  user.stats = add(user.stats,stats);
+  user.achievements = user.achievements || {};
+  for (var i = 0; i < AchievementData.length; i++) {
+    var a = AchievementData[i];
+    if (a.test(stats,user.stats)) user.achievements[a.name] = true;
   }
 }
 
