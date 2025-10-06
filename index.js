@@ -157,7 +157,7 @@ class Room {
     io.to(this.id).emit('trick-or-treat',Date.now());
 
     var s = this.amount-this.pm_amount;
-    this.Candies(1+s);
+    this.spawnCandies(1+s);
 
     var self = this;
     var buffPM = function() {
