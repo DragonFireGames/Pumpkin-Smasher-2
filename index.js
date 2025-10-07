@@ -2308,7 +2308,7 @@ Abilities.newVine = function(x,y,orient) {
   }
   return v;
 }
-Abilities.swarm = async function(rx,ry,room,free,spawnedBy) {
+Abilities.swarm = async function(rx,ry,room,spawnedBy) {
   rx = rx * 14;
   ry = ry * 14;
   var swarm = [];
@@ -2326,7 +2326,7 @@ Abilities.swarm = async function(rx,ry,room,free,spawnedBy) {
     swarm[i].destroy();
   }
 }
-Abilities.shield = async function(rx,ry,room,free,spawnedBy) {
+Abilities.shield = async function(rx,ry,room,spawnedBy) {
   rx = rx * 14;
   ry = ry * 14;
   // Top
@@ -2342,9 +2342,11 @@ Abilities.shield = async function(rx,ry,room,free,spawnedBy) {
     room.shield = false;
   }
 }
-Abilities.generators = async function(rx,ry,room,free,spawnedBy) {
+Abilities.generators = async function(rx,ry,room,spawnedBy) {
   rx = rx * 14;
   ry = ry * 14;
+
+  if (!spawnedBy) return;
 
   var oldgen = room.generators[rx+","+ry];
   if (oldgen && (oldgen.amount >= 1.2 || spawnedBy != oldgen.spawnedBy)) {
