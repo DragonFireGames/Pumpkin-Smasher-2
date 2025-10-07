@@ -2739,7 +2739,7 @@ async function start(room) {
     game.TrickOrTreat();
   },(Math.random()*30+15)*1000);
   // Init Coins
-  var starting_amount = 15+7.5*game.skeletons.length;
+  var starting_amount = (15+7.5*game.skeletons.length)/game.pumpkin_masters.length;
   game.coins = {};
   for (var i = 0; i < game.pumpkin_masters.length; i++) game.coins[game.pumpkin_masters[i]] = starting_amount;
   game.coinMult = 1;
