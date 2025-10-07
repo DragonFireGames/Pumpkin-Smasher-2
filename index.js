@@ -573,12 +573,13 @@ class Room {
     }
   }
   async spawnRandom(sel,amount,spawnedBy,condition) {
+    if (spawnedBy && this.coins[spawnedBy] < EntityData[sel].cost * amount) return;
     var spawned = [];
     while (true) {
       await wait(30);
       var rx = Math.floor((this.maxWidth-14)*Math.random())+14;
       var ry = Math.floor(this.maxHeight*Math.random());
-      var e = this.spawn(sel,sx,sy,spawnedBy,condition);
+      var e = this.spawn(sel,rx,ry,spawnedBy,condition);
       if (e) {
         spawned.push(e);
         if (spawned.length >= amount) return spawned;
