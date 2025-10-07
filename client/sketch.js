@@ -406,7 +406,7 @@ AbilityDisplay.vines = (function() {
   var horizVines = new FitImage("assets/abilities/vines/horizontal.png");
   var vertVines = new FitImage("assets/abilities/vines/vertical.png");
   var grow = function(v) {
-    var t = (Date.now()-v.spawnedAt())/1000;
+    var t = (Date.now()-v.spawnedAt)/1000;
     if (t > 1) return 36;
     return 36*Math.sqrt(t);
   };
