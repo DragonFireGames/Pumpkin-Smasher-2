@@ -2930,7 +2930,7 @@ function processStats(stats,is_pm,pm_win) {
     stats.CoinsSpent = 0;
     for (var i in stats.MonstersSpawned) stats.CoinsSpent += EntityDisplay[i].cost * stats.MonstersSpawned[i];
     for (var i in stats.AbilitiesUsed) stats.CoinsSpent += AbilityDisplay[i].cost * stats.AbilitiesUsed[i];
-    stats.TotalCoins = stats.CoinsSpent + Stats.CoinsLeft;
+    stats.TotalCoins = stats.CoinsSpent + stats.CoinsLeft;
   } else {
     if (pm_win) { stats.Losses++; stats.SkeletonLosses++; }
     else { stats.Wins++; stats.SkeletonWins++; }
