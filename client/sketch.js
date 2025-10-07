@@ -21,7 +21,7 @@
     peerjs
 */
 
-var __cpLocation = window.location;
+var __cpLocation = window.__cpLocation;
 
 // TODO: 
 // Better Animations and Graphics
@@ -1338,7 +1338,7 @@ Displays.pmgame = function() {
         scale(36, 36);
         fill(255, 255, 255, 128);
         var oldgen = generators[(rx*14)+","+(ry*14)];
-        if (cam.coins < AbilityDisplay[cam.selA.cost] || (cam.selA == "generators" && oldgen && (oldgen.amount >= 1.2 || player.id != oldgen.spawnedBy))) {
+        if (cam.selA == "generators" && oldgen && (oldgen.amount >= 1.2 || player.id != oldgen.spawnedBy)) {
           fill(255, 128, 128, 128);
         }
         rect(rx * 14, ry * 14, 15, 15);
