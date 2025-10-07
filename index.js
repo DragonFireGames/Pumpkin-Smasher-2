@@ -609,13 +609,14 @@ class TutorialRoom extends Room {
     delete this.disconnectedPlayers;
     this.socket = socket;
     this.player = new Player(socket.id,this.id);
-    this.players[this.id] = this.player;
+    this.players[socket.id] = this.player;
     this.client = CLIENT_LIST[socket.id];
     this.client.player = this.player;
     this.state = "tutorial";
     this.amount = 1;
     this.freeplay = false;
     this.healVines = null;
+    this.skeletons = [socket.id];
     this.tutorial();
   }
   async tutorial() {
