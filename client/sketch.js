@@ -21,7 +21,7 @@
     peerjs
 */
 
-var __cpLocation = window.__cpLocation;
+var __cpLocation = window.location;
 
 // TODO: 
 // Better Animations and Graphics
