@@ -540,7 +540,7 @@ class Room {
     x = Math.floor(x);
     y = Math.floor(y);
     if (typeof condition == "function" && !condition(x,y,sel)) return;
-    if (spawnedBy && room.coins[spawnedBy] < EntityData[sel].cost) return;
+    if (spawnedBy && this.coins[spawnedBy] < EntityData[sel].cost) return;
     if (!this.tilemap[y] || this.tilemap[y][x] != 0) return;
     if (EntityData[sel].pumpkin) {
       if (!this.pumpkins[x+","+y]) return;
@@ -548,7 +548,7 @@ class Room {
     }
     var e = new Entities[sel](x+0.5,y+0.5,this.id);
     if (!spawnedBy) return e;
-    room.coins[spawnedBy] -= EntityData[sel].cost;
+    this.coins[spawnedBy] -= EntityData[sel].cost;
     return e;
   }
   async spawnFrom(sel,amount,sx,sy,delay,spawnedBy,condition) {
@@ -586,10 +586,10 @@ class Room {
     }
   }
   ability(sel,x,y,spawnedBy) {
-    if (spawnedBy && room.coins[spawnedBy] < AbilityData[sel].cost) return;
+    if (spawnedBy && this.coins[spawnedBy] < AbilityData[sel].cost) return;
     Abilities[sel](x,y,this,spawnedBy);
     if (!spawnedBy) return;
-    room.coins[spawnedBy] -= AbilityData[sel].cost;
+    this.coins[spawnedBy] -= AbilityData[sel].cost;
     if (this.usedAbility == false) this.usedAbility = true;
   }
   /*loadData(sx,sy,data) {
