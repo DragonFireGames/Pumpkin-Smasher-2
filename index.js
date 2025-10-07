@@ -169,13 +169,15 @@ class Room {
         self.spawnRandom("speeder",1+s*2);
         self.spawnRandom("monster",2+s*4);
       } else if (Math.random() < 0.4) {
-        for (var i = 0; i < self.skeletons.length; i++) {
-          var p = self.players[self.skeletons[i]];
+        for (var i in self.players) {
+          var p = self.players[i];
+          if (p.pumpkinMaster) continue;
           self.spawnFrom("monster",5,p.x,p.y,30);
         }
       } else if (Math.random() < 0.5) {
-        for (var i = 0; i < self.skeletons.length; i++) {
-          var p = self.players[self.skeletons[i]];
+        for (var i in self.players) {
+          var p = self.players[i];
+          if (p.pumpkinMaster) continue;
           self.spawn("nuke",p.x,p.y);
         }
       } else if (Math.random() < 0.6) {
@@ -478,8 +480,8 @@ class Room {
       await wait(candy.duration*1000);
     }
     if (player.activeCandy) {
-      player.activeCandy = false;
       candy.expire(player,this);
+      player.activeCandy = false;
     }
   }
   spawnCandies(n) {
@@ -1567,9 +1569,9 @@ class Entity {
 
     var record = max ** 2;
     var sel;
-    for (var i = 0; i < room.skeletons.length; i++) {
-      var p = room.players[room.skeletons[i]];
-      if (p.health <= 0 || p.immune) continue;
+    for (var i in room.players) {
+      var p = room.players[i];
+      if (p.pumpkinMaster || p.health <= 0 || p.immune) continue;
       var dx = this.x - p.x;
       var dy = this.y - p.y;
       var d = dx * dx + dy * dy;
@@ -1592,9 +1594,9 @@ class Entity {
     if (!room) return;
 
     var record = Infinity;
-    for (var i = 0; i < room.skeletons.length; i++) {
-      var p = room.players[room.skeletons[i]];
-      if (p.health <= 0 || p.immune) continue;
+    for (var i in room.players) {
+      var p = room.players[i];
+      if (p.pumpkinMaster || p.health <= 0 || p.immune) continue;
       var dx = this.x - p.x;
       var dy = this.y - p.y;
       var d = dx * dx + dy * dy;
@@ -2414,9 +2416,11 @@ CandyData.smarties = {
   loseonswing: true,
   collect: function(player) {
     player.immune = true;
+    player.skin = 3;
   },
   expire: function(player) {
     player.immune = false;
+    player.skin = player.realskin; 
   }
 };
 CandyData.peppermint = {
