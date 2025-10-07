@@ -2345,7 +2345,7 @@ Abilities.generators = async function(rx,ry,room,free,spawnedBy) {
   ry = ry * 14;
 
   var oldgen = room.generators[rx+","+ry];
-  if ((oldgen && oldgen.amount >= 1.2) || spawnedBy != oldgen.spawnedBy) {
+  if (oldgen && (oldgen.amount >= 1.2 || spawnedBy != oldgen.spawnedBy)) {
     room.coins[spawnedBy] += AbilityData.generators.cost;
     return;
   }
