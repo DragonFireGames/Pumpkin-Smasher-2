@@ -1366,7 +1366,7 @@ class Player {
       check2(ufx,ufy-2);
       check2(ufx+this.facing*2,ufy);
     }
-    if (axelength) >= 2) {
+    if (axelength >= 2.2) {
       check2(ufx+this.facing*2,ufy+1);
       check2(ufx+this.facing*2,ufy-1);
       check2(ufx+this.facing,ufy+2);
