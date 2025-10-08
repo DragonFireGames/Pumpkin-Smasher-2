@@ -440,17 +440,17 @@ class Room {
     prm[x+","+(y+1)] = nullCheck(prm[x+","+(y+1)],0);
     prm[x+","+(y-1)] = nullCheck(prm[x+","+(y-1)],0);
   }
-  checkCollisions(x,y,bbox,obj) {
+  checkCollisions(x,y,bbox,obj,ghost) {
     if (this.state == "lobby" || this.state == "starting") {
       if (x-bbox.maxX >= 4 || x+bbox.minX <= -4 || y+bbox.maxY >= 4 || y+bbox.minY <= -4) return true;
     } else {
-      if (this.checkPoint(x+bbox.minX,y+bbox.minY)) return true;
-      if (this.checkPoint(x+bbox.minX,y+bbox.maxY)) return true;
-      if (this.checkPoint(x+bbox.maxX,y+bbox.maxY)) return true;
-      if (this.checkPoint(x+bbox.maxX,y+bbox.minY)) return true;
+      if (this.checkPoint(x+bbox.minX,y+bbox.minY,ghost)) return true;
+      if (this.checkPoint(x+bbox.minX,y+bbox.maxY,ghost)) return true;
+      if (this.checkPoint(x+bbox.maxX,y+bbox.maxY,ghost)) return true;
+      if (this.checkPoint(x+bbox.maxX,y+bbox.minY,ghost)) return true;
       for (var i = 0; i < this.vines.length; i++) {
         var v = this.vines[i];
-        if (intersectAABB(x,y,bbox,v.x,v.y,v.bbox)) return true;
+        if (intersectAABB(x,y,bbox,v.x,v.y,v.bbox) && !ghost) return true;
       }
       /*
       if (!this.entities.inclides(obj)) return false;
@@ -469,10 +469,11 @@ class Room {
     var i = tx+","+ty;
     var c = this.candies[i];
     if (!c) return;
+    var candy = CandyData[c.type];
+    if (player.activeCandy && candy.duration) return;
     delete this.candies[i];
     io.to(this.id).emit('candies',this.candies);
     player.activeCandy = c.type;
-    var candy = CandyData[c.type];
     player.gamestats.CandiesCollected[c.type]++;
     candy.collect(player,this,tx,ty);
     if (candy.duration) {
@@ -499,7 +500,7 @@ class Room {
     }
     io.to(this.id).emit('candies',this.candies);
   }
-  checkPoint(x,y) {
+  checkPoint(x,y,ghost) {
     //Get tile position
     const tx = Math.floor(x);
     const ty = Math.floor(y);
@@ -508,6 +509,8 @@ class Room {
     if (this.tilemap[ty] == undefined) {return true;}
     if (this.tilemap[ty][tx] == undefined) {return true;}
 
+    if (ghost) return false;
+    
     //Insert tile-specific code here
     /*if (typeof tiletype == 'function') {
       tiletype(this.tilemap[ty][tx],tx,ty);
@@ -515,7 +518,7 @@ class Room {
 
     //Check if wall
     if (this.tilemap[ty][tx] != 0) {return true;}
-
+    
     return false;
   }
   growPumpkin(emit) {
@@ -579,8 +582,8 @@ class Room {
     var spawned = [];
     while (true) {
       await wait(30);
-      var rx = Math.floor((this.maxWidth-14)*Math.random())+14;
-      var ry = Math.floor(this.maxHeight*Math.random());
+      var rx = Math.floor(this.maxWidth*Math.random())-this.minTileX;
+      var ry = Math.floor(this.maxHeight*Math.random())-this.minTileY;
       var e = this.spawn(sel,rx,ry,spawnedBy,condition);
       if (e) {
         spawned.push(e);
@@ -734,7 +737,8 @@ class TutorialRoom extends Room {
 
     this.spawnCandies(5);
 
-    this.spawnRandom("wizard",4);
+    var filter = ()=>x>14;
+    this.spawnRandom("wizard",4,null,filter);
     this.spawnRandom("rusher",4);
     this.spawnRandom("speeder",4);
     this.spawnRandom("monster",8);
