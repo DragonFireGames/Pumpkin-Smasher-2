@@ -271,7 +271,8 @@ class Room {
     this.players[socket.id] = player;
     client.player = player;
     if (client.name != "") player.name = client.name;
-    else player.name = randomValueArray(["Player","Bot","Random","Nobody","Default","Noob"]);
+    else player.name = randomValueArray(["Player","Random","Nobody","Default","Unnamed"]);
+    player.hat = client.hat;
     this.amount++;
     io.to(this.id).emit('amount',this.amount);
   }
@@ -551,7 +552,7 @@ class Room {
       if (!this.pumpkins[x+","+y]) return;
       this.destroyPumpkin(x,y);
     }
-    var e = new Entities[sel](x+0.5,y+0.5,this.id);
+    var e = new Entities[sel](x+0.5,y+0.5,this.id,spawnedBy);
     if (!spawnedBy) return e;
     this.coins[spawnedBy] -= EntityData[sel].cost;
     return e;
@@ -739,11 +740,11 @@ class TutorialRoom extends Room {
 
     var filter = ()=>x>14;
     this.spawnRandom("wizard",4,null,filter);
-    this.spawnRandom("rusher",4);
-    this.spawnRandom("speeder",4);
-    this.spawnRandom("monster",8);
-    this.spawnRandom("catapult",2);
-    this.spawnRandom("debuffer",1);
+    this.spawnRandom("rusher",4,null,filter);
+    this.spawnRandom("speeder",4,null,filter);
+    this.spawnRandom("monster",8,null,filter);
+    this.spawnRandom("catapult",2,null,filter);
+    this.spawnRandom("debuffer",1,null,filter);
 
     while (this.player.x <= 28 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
@@ -758,7 +759,7 @@ class TutorialRoom extends Room {
     while (this.player.x <= 56 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
-    this.spawnRandom("ghost",10);
+    this.spawnRandom("ghost",10,null,filter);
 
     while (this.player.x <= 62 && ROOM_LIST[this.id] && !this.freeplay) await wait(100);
     if (!ROOM_LIST[this.id] || this.freeplay) return;
@@ -1074,6 +1075,23 @@ class TutorialRoom extends Room {
 // ------
 // Player
 // ------
+/*var UpgradeData = {
+  "speed": {
+    "default": 2.2 * speed,
+    "upgrade": v => v*1.28,
+    "max": 4,
+  },
+  "axelength": {
+    "default": 0.55,
+    "upgrade": v => v+1/3,
+    "max": 4
+  },
+  "health": {
+    "default": 3,
+    "upgrade": v => v+1,
+    "max": 4
+  },
+};*/
 const speedDefault = 2.2;
 const speedMult = 1.28;
 const axeLengthDefault = 0.55;
@@ -1133,16 +1151,17 @@ class Player {
 
     this.activeCandy = false;
     this.candyDuration = 0;
-
-    this.hat = "santa";
-
+    
     this.name = "";
+    this.hat = "";
+    
     this.gamestats = {
       // Skeleton
       Smashed: 0,
       SmashedGold: 0,
       SmashedDiamond: 0,
       EntitiesKilled: {},
+      EntitiesKilledWithLolipop: 0,
       Deaths: 0,
       ObjectiveDamage: 0,
       ObjectivesDestroyed: 0,
@@ -1151,7 +1170,9 @@ class Player {
       CandiesCollected: {},
       // Pumpkin Master
       DamagedSkeletonsWith: {},
+      DamagedSkeletonsWithSwarm: 0,
       KilledSkeletonsWith: {},
+      KilledSkeletonsWithSwarm: 0,
       EntitiesSpawned: {},
       AbilitiesUsed: {},
       CoinsGenerated: 0,
@@ -1192,15 +1213,16 @@ class Player {
       level:this.level,
       upgradePts:this.upgradePts,
       name:this.name,
+      hat:this.hat,
       activeCandy:this.activeCandy,
       candyDuration:this.candyDuration,
-      hat:this.hat,
     };
     if (this.disabled) {
       p.health = this.health / this.maxhealth * healthDefault;
       p.maxhealth = healthDefault;
       p.axelength = axeLengthDefault;
     }
+    if (this.activeCandy == "chocolate") p.axelength += 1.5;
     return p;
   }
   generateStats(room) {
@@ -1256,10 +1278,11 @@ class Player {
     dx += this.x;
     dy += this.y;
 
-    if (!room.checkCollisions(dx,this.y,this.bbox,this)) {
+    var ghost = this.activeCandy == "ghost_chew"
+    if (!room.checkCollisions(dx,this.y,this.bbox,this,ghost)) {
       this.x = dx;
     }
-    if (!room.checkCollisions(this.x,dy,this.bbox,this)) {
+    if (!room.checkCollisions(this.x,dy,this.bbox,this,ghost)) {
       this.y = dy;
     }
 
@@ -1323,22 +1346,34 @@ class Player {
       check(Math.ceil(x),Math.floor(y));
       check(Math.floor(x),Math.floor(y));
     }
+    var axelength = this.axelength;
+    if (this.disabled) axelength = axeLengthDefault;
+    if (this.activeCandy == "chocolate") axelength += 1.5;
     check2(ufx,ufy);
-    if (!this.disabled && this.upgradeLvls.axelength >= 2) {
+    if (axelength >= 0.75) {
       check2(ufx+this.facing,ufy);
     }
-    if (!this.disabled && this.upgradeLvls.axelength >= 3) {
+    if (axelength >= 1) {
       check2(ufx,ufy+1);
       check2(ufx,ufy-1);
     }
-    if (!this.disabled && this.upgradeLvls.axelength >= 4) {
+    if (axelength >= 1.3) {
       check2(ufx+this.facing,ufy+1);
       check2(ufx+this.facing,ufy-1);
     }
+    if (axelength >= 1.7) {
+      check2(ufx,ufy+2);
+      check2(ufx,ufy-2);
+      check2(ufx+this.facing*2,ufy);
+    }
+    if (axelength) >= 2) {
+      check2(ufx+this.facing*2,ufy+1);
+      check2(ufx+this.facing*2,ufy-1);
+      check2(ufx+this.facing,ufy+2);
+      check2(ufx+this.facing,ufy-2);
+    }
 
     // Check for Entities
-    var axelength = this.axelength;
-    if (this.disabled) axelength = axeLengthDefault;
     for (var i = room.entities.length - 1; i >= 0; i--) {
       var e = room.entities[i];
       var b = e.bbox;
@@ -1347,7 +1382,7 @@ class Player {
       var dist = dx * dx + dy * dy;
       if (Math.sign(dx+0.07*this.facing) != this.facing && dist > e.hitdist*e.hitdist) continue;
       if (dist > (e.hitdist+axelength)**2) continue;
-      if (room.entities[i].hit(this)) {
+      if (e.hit(this)) {
         io.to(room.id).emit('hit', e.x, e.y);
       }
     }
@@ -1462,8 +1497,10 @@ class Player {
     var pm = room.players[dealer.spawnedBy];
     if (!pm) return;
     pm.gamestats.DamagedSkeletonsWith[dealer.category] += amount;
+    if (dealer.swarm) pm.gamestats.DamagedSkeletonsWithSwarm += amount;
     if (this.health < 0) { 
       pm.gamestats.KilledSkeletonsWith[dealer.category]++;
+      if (dealer.swarm) pm.gamestats.KilledSkeletonsWithSwarm++;
     }
   }
   addScore(n) {
@@ -1540,7 +1577,7 @@ class Entity {
     };
   }
   update() {}
-  moveForward(dir,speed) {
+  moveForward(dir,speed,ghost) {
     const room = ROOM_LIST[this.room];
     dir.x *= speed;
     dir.y *= speed;
@@ -1688,6 +1725,7 @@ Entities.nuke = class extends Entity {
     this.depth = -1;
     this.timer = 4;
     this.falling_pumpkin = new Entities.falling_pumpkin(x, y - 400/9, room, spawnedBy);
+    this.lolipop_immune = true;
   }
   update() {
     this.timer -= speed;
@@ -1705,6 +1743,7 @@ Entities.falling_pumpkin = class extends Entity {
     this.depth = 1;
     this.timer = 4;
     this.smashed = false;
+    this.lolipop_immune = true;
   }
   update() {
     const room = ROOM_LIST[this.room];
@@ -2033,6 +2072,7 @@ Entities.shockwave = class extends Entity {
     this.range = 0;
     this.smashed = false;
     this.hasHit = [];
+    this.lolipop_immune = true;
   }
   update() {
     const room = ROOM_LIST[this.room];
@@ -2103,6 +2143,7 @@ Entities.payload = class extends Entity {
     this.target = target;
     this.start = { x:x, y:y };
     this.path = 0;
+    this.lolipop_immune = true;
   }
   update() {
     const room = ROOM_LIST[this.room];
@@ -2320,7 +2361,9 @@ Abilities.swarm = async function(rx,ry,room,spawnedBy) {
     for (var y = ry; y < ry + 15; y++) {
       if (!room.pumpkins[x+","+y]) continue;
       room.destroyPumpkin(x,y);
-      swarm.push(new Entities.monster(x+0.5,y+0.5,room.id,spawnedBy));
+      var e = new Entities.monster(x+0.5,y+0.5,room.id,spawnedBy);
+      e.swarm = true;
+      swarm.push(e);
     }
   }
   await wait(20*1000);
@@ -2438,11 +2481,49 @@ CandyData.peppermint = {
 };
 CandyData.lolipop = {
   duration: 30,
+  loseonswing: true,
+  loseondamaged: true,
   collect: async function(player) {},
-  expire: async function(player) {},
+  expire: async function(player) {
+    var isfar = function(e) {
+      var dx = e.x-this.x;
+      var dy = e.y-this.y;
+      return dx * dx + dy * dy > 64;
+    };
+    // Kill Entities
+    for (var i = room.entities.length - 1; i >= 0; i--) {
+      var e = room.entities[i];
+      if (isfar(e) || e.lolipop_immune) continue;
+      player.addScore(e.value);
+      player.gamestats.EntitiesKilled[e.type]++;
+      player.gamestats.EntitiesKilledWithLolipop++;
+      io.to(room.id).emit('hit', e.x, e.y);
+      e.destroy();
+    }
+    // Check for vines
+    for (var i = room.vines.length - 1; i >= 0; i--) {
+      var v = room.vines[i];
+      if (isfar(v)) continue;
+      v.health = 0;
+      this.gamestats.AbilityDamage.vines+=v.health;
+      this.gamestats.AbilitiesDestroyed.vines++;
+      room.vines.splice(i,1);
+    }
+    // Check for generators
+    for (i in room.generators) {
+      var gen = room.generators[i];
+      if (isfar(gen)) continue;
+      this.addScore(0.2 * gen.health);
+      gen.health = 0;
+      this.gamestats.AbilityDamage.generators+=gen.health;
+      this.gamestats.AbilitiesDestroyed.generators++;
+      delete room.generators[i];
+    }
+  },
 };
 CandyData.hot_tamale = {
   duration: 30,
+  loseondamaged: true,
   collect: async function(player) {
     player.smashInt = setInterval(()=>{player.smash();},100);
   },
@@ -2453,16 +2534,26 @@ CandyData.hot_tamale = {
 CandyData.ghost_chew = {
   duration: 30,
   collect: async function(player) {},
-  expire: async function(player) {},
+  expire: async function(player) {
+    var s = Math.sqrt(2);
+    if (room.checkCollisions(player.x,player.y,player.bbox,player)) return;
+    for (var i = 0; i < 2; i+=0.05) {
+      if (!room.checkCollisions(player.x+i,player.y,player.bbox,player)) { player.x += i; break; }
+      if (!room.checkCollisions(player.x,player.y+i,player.bbox,player)) { player.y += i; break; }
+      if (!room.checkCollisions(player.x-i,player.y,player.bbox,player)) { player.x -= i; break; }
+      if (!room.checkCollisions(player.x,player.y-i,player.bbox,player)) { player.y -= i; break; }
+      if (!room.checkCollisions(player.x+i/s,player.y+i/s,player.bbox,player)) { player.x += i/s; player.y += i/s; break; }
+      if (!room.checkCollisions(player.x+i/s,player.y-i/s,player.bbox,player)) { player.x += i/s; player.y -= i/s; break; }
+      if (!room.checkCollisions(player.x-i/s,player.y-i/s,player.bbox,player)) { player.x -= i/s; player.y -= i/s; break; }
+      if (!room.checkCollisions(player.x-i/s,player.y+i/s,player.bbox,player)) { player.x -= i/s; player.y += i/s; break; }
+    }
+  },
 };
 CandyData.chocolate = {
   duration: 20,
-  collect: async function(player) {
-    player.axelength += 1;
-  },
-  expire: async function(player) {
-    player.axelength -= 1;
-  },
+  loseondamaged: true,
+  collect: async function(player) {},
+  expire: async function(player) {},
 };
 CandyData.candied_apple = {
   collect: async function(player) {
@@ -2477,7 +2568,7 @@ CandyData.blue_candy = {
   expire: async function(player) {},
 };
 function RandomCandy() {
-  return weightedRandom(0,["candy_corn","smarties","peppermint","blue_candy","candied_apple","hot_tamale","ghost_chew","chocolate"],[0.25,0.2,0.2,0.1,0.1,0.05,0.05,0.05]);
+  return weightedRandom(0,["candy_corn","smarties","peppermint","blue_candy","candied_apple","hot_tamale","ghost_chew","chocolate","lolipop"],[0.25,0.2,0.15,0.1,0.1,0.05,0.05,0.05,0.05]);
 }
 
 // --------
@@ -2643,6 +2734,9 @@ io.sockets.on('connection', function (socket) {
   // Misc
   socket.on('changeName',(name) => {
     client.name = name;
+  });
+  socket.on('changeHat',(hat) => {
+    client.hat = hat;
   });
 
   // Disconnect
