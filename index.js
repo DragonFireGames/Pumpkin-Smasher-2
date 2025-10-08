@@ -738,7 +738,7 @@ class TutorialRoom extends Room {
 
     this.spawnCandies(5);
 
-    var filter = ()=>x>14;
+    var filter = x=>x>14;
     this.spawnRandom("wizard",4,null,filter);
     this.spawnRandom("rusher",4,null,filter);
     this.spawnRandom("speeder",4,null,filter);
