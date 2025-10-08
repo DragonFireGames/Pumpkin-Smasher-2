@@ -2522,7 +2522,7 @@ CandyData.lolipop = {
   },
 };
 CandyData.hot_tamale = {
-  duration: 30,
+  duration: 20,
   loseondamaged: true,
   collect: async function(player) {
     player.smashInt = setInterval(()=>{player.smash();},100);
@@ -2532,12 +2532,12 @@ CandyData.hot_tamale = {
   },
 };
 CandyData.ghost_chew = {
-  duration: 30,
+  duration: 20,
   collect: async function(player) {},
   expire: async function(player,room) {
     var s = Math.sqrt(2);
     if (room.checkCollisions(player.x,player.y,player.bbox,player)) return;
-    for (var i = 0; i < 2; i+=0.05) {
+    for (var i = 0.05; i < 2; i+=0.05) {
       if (!room.checkCollisions(player.x+i,player.y,player.bbox,player)) { player.x += i; break; }
       if (!room.checkCollisions(player.x,player.y+i,player.bbox,player)) { player.y += i; break; }
       if (!room.checkCollisions(player.x-i,player.y,player.bbox,player)) { player.x -= i; break; }
@@ -2564,6 +2564,7 @@ CandyData.candied_apple = {
 CandyData.blue_candy = {
   collect: async function(player) {
     player.upgradePts++;
+    SOCKET_LIST[player.socket].emit('lvlUp',player.upgradeLvls);
   },
   expire: async function(player) {},
 };
