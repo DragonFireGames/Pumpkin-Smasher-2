@@ -624,6 +624,8 @@ class TutorialRoom extends Room {
     this.healVines = null;
     this.skeletons = [socket.id];
     this.tutorial();
+    this.coins = 0;
+    this.coins[socket.id] = 0;
   }
   async tutorial() {
     // Start game
@@ -1350,18 +1352,18 @@ class Player {
     if (this.disabled) axelength = axeLengthDefault;
     if (this.activeCandy == "chocolate") axelength += 1.5;
     check2(ufx,ufy);
-    if (axelength >= 0.75) {
+    if (axelength >= 1) {
       check2(ufx+this.facing,ufy);
     }
-    if (axelength >= 1) {
+    if (axelength >= 1.5) {
       check2(ufx,ufy+1);
       check2(ufx,ufy-1);
     }
-    if (axelength >= 1.3) {
+    if (axelength >= 1.75) {
       check2(ufx+this.facing,ufy+1);
       check2(ufx+this.facing,ufy-1);
     }
-    if (axelength >= 1.7) {
+    if (axelength >= 2) {
       check2(ufx,ufy+2);
       check2(ufx,ufy-2);
       check2(ufx+this.facing*2,ufy);
