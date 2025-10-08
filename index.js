@@ -2484,7 +2484,7 @@ CandyData.lolipop = {
   loseonswing: true,
   loseondamaged: true,
   collect: async function(player) {},
-  expire: async function(player) {
+  expire: async function(player,room) {
     var isfar = function(e) {
       var dx = e.x-this.x;
       var dy = e.y-this.y;
@@ -2534,7 +2534,7 @@ CandyData.hot_tamale = {
 CandyData.ghost_chew = {
   duration: 30,
   collect: async function(player) {},
-  expire: async function(player) {
+  expire: async function(player,room) {
     var s = Math.sqrt(2);
     if (room.checkCollisions(player.x,player.y,player.bbox,player)) return;
     for (var i = 0; i < 2; i+=0.05) {
