@@ -624,7 +624,7 @@ class TutorialRoom extends Room {
     this.healVines = null;
     this.skeletons = [socket.id];
     this.tutorial();
-    this.coins = 0;
+    this.coins = {};
     this.coins[socket.id] = 0;
   }
   async tutorial() {
