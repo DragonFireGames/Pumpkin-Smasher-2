@@ -272,7 +272,7 @@ class Room {
     client.player = player;
     if (client.name != "") player.name = client.name;
     else player.name = randomValueArray(["Player","Random","Nobody","Default","Unnamed"]);
-    player.hat = client.hat;
+    player.hat = "red_beanie"//client.hat;
     this.amount++;
     io.to(this.id).emit('amount',this.amount);
   }
@@ -1110,6 +1110,7 @@ class Client {
     this.id = id;
     this.room = "";
     this.name = "";
+    this.hat = "";
     this.timeJoined = Date.now();
   }
 }
