@@ -1964,7 +1964,8 @@ function show() {
     // Skeleton
     var skele = function(sel) {
       textures.skeleton[sel].show(w, 46);
-      if (p.hat) textures.hats[p.hat].show(w, 46, sel);
+      textures.hats.santa.show(w, 46, sel);
+      //if (p.hat) textures.hats[p.hat].show(w, 46, sel);
     }
     if (p.activeCandy) {
       var time = p.candyDuration-Date.now();
