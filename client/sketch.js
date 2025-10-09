@@ -21,7 +21,7 @@
     peerjs
 */
 
-var __cpLocation = window.location;
+var __cpLocation = window.__cpLocation;
 
 // TODO: 
 // Better Animations and Graphics
@@ -88,14 +88,15 @@ defaultUser.name = "";
 defaultUser.doneTutorial = false;
 defaultUser.stats = {};
 user.achievements = {};
-var AchievementData = [
-  {
+var AchievementData = {
+  "no_deaths": {
     name: "No Deaths",
-    hat: false,
+    description: "No deaths as skeleton in a single match",
+    hat: "pumpkin",
     test: function(match, cumulative) {
       return match.deaths == 0
     }
-  }
+  },
   /*
   // Skeleton
   MaxedHealth: false,
@@ -112,7 +113,7 @@ var AchievementData = [
   KilledSkeletonWithSwarm: false,
   Used10AbilitiesInMatch: false
   */
-];
+};
 for (var i in defaultUser) {
   if (!user[i]) user[i] = defaultUser[i];
 }
@@ -789,6 +790,24 @@ class Animation {
     return { w, h };
   }
 }
+class HatDisplay {
+  constructor(url,x,y) {
+    this.hat = new FitImage(url);
+    this.x = x;
+    this.y = y;
+  }
+  show(w,h,sel) {
+    var tex = textures.skeleton[sel];
+    var hat = this.hat;
+    var hw = w * this.hat.w / tex.w;
+    var hh = h * this.hat.h / tex.h;
+    var dx = (this.x + tex.hatdx) / tex.w * w + (hw-w)/2;
+    var dy = (this.y + tex.hatdy) / tex.w * w + (hh-h)/2;
+    translate(dx,dy);
+    hat.show(hw, hh);
+    translate(-dx,-dy);
+  }
+}
 // Objects to contain assets
 var textures = {};
 var gui = {};
@@ -817,12 +836,20 @@ async function loadAssets() {
   // Lobby Image
   textures.lobby = LoadImage("assets/misc/lobby.png");
 
+
+  var SkeletonImg = function(url,dx,dy,) {
+    var img = new FitImage(url);
+    img.hatdx = dx;
+    img.hatdy = dy;
+    return img;
+  }
+
   // Skeleton Assets
   textures.skeleton = [];
-  textures.skeleton[0] = new FitImage("assets/skeleton/1.png");
-  textures.skeleton[1] = new FitImage("assets/skeleton/2.png");
-  textures.skeleton[2] = new FitImage("assets/skeleton/3.png");
-  textures.skeleton[3] = new FitImage("assets/skeleton/joining.png");
+  textures.skeleton[0] = new SkeletonImg("assets/skeleton/1.png",-2,-4);
+  textures.skeleton[1] = new SkeletonImg("assets/skeleton/2.png",2,0);
+  textures.skeleton[2] = new SkeletonImg("assets/skeleton/3.png",0,0);
+  textures.skeleton[3] = new SkeletonImg("assets/skeleton/joining.png",0,0);
   textures.bone_pile = new FitImage("assets/skeleton/bone_pile.png");
   textures.axe = new FitImage("assets/skeleton/axe.png");
 
@@ -837,8 +864,13 @@ async function loadAssets() {
 
   // Hats
   textures.hats = {};
-  textures.hats.santa = new FitImage("assets/hats/santa.png");
+  textures.hats.santa = new HatDisplay("assets/hats/santa.png",0,12);
+  textures.hats.pumpkin = new HatDisplay("assets/hats/pumpkin.png",14,20);
+  textures.hats.red_beanie = new HatDisplay("assets/hats/red_beanie.png",12,12);
+  textures.hats.green_beanie = new HatDisplay("assets/hats/green_beanie.png",12,12);
+  textures.hats.blue_beanie = new HatDisplay("assets/hats/blue_beanie.png",12,12);
 
+  // Load Displays
   for (var i in EntityDisplay) {
     EntityDisplay[i] = EntityDisplay[i]();
   }
@@ -850,7 +882,6 @@ async function loadAssets() {
   }
 
   // Gui
-
   gui.logo = LoadImage("assets/gui/logo.png");
 
   gui.discord_icon = LoadImage("assets/gui/discord_icon.png");
@@ -1933,7 +1964,7 @@ function show() {
     // Skeleton
     var skele = function(sel) {
       textures.skeleton[sel].show(w, 46);
-      //if (p.hat) HatDisplay[p.hat].show();
+      if (p.hat) textures.hats[p.hat].show(w, 46, sel);
     }
     if (p.activeCandy) {
       var time = p.candyDuration-Date.now();
@@ -2947,9 +2978,9 @@ function processStats(stats,is_pm,pm_win) {
   };
   user.stats = add(user.stats,stats);
   user.achievements = user.achievements || {};
-  for (var i = 0; i < AchievementData.length; i++) {
+  for (var i in AchievementData) {
     var a = AchievementData[i];
-    if (a.test(stats,user.stats)) user.achievements[a.name] = true;
+    if (a.test(stats,user.stats)) user.achievements[i] = true;
   }
 }
 
@@ -2957,6 +2988,7 @@ function changeUsername() {
   var name = homeDis.username.value;
   name = censor(name);
   socket.emit('changeName', name);
+  socket.emit('changeHat', randomProperty(textures.hats));
   user.name = homeDis.username.value;
 }
 
@@ -2991,6 +3023,19 @@ function weightedRandom(randomfunct, def, values, weights) {
     prob -= weights[i];
   }
   return def;
+}
+function randomProperty(obj) {
+  const keys = Object.keys(obj);
+  return randomValueArray(keys);
+}
+function randomValue(obj) {
+  return obj[randomProperty(obj)];
+}
+function randomValueArray(arr) {
+  return arr[randomIndex(arr)];
+}
+function randomIndex(arr) {
+  return arr.length * Math.random() << 0;
 }
 function format(Fill, Stroke, StrokeWidth, TextSize, TextAlign) {
   if (Fill || Fill === 0) fill(Fill);
