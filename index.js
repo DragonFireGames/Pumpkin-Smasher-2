@@ -2868,7 +2868,7 @@ async function start(room) {
 function randomProperty(obj) {
   const keys = Object.keys(obj);
   return randomValueArray(keys);
-};
+}
 function randomValue(obj) {
   return obj[randomProperty(obj)];
 }
