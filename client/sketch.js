@@ -21,7 +21,6 @@
     peerjs
 */
 
-var __cpLocation = window.location;
 
 // TODO: 
 // Better Animations and Graphics
@@ -45,7 +44,7 @@ socket.on("disconnect", async () => {
     await wait(1000);
     if (socket.connected) return;
   }
-  __cpLocation.reload();
+  location.reload();
 });
 //^^Connects to the socket.io server
 
@@ -86,18 +85,71 @@ var defaultUser = {};
 defaultUser.lastSession = {};
 defaultUser.name = "";
 defaultUser.doneTutorial = false;
-defaultUser.stats = {};
-user.achievements = {};
-var AchievementData = {
-  "no_deaths": {
-    name: "No Deaths",
-    description: "No deaths as skeleton in a single match",
-    hat: "pumpkin",
-    test: function(match, cumulative) {
-      return match.deaths == 0
-    }
+/*defaultUser.stats = {
+  // Overall
+  SkeletonWins: 0,
+  SkeletonLosses: 0,
+  PumpkinMasterWins: 0,
+  PumpkinMasterLosses: 0,
+  // Skeleton
+  Smashed: 0,
+  SmashedGold: 0,
+  SmashedDiamond: 0,
+  Upgraded: 0,
+  Upgrade: {
+    health: 0,
+    axerange: 0,
+    speed: 0
+  }
+  KilledMonsters: 0,
+  Killed: {
+    monster: 0,
+    ghost: 0,
+    speeder: 0,
+    rusher: 0,
+    wizard: 0,
+    projectile: 0,
+    brute: 0,
+    catapult: 0,
+    debuffer: 0,
   },
-  /*
+  Deaths: 0,
+  ObjectivesDestroyed: 0,
+  // Pumpkin Master
+  KilledSkeletons: 0,
+  KilledSkeletonsWith: {
+    monster: 0,
+    ghost: 0,
+    nuke: 0,
+    speeder: 0,
+    rusher: 0,
+    wizard: 0,
+    brute: 0,
+    catapult: 0,
+    debuffer: 0,
+  },
+  SpawnedMonsters: 0,
+  Spawned: {
+    monster: 0,
+    ghost: 0,
+    nuke: 0,
+    speeder: 0,
+    rusher: 0,
+    wizard: 0,
+    brute: 0,
+    catapult: 0,
+    debuffer: 0,
+  },
+  UsedAbilities: 0,
+  Used: {
+    fog: 0,
+    vines: 0,
+    swarm: 0,
+    shield: 0,
+    generators: 0,
+  }
+}
+user.achivements = {
   // Skeleton
   MaxedHealth: false,
   MaxedAxeRange: false,
@@ -105,6 +157,7 @@ var AchievementData = {
   Killed50EnemiesInMatch: false,
   Smashed200PumpkinsInMatch: false,
   Smashed10DiamondPumpkinsInMatch: false,
+  NoDeaths: false,
   DestroyedObjective: false,
   DestroyedAllObjectives: false,
   DestroyedShield: false,
@@ -112,8 +165,7 @@ var AchievementData = {
   Killed10Skeletons: false,
   KilledSkeletonWithSwarm: false,
   Used10AbilitiesInMatch: false
-  */
-};
+}*/
 for (var i in defaultUser) {
   if (!user[i]) user[i] = defaultUser[i];
 }
@@ -407,30 +459,25 @@ AbilityDisplay.vines = (function() {
   var icon = new FitImage("assets/abilities/vines/icon.png");
   var horizVines = new FitImage("assets/abilities/vines/horizontal.png");
   var vertVines = new FitImage("assets/abilities/vines/vertical.png");
-  var grow = function(v) {
-    var t = (Date.now()-v.spawnedAt)/1000;
-    if (t > 1) return 36;
-    return 36*Math.sqrt(t);
-  };
   return {
-    cost: 8,
+    cost: 7,
     cooldown: 1,
     wait: false,
     icon: function() {
       icon.show(0, 40);
     },
-    horiz: function(v) {
-      horizVines.show(0, grow(v));
+    horiz: function() {
+      horizVines.show(0, 36);
     },
-    vert: function(v) {
-      vertVines.show(grow(v), 0);
+    vert: function() {
+      vertVines.show(36, 0);
     }
   };
 });
 AbilityDisplay.swarm = (function() {
   var icon = new FitImage("assets/abilities/swarm/icon.png");
   return {
-    cost: 22,
+    cost: 20,
     cooldown: 10 * 1000,
     wait: false,
     icon: function() {
@@ -442,7 +489,7 @@ AbilityDisplay.shield = (function() {
   var icon = new FitImage("assets/abilities/shield/icon.png");
   var shieldImg = new Animation("assets/abilities/shield/shield.png", 3, 8);
   return {
-    cost: 75,
+    cost: 70,
     cooldown: 90 * 1000,
     wait: false,
     icon: function() {
@@ -457,7 +504,7 @@ AbilityDisplay.generators = (function() {
   var icon = new FitImage("assets/abilities/generator/icon.png");
   var generatorImg = new FitImage("assets/abilities/generator/generator.png");
   return {
-    cost: 18,
+    cost: 8,
     cooldown: 1,
     wait: false,
     icon: function() {
@@ -468,10 +515,10 @@ AbilityDisplay.generators = (function() {
       var seconds = 1000 / g.amount;
       var percent = fract(Date.now() / seconds);
       translate(0, -25 * percent + 10);
-      if (percent >= 0.85) {
-        if (g.amount >= 1.2) {
+      if (percent >= 0.9) {
+        if (g.amount >= 0.8) {
           textures.diamondpumpkin.show(percent * 60);
-        } else if (g.amount >= 0.85) {
+        } else if (g.amount >= 0.4) {
           textures.goldpumpkin.show(percent * 60);
         } else {
           textures.pumpkin.show(percent * 60);
@@ -480,122 +527,6 @@ AbilityDisplay.generators = (function() {
         textures.newpumpkin.show(percent * 60);
       }
       translate(0, 25 * percent - 10);
-    }
-  };
-});
-
-// Candies
-var CandyDisplay = {};
-CandyDisplay.candy_corn = (function() {
-  var candy = new FitImage("assets/candies/candy-corn.png");
-  return {
-    show: function() {
-      candy.show(36, 36);
-    },
-    active: function(p,f,s) {
-      tint(255, 200, 128);
-      f(s);
-      tint(255, 255, 255);
-    }
-  };
-});
-CandyDisplay.smarties = (function() {
-  var candy = new FitImage("assets/candies/smarties.png");
-  return {
-    show: function() {
-      candy.show(36, 36);
-    },
-    active: function(p,f,s) {
-      f(3);
-    }
-  };
-});
-CandyDisplay.peppermint = (function() {
-  var candy = new FitImage("assets/candies/peppermint.png");
-  return {
-    show: function() {
-      candy.show(36, 36);
-    },
-    active: function(p,f,s) {
-      f(s);
-    }
-  };
-});
-CandyDisplay.lolipop = (function() {
-  var candy = new FitImage("assets/candies/lolipop.png");
-  return {
-    show: function() {
-      candy.show(36, 36);
-    },
-    active: function(p,f,s) {
-      tint(255, 170, 255);
-      f(s);
-      tint(255, 255, 255);
-    }
-  };
-});
-CandyDisplay.hot_tamale = (function() {
-  var candy = new FitImage("assets/candies/hot-tamale.png");
-  return {
-    show: function() {
-      candy.show(36, 36);
-    },
-    active: function(p,f,s) {
-      tint(255, 128, 128);
-      f(s);
-      tint(255, 255, 255);
-    }
-  };
-});
-CandyDisplay.ghost_chew = (function() {
-  var candy = new FitImage("assets/candies/ghost-chew.png");
-  return {
-    show: function() {
-      candy.show(36, 36);
-    },
-    active: function(p,f,s) {
-      tint(255, 255, 255, 128);
-      f(s);
-      tint(255, 255, 255, 255);
-    }
-  };
-});
-CandyDisplay.chocolate = (function() {
-  var candy = new FitImage("assets/candies/chocolate.png");
-  return {
-    show: function() {
-      candy.show(36, 36);
-    },
-    active: function(p,f,s) {
-      tint(160, 120, 100);
-      f(s);
-      tint(255, 255, 255);
-    }
-  };
-});
-CandyDisplay.candied_apple = (function() {
-  var candy = new FitImage("assets/candies/candied-apple.png");
-  return {
-    show: function() {
-      candy.show(36, 36);
-    },
-    active: function(p,f,s) {
-      tint(150, 200, 150);
-      f(s);
-      tint(255, 255, 255);
-    }
-  };
-});
-CandyDisplay.blue_candy = (function() {
-  var candy = new FitImage("assets/candies/blue-candy.png");
-  return {
-    show: function() {
-      candy.show(36, 36);
-    },
-    active: function(p,f,s) {
-      tint(170, 170, 255);
-      f(s);
-      tint(255, 255, 255);
     }
   };
 });
@@ -790,24 +721,6 @@ class Animation {
     return { w, h };
   }
 }
-class HatDisplay {
-  constructor(url,x,y) {
-    this.hat = new FitImage(url);
-    this.x = x;
-    this.y = y;
-  }
-  show(w,h,sel) {
-    var tex = textures.skeleton[sel];
-    var hat = this.hat;
-    var hw = w * this.hat.w / tex.w;
-    var hh = h * this.hat.h / tex.h;
-    var dx = (this.x + tex.hatdx) / tex.w * w + (hw-w)/2;
-    var dy = (this.y + tex.hatdy) / tex.w * w + (hh-h)/2;
-    translate(dx,dy);
-    hat.show(hw, hh);
-    translate(-dx,-dy);
-  }
-}
 // Objects to contain assets
 var textures = {};
 var gui = {};
@@ -836,20 +749,12 @@ async function loadAssets() {
   // Lobby Image
   textures.lobby = LoadImage("assets/misc/lobby.png");
 
-
-  var SkeletonImg = function(url,dx,dy,) {
-    var img = new FitImage(url);
-    img.hatdx = dx;
-    img.hatdy = dy;
-    return img;
-  }
-
   // Skeleton Assets
   textures.skeleton = [];
-  textures.skeleton[0] = new SkeletonImg("assets/skeleton/1.png",-2,-4);
-  textures.skeleton[1] = new SkeletonImg("assets/skeleton/2.png",2,0);
-  textures.skeleton[2] = new SkeletonImg("assets/skeleton/3.png",0,0);
-  textures.skeleton[3] = new SkeletonImg("assets/skeleton/joining.png",0,0);
+  textures.skeleton[0] = new FitImage("assets/skeleton/1.png");
+  textures.skeleton[1] = new FitImage("assets/skeleton/2.png");
+  textures.skeleton[2] = new FitImage("assets/skeleton/3.png");
+  textures.skeleton[3] = new FitImage("assets/skeleton/joining.png");
   textures.bone_pile = new FitImage("assets/skeleton/bone_pile.png");
   textures.axe = new FitImage("assets/skeleton/axe.png");
 
@@ -862,26 +767,15 @@ async function loadAssets() {
 
   textures.objective = new FitImage("assets/pumpkins/objective.png");
 
-  // Hats
-  textures.hats = {};
-  textures.hats.santa = new HatDisplay("assets/hats/santa.png",0,12);
-  textures.hats.pumpkin = new HatDisplay("assets/hats/pumpkin.png",14,20);
-  textures.hats.red_beanie = new HatDisplay("assets/hats/red_beanie.png",12,12);
-  textures.hats.green_beanie = new HatDisplay("assets/hats/green_beanie.png",12,12);
-  textures.hats.blue_beanie = new HatDisplay("assets/hats/blue_beanie.png",12,12);
-
-  // Load Displays
   for (var i in EntityDisplay) {
     EntityDisplay[i] = EntityDisplay[i]();
   }
   for (var i in AbilityDisplay) {
     AbilityDisplay[i] = AbilityDisplay[i]();
   }
-  for (var i in CandyDisplay) {
-    CandyDisplay[i] = CandyDisplay[i]();
-  }
 
   // Gui
+
   gui.logo = LoadImage("assets/gui/logo.png");
 
   gui.discord_icon = LoadImage("assets/gui/discord_icon.png");
@@ -897,8 +791,6 @@ async function loadAssets() {
 
   gui.blur = new FitImage("assets/gui/blur.png");
   gui.blur2 = new FitImage("assets/gui/blur2.png");
-
-  gui.trick_or_treat = new FitImage("assets/candies/trick-or-treat.png");
 
   if (isMobile) await loadGUI();
 }
@@ -965,8 +857,6 @@ var roomMap = {};
 // Pumpkins
 var pumpkinBuf;
 var pumpkins = {};
-// Candies
-var candies = {};
 // Objectives
 var objectives = [];
 
@@ -1138,10 +1028,8 @@ function draw() {
     for (var i = 0; i < tutorialMsg.length; i++) {
       text(tutorialMsg[i], -103, -12 + 18 * i);
     }
-    if (Date.now()-tutorialDate > 1000) {
-      format("#ffa500", false, 1, 8, RIGHT);
-      text("ENTER to continue", 145, 33);
-    }
+    format("#ffa500", false, 1, 8, RIGHT);
+    text("ENTER to continue", 145, 33);
     // Speaker
     if (tutorialPumpkin) {
       translate(-125, 0);
@@ -1152,8 +1040,7 @@ function draw() {
     }
     pop();
     // Continue
-    if (keyIsDown(13) && Date.now()-tutorialDate > 1000) {
-      tutorialDate = Date.now();
+    if (keyIsDown(13)) {
       tutorialMsg = false;
       socket.emit("continueTutorial");
     }
@@ -1275,22 +1162,6 @@ Displays.game = function() {
       pop();
     }
 
-    // Trick or Treat
-    var time = Date.now()-TrickOrTreatDate;
-    if (time < 5000) {
-      push();
-      format(255, false, 1, 12, CENTER);
-      if (time > 3000) {
-        var opacity = Math.floor((time-3000)/2000*255);
-        fill(255,opacity);
-        tint(255,opacity);
-      }
-      text("Trick or Treat!", 0, wHeight / 2 - 50);
-      //translate(-100, wHeight / 2 - 50);
-      //gui.trick_or_treat.show(30,0);
-      pop();
-    }
-
     // Upgrades
     if (upgradeDisplay) {
       push();
@@ -1368,10 +1239,6 @@ Displays.pmgame = function() {
         push();
         scale(36, 36);
         fill(255, 255, 255, 128);
-        var oldgen = generators[(rx*14)+","+(ry*14)];
-        if (cam.selA == "generators" && oldgen && (oldgen.amount >= 1.2 || player.id != oldgen.spawnedBy)) {
-          fill(255, 128, 128, 128);
-        }
         rect(rx * 14, ry * 14, 15, 15);
         pop();
       }
@@ -1589,7 +1456,7 @@ Displays.lobby = function() {
       "Every time an objective is destroyed, the Pumpkin Master gets an additional half a coin per second.",
       "Shields can win the game when used properly.",
       "Split up and attack all three objectives at once, there is no way to defend from all of you.",
-      "Fog the entire map to hide the position of your shield.",
+      "Fog the entire map to hide the location of your shield.",
       "Press space in a room you are hosting to switch from public to private.",
       "Press +/- in a room you are hosting to change the player amount required to start.",
       "Private rooms cannot be seen in the join menu.",
@@ -1649,7 +1516,7 @@ homeDis.clickTutorial = function() {
 homeDis.clickInstructions = function() {
   setDisplay("instructions");
   //cam.scroll = 0;
-  //__cpLocation.href = __cpLocation.origin+"/instructions";
+  //location.href = location.origin+"/instructions";
 }
 homeDis.clickSettings = function() {
   alert("Coming soon!");
@@ -1742,17 +1609,6 @@ Displays.gameover = function() {
   rect(-37.5, 0, 75, 50);
   format("#ffa500", false, 1, 20, CENTER);
   text("Leave", 0, 30);
-  // Display code
-  push();
-  format("#ffa500", false, 1, 20, LEFT);
-  textAlign(LEFT, BOTTOM);
-  if (player.pumpkinMaster) {
-    text(`Skeleton Kills: ${MatchStats.SkeletonKills}`,20-wWidth/2,20-wHeight/2);
-  } else {
-    text(`Pumpkins Smashed: ${MatchStats.Smashed}`,20-wWidth/2,20-wHeight/2);
-  }
-  pop();
-  //
   if ((keyIsDown(13) || (isMobile && mouseIsPressed) || (overbutton && mouseIsPressed))) {
     exit();
   }
@@ -1800,10 +1656,10 @@ function setDisplay(d, sd) {
   subdisplay = sd ?? "";
   DiscordWidget.style.visibility = "hidden";
   user.lastSession = {};
-  history.pushState({}, "", __cpLocation.origin);
+  history.pushState({}, "", location.origin);
   if (display == "lobby") {
-    history.pushState({}, "", __cpLocation.origin + "?room=" + room);
-    if (isNext) history.pushState({}, "", __cpLocation.origin + "?room=next");
+    history.pushState({}, "", location.origin + "?room=" + room);
+    if (isNext) history.pushState({}, "", location.origin + "?room=next");
     return;
   }
   if (display == "home" || display == "loading") return;
@@ -1823,7 +1679,7 @@ function endAssetLoad() {
   }
 
   // Get params
-  var params_str = __cpLocation.href.split('?')[1];
+  var params_str = location.href.split('?')[1];
   if (params_str) {
     var params_arr = params_str.split('&');
 
@@ -1880,24 +1736,15 @@ function show() {
   // Show Pumpkin Image
   image(pumpkinBuf, minTileX * 36, minTileY * 36, pumpkinBuf.width, pumpkinBuf.height);
 
-  // Candies
-  for (var i in candies) {
-    var c = candies[i];
-    push();
-    translate(c.x, c.y);
-    CandyDisplay[c.type].show();
-    pop();
-  }
-
   // Abilities
   for (var i = 0; i < vines.length; i++) {
     if (vines[i].health <= 0) continue;
     push();
     translate(vines[i].x, vines[i].y);
-    //var alpha = lerp(128,255,vines[i].health/25);
+    //var alpha = lerp(128,255,vines[i].health/20);
     //tint(255,255,255,floor(alpha));
-    AbilityDisplay.vines[vines[i].orient](vines[i]);
-    healthBar(40, 14, vines[i].health / 25);
+    AbilityDisplay.vines[vines[i].orient]();
+    healthBar(40, 14, vines[i].health / 20);
     pop();
   }
   if (shield) {
@@ -1905,7 +1752,7 @@ function show() {
     translate(shield.x, shield.y);
     //var alpha = lerp(128,255,shield.health/50);
     //tint(255,255,255,floor(alpha));
-    AbilityDisplay.shield.show(shield);
+    AbilityDisplay.shield.show();
     translate(0, -75);
     healthBar(60, 20, shield.health / 50);
     pop();
@@ -1962,15 +1809,7 @@ function show() {
     rotate(-p.swing);
     translate(-(w - aw) / 2, -off);
     // Skeleton
-    var skele = function(sel) {
-      textures.skeleton[sel].show(w, 46);
-      if (p.hat) textures.hats[p.hat].show(w, 46, sel);
-    }
-    if (p.activeCandy) {
-      var time = p.candyDuration-Date.now();
-      if (time < 5000 && time % 500 < 250) skele(p.skin);
-      else CandyDisplay[p.activeCandy].active(p,skele,p.skin);
-    } else skele(p.skin);
+    textures.skeleton[p.skin].show(w, 46);
   };
   for (var i = 0; i < entities.length; i++) {
     var e = entities[i];
@@ -2006,7 +1845,6 @@ function show() {
             v.y - l < max.x);
   });
   //*/
-
   // Sort
   //*
   showing.sort((a, b) => {
@@ -2033,17 +1871,29 @@ function show() {
   /*
   for (var i = 0; i < entities.length; i++) {
     var e = entities[i];
-    push();
     translate(e.x, e.y);
     EntityDisplay[s.data.type].display(e);
-    pop();
   }
   for (var i in players) {
     var p = players[i];
-    push();
+    if (p.pumpkinMaster) continue;
     translate(p.x, p.y);
-    showplayer(p);
-    pop();
+    if (p.health <= 0) {
+      textures.bone_pile.show(0, 46);
+      continue;
+    }
+    scale(p.facing, 1);
+    // Axe
+    var w = textures.skeleton[p.skin].calc(0, 46).w;
+    var aw = textures.axe.calc(0, 46).w;
+    var off = p.swing ? 5 : 0;
+    translate((w - aw) / 2, off);
+    rotate(p.swing * 18);
+    textures.axe.show(0, 62*p.axelength);
+    rotate(-p.swing * 18);
+    translate(-(w - aw) / 2, -off);
+    // Skeleton
+    textures.skeleton[p.skin].show(w, 46);
   }
   //*/
 
@@ -2054,7 +1904,7 @@ function show() {
     push();
     translate(p.x, p.y);
     format("#ffffff", false, 0, 12, CENTER);
-    if (p.name == "DragonFire7z" || p.name == "DragonFireGames") fill("#ff0000");
+    if (p.name == "DragonFire7z") fill("#ff0000");
     text(p.name, -4 * p.facing, -20);
     pop();
   }
@@ -2148,7 +1998,6 @@ async function exit() {
   pumpkins = {};
   objectives = [];
   entities = [];
-  candies = [];
   cam = {};
   timer = 0;
   startTime = 0;
@@ -2587,9 +2436,9 @@ socket.on('rejoinFailed', returnToHome);
 function returnToHome() {
   user.lastSession = {};
   localStorage.user = JSON.stringify(user);
-  //__cpLocation.href = __cpLocation.origin;
+  //location.href = location.origin;
   setDisplay("home");
-  history.pushState({}, "", __cpLocation.origin);
+  history.pushState({}, "", location.origin);
 }
 socket.on('rejoinSuccess', function(id) {
   player.id = id;
@@ -2741,19 +2590,6 @@ socket.on('objective', function(objectiveList) {
   }
 });
 // Events
-var TrickOrTreatDate = 0;
-socket.on('trick-or-treat', function(date) {
-  TrickOrTreatDate = date;
-  //alert("Trick or Treat!");
-});
-socket.on('candies', function(packedCandies) {
-  //alert(JSON.stringify(packedCandies));
-  candies = packedCandies;
-  for (var i in candies) {
-    candies[i].x = (candies[i].x + 0.5) * 36;
-    candies[i].y = (candies[i].y + 0.5) * 36;
-  }
-});
 socket.on('growpumpkin', async function(p) {
   pumpkins[p.x + "," + p.y] = p;
   if (!pumpkinBuf) return;
@@ -2878,14 +2714,12 @@ socket.on('objective_destroyed', function(x, y) {
 });
 var tutorialMsg = false;
 var tutorialPumpkin = false;
-var tutorialDate = 0;
-socket.on('tutorialMsg', function(msg, date, p) {
+socket.on('tutorialMsg', function(msg, p) {
   tutorialMsg = msg;
-  tutorialDate = date;
   tutorialPumpkin = p;
 })
 // Win Conditions
-socket.on('skeleton_win', async function(stats) {
+socket.on('skeleton_win', async function() {
   console.log("Skeletons Win!");
   subdisplay = "animation";
   for (var i in pumpkins) {
@@ -2907,11 +2741,10 @@ socket.on('skeleton_win', async function(stats) {
     spawnConfetti();
   }
   await wait(5000);
-  processStats(stats,player.pumpkinMaster,true);
   setDisplay("gameover", player.pumpkinMaster ? "lose" : "win");
   endGame();
 });
-socket.on('pumpkin_master_win', async function(stats) {
+socket.on('pumpkin_master_win', async function() {
   console.log("Pumpkin Master Wins!")
   subdisplay = "animation";
   for (var i in players) {
@@ -2921,7 +2754,6 @@ socket.on('pumpkin_master_win', async function(stats) {
     spawnConfetti();
   }
   await wait(5000);
-  processStats(stats,player.pumpkinMaster,true);
   setDisplay("gameover", player.pumpkinMaster ? "win" : "lose");
   endGame();
 });
@@ -2943,52 +2775,11 @@ function endGame() {
     sounds.background[i].stop();
   }
 }
-var MatchStats = {};
-function processStats(stats,is_pm,pm_win) {
-  var total = function(obj){
-    var c = 0;
-    for (var i in obj) c += obj[i];
-    return c;
-  };
-  stats.GamesPlayed = 1;
-  if (is_pm) {
-    if (pm_win) { stats.Wins++; stats.PumpkinMasterWins++; }
-    else { stats.Losses++; stats.PumpkinMasterLosses++; }
-    stats.SkeletonDamage = total(stats.DamagedSkeletonsWith);
-    stats.SkeletonKills = total(stats.KilledSkeletonsWith);
-    stats.TotalMonstersSpawned = total(stats.MonstersSpawned);
-    stats.TotalAbilitiesUsed = total(stats.AbilitiesUsed);
-    stats.CoinsSpent = 0;
-    for (var i in stats.MonstersSpawned) stats.CoinsSpent += EntityDisplay[i].cost * stats.MonstersSpawned[i];
-    for (var i in stats.AbilitiesUsed) stats.CoinsSpent += AbilityDisplay[i].cost * stats.AbilitiesUsed[i];
-    stats.TotalCoins = stats.CoinsSpent + stats.CoinsLeft;
-  } else {
-    if (pm_win) { stats.Losses++; stats.SkeletonLosses++; }
-    else { stats.Wins++; stats.SkeletonWins++; }
-    stats.TotalUpgrades = total(stats.Upgrades);
-    stats.TotalCandiesCollected = total(stats.CandiesCollected);
-  }
-  MatchStats = stats;
-  var add = function(c,o) {
-    c = c || {};
-    for (var i in o) {
-      if (o[i] instanceof Object) c[i] = add(c[i],o[i]);
-      c[i] = (c[i]||0)+o[i];
-    }
-  };
-  user.stats = add(user.stats,stats);
-  user.achievements = user.achievements || {};
-  for (var i in AchievementData) {
-    var a = AchievementData[i];
-    if (a.test(stats,user.stats)) user.achievements[i] = true;
-  }
-}
 
 function changeUsername() {
   var name = homeDis.username.value;
   name = censor(name);
   socket.emit('changeName', name);
-  socket.emit('changeHat', randomProperty(textures.hats));
   user.name = homeDis.username.value;
 }
 
@@ -3024,19 +2815,6 @@ function weightedRandom(randomfunct, def, values, weights) {
   }
   return def;
 }
-function randomProperty(obj) {
-  const keys = Object.keys(obj);
-  return randomValueArray(keys);
-}
-function randomValue(obj) {
-  return obj[randomProperty(obj)];
-}
-function randomValueArray(arr) {
-  return arr[randomIndex(arr)];
-}
-function randomIndex(arr) {
-  return arr.length * Math.random() << 0;
-}
 function format(Fill, Stroke, StrokeWidth, TextSize, TextAlign) {
   if (Fill || Fill === 0) fill(Fill);
   else noFill();
@@ -3060,6 +2838,7 @@ function mod(x, y) {
 }
 
 // Hehehe
+
 /*
 var counter = 0;
 setInterval(()=>{
@@ -3068,5 +2847,5 @@ setInterval(()=>{
     counter %= 360;
 },10);
 */
+
 //setInterval(()=>{socket.emit('smash');},10);
-a
