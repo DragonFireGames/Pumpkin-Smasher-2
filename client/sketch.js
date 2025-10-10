@@ -1964,8 +1964,7 @@ function show() {
     // Skeleton
     var skele = function(sel) {
       textures.skeleton[sel].show(w, 46);
-      textures.hats.santa.show(w, 46, sel);
-      //if (p.hat) textures.hats[p.hat].show(w, 46, sel);
+      if (p.hat) textures.hats[p.hat].show(w, 46, sel);
     }
     if (p.activeCandy) {
       var time = p.candyDuration-Date.now();
@@ -2629,13 +2628,14 @@ socket.on('players', function(packedPlayers, id, sentAt) {
   player.score = packedPlayers[id].score;
   player.level = packedPlayers[id].level;*/
 
-  players = packedPlayers
+  players = packedPlayers;
   for (var i in players) {
     players[i].x *= 36;
     players[i].y *= 36;
   }
   player = players[id];
   player.id = id;
+  if (!player.hat) alert(JSON.stringify(player));
 
 });
 
