@@ -21,7 +21,7 @@
     peerjs
 */
 
-var __cpLocation = window.location;
+var __cpLocation = window.__cpLocation;
 
 // TODO: 
 // Better Animations and Graphics
@@ -1518,7 +1518,9 @@ Displays.lobby = function() {
     translate(p.x, p.y);
     scale(p.facing, 1);
     // Skeleton
-    textures.skeleton[p.skin].show(0, 46);
+    var w = textures.skeleton[p.skin].calc(0, 46).w;
+    textures.skeleton[p.skin].show(w, 46);
+    textures.hats[p.hat].show(w, 46, p.skin);
     pop();
   }
   for (var i in players) {
@@ -2635,8 +2637,6 @@ socket.on('players', function(packedPlayers, id, sentAt) {
   }
   player = players[id];
   player.id = id;
-  if (!player.hat) alert(JSON.stringify(player));
-
 });
 
 var lastEntitiesRecieved = 0;
@@ -2989,7 +2989,7 @@ function changeUsername() {
   var name = homeDis.username.value;
   name = censor(name);
   socket.emit('changeName', name);
-  socket.emit('changeHat', randomProperty(textures.hats));
+  socket.emit('changeHat', "santa");//randomProperty(textures.hats));
   user.name = homeDis.username.value;
 }
 
