@@ -1216,7 +1216,7 @@ class Player {
       level:this.level,
       upgradePts:this.upgradePts,
       name:this.name,
-      hat:"santa",//this.hat,
+      hat:this.hat,
       activeCandy:this.activeCandy,
       candyDuration:this.candyDuration,
     };
