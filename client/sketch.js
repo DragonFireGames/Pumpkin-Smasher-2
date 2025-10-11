@@ -2575,6 +2575,7 @@ function mouseReleased() {
 }
 // Scroll
 document.addEventListener("wheel", function(e) {
+  if (display != "view" && display != "pmgame") return;
   e.preventDefault();
   e.stopPropagation();
   if (display == "view") {
