@@ -36,6 +36,7 @@ socket.on("connect", () => {
     socket.emit('rejoin', room, player.id, false);
   } else {
     changeUsername();
+    changeHat();
   }
 });
 socket.on("disconnect", async () => {
@@ -1716,7 +1717,7 @@ Displays.lobby = function() {
     // Skeleton
     var w = textures.skeleton[p.skin].calc(0, 46).w;
     textures.skeleton[p.skin].show(w, 46);
-    if (p.hat) textures.hats[p.hat].show(w, 46, sel);
+    if (p.hat) textures.hats[p.hat].show(w, 46, p.skin);
     pop();
   }
   for (var i in players) {
