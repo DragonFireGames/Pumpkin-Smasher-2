@@ -59,6 +59,139 @@ var DiscordWidget = document.getElementById("discordWidget");
 var homeDis = {};
 homeDis.div = document.getElementById("homeDis");
 homeDis.username = document.getElementById("username");
+homeDis.clickStart = function() {
+  if (!socket.connected) return;
+  socket.emit('joinRoom');
+  setDisplay("loading");
+  setTimeout(() => {
+    setDisplay("lobby");
+  }, 1000);
+}
+homeDis.clickHost = function() {
+  if (!socket.connected) return;
+  socket.emit('hostRoom');
+  setDisplay("loading");
+  setTimeout(() => {
+    setDisplay("lobby", "host");
+  }, 1000);
+}
+homeDis.clickJoin = function() {
+  if (!socket.connected) return;
+  socket.emit('viewRooms');
+  setDisplay("loading", "view");
+}
+homeDis.clickTutorial = function() {
+  socket.emit('doTutorial');
+  setDisplay("loading");
+}
+homeDis.clickInstructions = function() {
+  setDisplay("instructions");
+  //cam.scroll = 0;
+  //__cpLocation.href = __cpLocation.origin+"/instructions";
+}
+homeDis.clickSettings = function() {
+  setDisplay("settings");
+};
+var settingsDis = {};
+settingsDis.div = document.getElementById("settingsDis");
+settingsDis.clickWardrobe = function() {
+  setDisplay("wardrobe");
+  wardrobeDis.selectedHat = user.hat || "";
+  var hats = document.getElementsByClassName("hat");
+  outer: for (var i = 0; i < hats.length; i++) {
+    var h = hats[i];
+    var n = h.id.slice(4);
+    h.classList.remove("disabled");
+    h.classList.remove("selected");
+    if (n == wardrobeDis.selectedHat) h.classList.add("selected");
+    if (!n) continue;
+    for (var a in AchievementData) {
+      if (AchievementData[a].hat != n) continue;
+      if (user.achievements[a]) continue;
+      h.classList.add("disabled");
+      continue outer;
+    }
+  }
+};
+settingsDis.clickAchievements = function() {
+  setDisplay("achievements");
+  var achs = document.getElementsByClassName("achievement");
+  for (var i = 0; i < achs.length; i++) {
+    achs[i].classList.remove("earned");
+    var n = achs[i].id.slice(4);
+    var a = AchievementData[n];
+    var p = (a.progress(user.stats) * 100).toFixed(1);
+    achs[i].children[1].innerText = a.name+" ("+p+"%)";
+  }
+  for (var i in user.achievements) {
+    var ach = document.getElementById("ach_"+i);
+    ach.classList.add("earned");
+    var a = AchievementData[i];
+    ach.children[1].innerText = a.name+" (100.0%)";
+  }
+};
+settingsDis.clickStats = function() {
+  statDis.updateStats(user.stats);
+  setDisplay("stats");
+};
+settingsDis.clickKeybinds = function() {
+  alert("coming soon!");
+};
+settingsDis.clickDisplay = function() {
+  alert("coming soon!");
+};
+settingsDis.clickMisc = function() {
+  alert("coming soon!");
+};
+settingsDis.clickReturn = function() {
+  setDisplay("home");
+};
+var wardrobeDis = {};
+wardrobeDis.div = document.getElementById("wardrobeDis");
+wardrobeDis.wardrobe = document.getElementById("wardrobe");
+wardrobeDis.clickReturn = function() {
+  setDisplay("settings");
+  user.hat = wardrobeDis.selectedHat;
+  changeHat();
+};
+wardrobeDis.selectedHat = "";
+wardrobeDis.selectHat = function(hat) {
+  var oldhat = document.getElementById("hat_"+wardrobeDis.selectedHat);
+  var newhat = document.getElementById("hat_"+hat);
+  if (newhat.classList.contains("disabled")) return;
+  oldhat.classList.remove("selected");
+  wardrobeDis.selectedHat = hat;
+  newhat.classList.add("selected");
+}
+var statDis = {};
+statDis.div = document.getElementById("statDis");
+statDis.stats = document.getElementById("stats");
+statDis.clickReturn = function() {
+  setDisplay("settings");
+};
+statDis.updateStats = function(stats) {
+  var serialize = function(obj,depth) {
+    var txt = "";
+    var start = "";
+    for (var i = 0; i < depth; i++) start += " - ";
+    for (var i in obj) {
+      txt += start+i+": "
+      if (obj[i] instanceof Object) {
+        txt += "\n"+serialize(obj[i],depth+1);
+        continue;
+      }
+      txt += obj[i]+"\n";
+    }
+    return txt;
+  };
+  statDis.stats.innerText = serialize(stats,0);
+};
+var achievementDis = {};
+achievementDis.div = document.getElementById("achievementDis");
+achievementDis.list = document.getElementById("achievementList");
+achievementDis.clickReturn = function() {
+  setDisplay("settings");
+};
 var viewDis = {};
 viewDis.div = document.getElementById("viewDis");
 viewDis.roomCode = document.getElementById("roomCode");
@@ -85,16 +218,53 @@ if (localStorage.user != undefined) {
 var defaultUser = {};
 defaultUser.lastSession = {};
 defaultUser.name = "";
+defaultUser.hat = "";
 defaultUser.doneTutorial = false;
 defaultUser.stats = {};
-user.achievements = {};
+defaultUser.achievements = {};
 var AchievementData = {
   "no_deaths": {
     name: "No Deaths",
     description: "No deaths as skeleton in a single match",
     hat: "pumpkin",
     test: function(match, cumulative) {
-      return match.deaths == 0
+      return match.Deaths == 0;
+    },
+    progress: function(cumulative) {
+      return 0;
+    }
+  },
+  "rusher_killer": {
+    name: "Rusher Killer",
+    description: "Kill 40 rushers",
+    hat: "red_beanie",
+    test: function(match, cumulative) {
+      return cumulative.EntitiesKilled.rusher >= 40;
+    },
+    progress: function(cumulative) {
+      return cumulative.EntitiesKilled.rusher / 40;
+    }
+  },
+  "wizard_killer": {
+    name: "Wizard Killer",
+    description: "Kill 40 wizards",
+    hat: "blue_beanie",
+    test: function(match, cumulative) {
+      return cumulative.EntitiesKilled.wizard >= 40;
+    },
+    progress: function(cumulative) {
+      return cumulative.EntitiesKilled.wizard / 40;
+    }
+  },
+  "debuffer_killer": {
+    name: "Debuffer Killer",
+    description: "Kill 20 debuffers",
+    hat: "green_beanie",
+    test: function(match, cumulative) {
+      return cumulative.EntitiesKilled.debuffer >= 20;
+    },
+    progress: function(cumulative) {
+      return cumulative.EntitiesKilled.debuffer / 20;
     }
   },
   /*
@@ -117,7 +287,6 @@ var AchievementData = {
 for (var i in defaultUser) {
   if (!user[i]) user[i] = defaultUser[i];
 }
-
 
 // -------------
 // Entity System
@@ -737,6 +906,7 @@ class Sound {
 }
 class FitImage {
   constructor(url) {
+    this.url = url;
     this.img = LoadImage(url, () => {
       this.w = this.img.width;
       this.h = this.img.height;
@@ -869,6 +1039,28 @@ async function loadAssets() {
   textures.hats.red_beanie = new HatDisplay("assets/hats/red_beanie.png",12,12);
   textures.hats.green_beanie = new HatDisplay("assets/hats/green_beanie.png",12,12);
   textures.hats.blue_beanie = new HatDisplay("assets/hats/blue_beanie.png",12,12);
+  
+  for (var i in textures.hats) {
+    var h = textures.hats[i].hat.url;
+    var html = `
+      <div class="hat" id="hat_${i}" onclick="wardrobeDis.selectHat('${i}')">
+        <img class="hat-image" src="${h}">
+      </div>
+    `;
+    wardrobeDis.wardrobe.innerHTML += html;
+  }
+  for (var a in AchievementData) {
+    var ach = AchievementData[a];
+    var h = textures.hats[ach.hat].hat.url;
+    var html = `
+      <div class="achievement" id="ach_${a}">
+        ${h?`<img class="achievement-hat-image" src="${h}">`:''}
+        <h3 class="achievement-name">${ach.name}</h3>
+        <p class="achievement-desc">${ach.description}</p>
+      </div>
+    `;
+    achievementDis.list.innerHTML += html;
+  }
 
   // Load Displays
   for (var i in EntityDisplay) {
@@ -1076,6 +1268,10 @@ function draw() {
   homeDis.div.style.visibility = display == "home" ? "visible" : "hidden";
   viewDis.div.style.visibility = display == "view" ? "visible" : "hidden";
   instructions.style.visibility = display == "instructions" ? "visible" : "hidden";
+  settingsDis.div.style.visibility = display == "settings" ? "visible" : "hidden";
+  wardrobeDis.div.style.visibility = display == "wardrobe" ? "visible" : "hidden";
+  statDis.div.style.visibility = display == "stats" ? "visible" : "hidden";
+  achievementDis.div.style.visibility = display == "achievements" ? "visible" : "hidden";
 
   // Background Blur
   if (display == "home" || display == "view") {
@@ -1520,7 +1716,7 @@ Displays.lobby = function() {
     // Skeleton
     var w = textures.skeleton[p.skin].calc(0, 46).w;
     textures.skeleton[p.skin].show(w, 46);
-    textures.hats[p.hat].show(w, 46, p.skin);
+    if (p.hat) textures.hats[p.hat].show(w, 46, sel);
     pop();
   }
   for (var i in players) {
@@ -1623,38 +1819,35 @@ Displays.home = function() {
   text("Pumpkin Smasher", 0, -70);
   //image(gui.logo,-170,-170,340,150);
 }
-homeDis.clickStart = function() {
-  if (!socket.connected) return;
-  socket.emit('joinRoom');
-  setDisplay("loading");
-  setTimeout(() => {
-    setDisplay("lobby");
-  }, 1000);
+Displays.settings = function() {
+  format(0, "#ffa500", 10, 40, CENTER);
+  text("Settings", 0, -100);
 }
-homeDis.clickHost = function() {
-  if (!socket.connected) return;
-  socket.emit('hostRoom');
-  setDisplay("loading");
-  setTimeout(() => {
-    setDisplay("lobby", "host");
-  }, 1000);
+Displays.wardrobe = function() {
+  format(0, "#ffa500", 10, 40, CENTER);
+  text("Wardrobe", 0, -140);
+  push();
+  translate(20+wWidth/4,0);
+  scale(5);
+  var hat = wardrobeDis.selectedHat;
+  var sel = Math.floor(frameCount / 30) % 3;
+  var w = textures.skeleton[sel].calc(0, 46).w;
+  var aw = textures.axe.calc(0, 46).w;
+  translate((w - aw) / 2, 0);
+  textures.axe.show(0, 62 * (0.55 + 0.2));
+  translate(-(w - aw) / 2, -0);
+  // Skeleton
+  textures.skeleton[sel].show(w, 46);
+  if (hat) textures.hats[hat].show(w, 46, sel);
+  pop();
 }
-homeDis.clickJoin = function() {
-  if (!socket.connected) return;
-  socket.emit('viewRooms');
-  setDisplay("loading", "view");
+Displays.stats = function() {
+  format(0, "#ffa500", 10, 40, CENTER);
+  text("Statistics", 0, -150);
 }
-homeDis.clickTutorial = function() {
-  socket.emit('doTutorial');
-  setDisplay("loading");
-}
-homeDis.clickInstructions = function() {
-  setDisplay("instructions");
-  //cam.scroll = 0;
-  //__cpLocation.href = __cpLocation.origin+"/instructions";
-}
-homeDis.clickSettings = function() {
-  alert("Coming soon!");
+Displays.achievements = function() {
+  format(0, "#ffa500", 10, 40, CENTER);
+  text("Achievements", 0, -150);
 }
 
 Displays.view = function() {
@@ -2630,13 +2823,14 @@ socket.on('players', function(packedPlayers, id, sentAt) {
   player.score = packedPlayers[id].score;
   player.level = packedPlayers[id].level;*/
 
-  players = packedPlayers;
+  players = packedPlayers
   for (var i in players) {
     players[i].x *= 36;
     players[i].y *= 36;
   }
   player = players[id];
   player.id = id;
+
 });
 
 var lastEntitiesRecieved = 0;
@@ -2989,12 +3183,15 @@ function changeUsername() {
   var name = homeDis.username.value;
   name = censor(name);
   socket.emit('changeName', name);
-  socket.emit('changeHat', "santa");//randomProperty(textures.hats));
   user.name = homeDis.username.value;
 }
 
+function changeHat() {
+  socket.emit('changeHat', user.hat || "");
+}
+
 function censor(str) {
-  const censoredWords = ["(mother|)fuck", "\bass", "bitch", "(bull|)shit", "nigg(er|a)", "cock", "cunt", "clit", "pussy", "penis", "dick", "porn", "satan", "damn", "dyke", "gang[-_\s]*bang", "jizz", "piss", "\btit", "blow[-_\s]*job", "hand[-_\s]*job", "\bcoon", "\bcum", "\bcumm", "slut", "pimp", "\bsex", "tits", "tities"];
+  const censoredWords = ["(mother|)fuck", "\bass", "bitch", "(bull|)shit", "nigg(er|a)", "cock", "cunt", "clit", "pussy", "penis", "dick", "porn", "satan", "damn", "dyke", "gang[-_\s]*bang", "jizz", "piss", "\btit", "blow[-_\s]*job", "hand[-_\s]*job", "\bcoon", "\bcum", "\bcumm", "slut", "pimp", "\bsex", "\btits", "tities"];
   for (var word of censoredWords) {
     str = str.replaceAll(new RegExp(word + "(er|ers|ing|ed|s|es|hole|holes|ical|)", 'ig'), (w) => "*".repeat(w.length));
   }
@@ -3070,3 +3267,5 @@ setInterval(()=>{
 },10);
 */
 //setInterval(()=>{socket.emit('smash');},10);
+
+
