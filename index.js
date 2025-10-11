@@ -272,7 +272,7 @@ class Room {
     client.player = player;
     if (client.name != "") player.name = client.name;
     else player.name = randomValueArray(["Player","Random","Nobody","Default","Unnamed"]);
-    player.hat = "red_beanie"//client.hat;
+    player.hat = client.hat;
     this.amount++;
     io.to(this.id).emit('amount',this.amount);
   }
@@ -2919,3 +2919,5 @@ function intersectAABB(x1,y1,bbox1,x2,y2,bbox2) {
 function nullCheck(obj,def) {
   return obj == undefined ? def : obj;
 }
+
+
