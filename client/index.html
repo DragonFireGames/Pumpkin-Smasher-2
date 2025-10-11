@@ -30,11 +30,37 @@
       <input type="button" id="instructionsBtn" class="menu" value="How to Play" onclick="homeDis.clickInstructions();">
       <input type="button" id="settingsBtn" class="menu" value="Settings" onclick="homeDis.clickSettings();">
     </div>
+    <div id="settingsDis">
+      <input type="button" id="wardrobeBtn" class="menu" value="Wardrobe" onclick="settingsDis.clickWardrobe();">
+      <input type="button" id="achievementBtn" class="menu" value="Achievements" onclick="settingsDis.clickAchievements();">
+      <input type="button" id="statBtn" class="menu" value="Statistics" onclick="settingsDis.clickStats();">
+      <input type="button" id="keybindBtn" class="menu" value="Keybinds" onclick="settingsDis.clickKeybinds();">
+      <input type="button" id="displaySettingsBtn" class="menu" value="Display" onclick="settingsDis.clickDisplay();">
+      <input type="button" id="miscBtn" class="menu" value="Mischellaneous" onclick="settingsDis.clickMisc();">
+      <input type="button" id="returnBtn" class="menu" value="Return" onclick="settingsDis.clickReturn();">
+    </div>
+    <div id="wardrobeDis">
+      <div id="wardrobe">
+        <div class="hat selected" id="hat_" onclick="wardrobeDis.selectHat('')">
+        </div>
+      </div>
+      <input type="button" id="wardrobeReturnBtn" class="menu" value="Return" onclick="wardrobeDis.clickReturn();">
+    </div>
+    <div id="statDis">
+      <div id="stats">
+      </div>
+      <input type="button" id="statReturnBtn" class="menu" value="Return" onclick="statDis.clickReturn();">
+    </div>
+    <div id="achievementDis">
+      <div id="achievementList">
+      </div>
+      <input type="button" id="achievementReturnBtn" class="menu" value="Return" onclick="achievementDis.clickReturn();">
+    </div>
     <div id="viewDis" class="display">
       <input type="text" id="roomCode" class="menu" placeholder="Enter Room Code" maxlength="8" autocomplete="off" onkeydown="return /[\w\d]/i.test(event.key);" pattern="^([\w\d]{8}|)$">
       <input type="button" id="enterBtn" class="menu" value="Enter" onclick="viewDis.clickEnter();">
     </div>
-    <embed id="instructions" src="">
+    <embed id="instructions" src="/instructions">
     <div id="discordWidget">
       <iframe src="https://discord.com/widget?id=1115522694738346095&theme=dark" id="onlineMembers" allowtransparency="true" frameborder="0" sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"></iframe>
       <widgetbot id="widgetBot"></widgetbot>
