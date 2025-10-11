@@ -3161,6 +3161,7 @@ function processStats(stats,is_pm,pm_win) {
     if (pm_win) { stats.Losses++; stats.SkeletonLosses++; }
     else { stats.Wins++; stats.SkeletonWins++; }
     stats.TotalUpgrades = total(stats.Upgrades);
+    stats.TotalEntitiesKilled = total(stats.EntitiesKilled);
     stats.TotalCandiesCollected = total(stats.CandiesCollected);
   }
   MatchStats = stats;
@@ -3170,6 +3171,7 @@ function processStats(stats,is_pm,pm_win) {
       if (o[i] instanceof Object) c[i] = add(c[i],o[i]);
       c[i] = (c[i]||0)+o[i];
     }
+    return c;
   };
   user.stats = add(user.stats,stats);
   user.achievements = user.achievements || {};
