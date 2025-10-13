@@ -2101,6 +2101,94 @@ Entities.shockwave = class extends Entity {
   }
   hit(p) {}
 };
+Entities.mine = class extends Entity {
+  constructor(x, y, room, spawnedBy) {
+    super(x, y, room, spawnedBy);
+    this.type = "mine";
+    this.category = "mine";
+    this.img = "inactive";
+    this.bbox = {
+      minX:-0.45,
+      maxX:0.45,
+      minY:-0.45,
+      maxY:0.45
+    }
+    this.hitdist = 0.2;
+    this.f_start = 0;
+    this.f = 0;
+    this.depth = -1;
+    this.armed = false;
+    this.value = 5;
+    this.spawnedAt = Date.now();
+    this.countdown = 0;
+  }
+  pack() {
+    return {
+      x:this.x,
+      y:this.y,
+      type:this.type,
+      depth:this.depth,
+      f:this.f,
+      f_start:this.f_start,
+      img:this.img,
+      facing:this.facing
+    };
+  }
+  update() {
+    const room = ROOM_LIST[this.room];
+    if (this.img == "inactive") {
+      if (Date.now()-this.spawnedAt >= 10000) {
+        this.img = "armed";
+      }
+      return;
+    }
+    const nearest = this.getNearestPlayer(Infinity);
+    if (!nearest) return;
+    if (this.img == "armed") {
+      if (nearest.dist < 2) {
+        this.img = "ticking";
+        this.countdown = Date.now();
+      }
+    }
+    if (this.img == "ticking") {
+      if (nearest.dist > 2.2) {
+        this.img = "armed";
+      }
+      if (Date.now()-this.countdown >= 1500) {
+        this.explode();
+      }
+    }
+  }
+  async damagePlayers() {
+    const room = ROOM_LIST[this.room];
+    if (!room) return;
+    for (var i in room.players) {
+      var p = room.players[i];
+      if (p.pumpkinMaster || p.immune) continue;
+      var d = (this.x - p.x) ** 2 + (this.y - p.y) ** 2;
+      if (d < 4) {
+        p.damage(1.0, this);
+      }
+    }
+    await wait(7 * 75);
+    this.destroy();
+  }
+  async explode() {
+    this.img = "exploding";
+    this.f = 0;
+    this.f_start = Date.now();
+    await wait(17 * 75);
+    this.damagePlayers();
+  }
+  hit(p) {
+    if (this.img == "inactive") return super.hit(p);
+    if (this.img == "exploding") return;
+    this.img = "exploding";
+    this.f = 17;
+    this.f_start = Date.now();
+    this.damagePlayers();
+  }
+};
 Entities.catapult = class extends Entity {
   constructor(x, y, room, spawnedBy) {
     super(x, y, room, spawnedBy);
@@ -2251,6 +2339,10 @@ EntityData.wizard = {
   pumpkin: true
 };
 EntityData.brute = {
+  cost: 10,
+  pumpkin: true
+};
+EntityData.mine = {
   cost: 10,
   pumpkin: true
 };
