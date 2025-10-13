@@ -21,7 +21,7 @@
     peerjs
 */
 
-var __cpLocation = window.location;
+var __cpLocation = window["\x6cocation"];
 
 // TODO: 
 // Better Animations and Graphics
@@ -46,7 +46,7 @@ socket.on("disconnect", async () => {
     await wait(1000);
     if (socket.connected) return;
   }
-  __cpLocation.reload();
+  location.reload();
 });
 //^^Connects to the socket.io server
 
@@ -88,7 +88,7 @@ homeDis.clickTutorial = function() {
 homeDis.clickInstructions = function() {
   setDisplay("instructions");
   //cam.scroll = 0;
-  //__cpLocation.href = __cpLocation.origin+"/instructions";
+  //location.href = location.origin+"/instructions";
 }
 homeDis.clickSettings = function() {
   setDisplay("settings");
@@ -224,6 +224,17 @@ defaultUser.doneTutorial = false;
 defaultUser.stats = {};
 defaultUser.achievements = {};
 var AchievementData = {
+  "full_party": {
+    name: "Full Party",
+    description: "Play a full game with 4 or more players",
+    hat: "party_hat",
+    test: function(match, cumulative) {
+      return match.PlayerCount >= 4;
+    },
+    progress: function(cumulative) {
+      return 0;
+    }
+  },
   "gentleman": {
     name: "Gentleman",
     description: "Max out one of your upgrades as skeleton",
@@ -231,17 +242,6 @@ var AchievementData = {
     test: function(match, cumulative) {
       for (var i in match.Upgrades) if (match.Upgrades[i] >= 4) return true;
       return false;
-    },
-    progress: function(cumulative) {
-      return 0;
-    }
-  },
-  "full_party": {
-    name: "Full Party",
-    description: "Play a full game with 4 or more players",
-    hat: "party_hat",
-    test: function(match, cumulative) {
-      return match.PlayerCount >= 4;
     },
     progress: function(cumulative) {
       return 0;
@@ -291,22 +291,6 @@ var AchievementData = {
       return cumulative.EntitiesKilled.debuffer / 20;
     }
   },
-  /*
-  // Skeleton
-  MaxedHealth: false,
-  MaxedAxeRange: false,
-  MaxedSpeed: false,
-  Killed50EnemiesInMatch: false,
-  Smashed200PumpkinsInMatch: false,
-  Smashed10DiamondPumpkinsInMatch: false,
-  DestroyedObjective: false,
-  DestroyedAllObjectives: false,
-  DestroyedShield: false,
-  // Pumpkin Master
-  Killed10Skeletons: false,
-  KilledSkeletonWithSwarm: false,
-  Used10AbilitiesInMatch: false
-  */
 };
 for (var i in defaultUser) {
   if (!user[i]) user[i] = defaultUser[i];
@@ -326,8 +310,9 @@ EntityIDs[3] = "speeder";
 EntityIDs[4] = "rusher";
 EntityIDs[5] = "wizard";
 EntityIDs[6] = "brute";
-EntityIDs[7] = "catapult";
-EntityIDs[8] = "debuffer";
+EntityIDs[7] = "mine";
+EntityIDs[8] = "catapult";
+EntityIDs[9] = "debuffer";
 EntityIDs.length = Object.keys(EntityIDs).length;
 // Display
 EntityDisplay = {};
@@ -484,6 +469,26 @@ EntityDisplay.shockwave = (function() {
   return {
     display: function(e) {
       tex.shockwave.show(128, 128, e.f);
+    }
+  };
+});
+EntityDisplay.mine = (function() {
+  var tex = {};
+  tex.armed = new FitImage("assets/entities/mine/armed.png");
+  tex.inactive = new FitImage("assets/entities/mine/inactive.png");
+  tex.ticking = new Animation("assets/entities/mine/ticking.png", 2, 8);
+  tex.explode = new Animation("assets/entities/mine/explode.png", 24);
+  return {
+    cost: 10,
+    pumpkin: true,
+    icon: function() {
+      tex.armed.show(0, 40);
+    },
+    display: function(e) {
+      if (e.img == "exploding") {
+        var frame = Math.floor((Date.now()-e.f_start)/75) + (e.f || 0);
+        if (frame < 24) tex.explode.show(36 * tex.explode.w / tex.armed.w, 0, frame);
+      } else tex[e.img].show(36, 0, e.f);
     }
   };
 });
@@ -1058,9 +1063,9 @@ async function loadAssets() {
 
   // Hats
   textures.hats = {};
-  textures.hats.tophat = new HatDisplay("assets/hats/tophat.png",8,2);
-  textures.hats.party_hat = new HatDisplay("assets/hats/party_hat.png",14,4);
   textures.hats.santa = new HatDisplay("assets/hats/santa.png",0,12);
+  textures.hats.party_hat = new HatDisplay("assets/hats/party_hat.png",14,4);
+  textures.hats.tophat = new HatDisplay("assets/hats/tophat.png",8,2);
   textures.hats.pumpkin = new HatDisplay("assets/hats/pumpkin.png",14,20);
   textures.hats.red_beanie = new HatDisplay("assets/hats/red_beanie.png",12,12);
   textures.hats.green_beanie = new HatDisplay("assets/hats/green_beanie.png",12,12);
@@ -1742,7 +1747,7 @@ Displays.lobby = function() {
     // Skeleton
     var w = textures.skeleton[p.skin].calc(0, 46).w;
     textures.skeleton[p.skin].show(w, 46);
-    if (p.hat) textures.hats[p.hat].show(w, 46, p.skin);
+    if (p.hat) textures.hats[p.hat].show(w, 46, sel);
     pop();
   }
   for (var i in players) {
@@ -2021,10 +2026,10 @@ function setDisplay(d, sd) {
   subdisplay = sd ?? "";
   DiscordWidget.style.visibility = "hidden";
   user.lastSession = {};
-  history.pushState({}, "", __cpLocation.origin);
+  history.pushState({}, "", location.origin);
   if (display == "lobby") {
-    history.pushState({}, "", __cpLocation.origin + "?room=" + room);
-    if (isNext) history.pushState({}, "", __cpLocation.origin + "?room=next");
+    history.pushState({}, "", location.origin + "?room=" + room);
+    if (isNext) history.pushState({}, "", location.origin + "?room=next");
     return;
   }
   if (display == "home" || display == "loading") return;
@@ -2044,7 +2049,7 @@ function endAssetLoad() {
   }
 
   // Get params
-  var params_str = __cpLocation.href.split('?')[1];
+  var params_str = location.href.split('?')[1];
   if (params_str) {
     var params_arr = params_str.split('&');
 
@@ -2475,8 +2480,9 @@ function keyPressed() {
       rusher: 53,
       wizard: 54,
       brute: 55,
-      catapult: 56,
-      debuffer: 57,
+      mine: 56,
+      catapult: 57,
+      debuffer: 48,
     };
     else if (cam.mode == "ability") list = {
       fog: 49,
@@ -2809,9 +2815,9 @@ socket.on('rejoinFailed', returnToHome);
 function returnToHome() {
   user.lastSession = {};
   localStorage.user = JSON.stringify(user);
-  //__cpLocation.href = __cpLocation.origin;
+  //location.href = location.origin;
   setDisplay("home");
-  history.pushState({}, "", __cpLocation.origin);
+  history.pushState({}, "", location.origin);
 }
 socket.on('rejoinSuccess', function(id) {
   player.id = id;
@@ -3196,7 +3202,7 @@ function processStats(stats,is_pm,pm_win) {
     c = c || {};
     for (var i in o) {
       if (o[i] instanceof Object) c[i] = add(c[i],o[i]);
-      else c[i] = (c[i]||0)+o[i];
+      c[i] = (c[i]||0)+o[i];
     }
     return c;
   };
