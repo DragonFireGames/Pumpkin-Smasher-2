@@ -1230,6 +1230,8 @@ class Player {
   }
   generateStats(room) {
     var stats = this.gamestats;
+    stats.PlayerCount = room.amount;
+    stats.PumpkinMasterCount = room.pm_amount;
     if (this.pumpkinMaster) {
       stats.CoinsLeft = room.coins[this.id];
       stats.ObjectivesLost = room.objectiveRooms - room.objectives.length;

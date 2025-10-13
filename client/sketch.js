@@ -224,6 +224,29 @@ defaultUser.doneTutorial = false;
 defaultUser.stats = {};
 defaultUser.achievements = {};
 var AchievementData = {
+  "gentleman": {
+    name: "Gentleman",
+    description: "Max out one of your upgrades as skeleton",
+    hat: "tophat",
+    test: function(match, cumulative) {
+      for (var i in match.Upgrades) if (match.Upgrades[i] >= 4) return true;
+      return false;
+    },
+    progress: function(cumulative) {
+      return 0;
+    }
+  },
+  "full_party": {
+    name: "Full Party",
+    description: "Play a full game with 4 or more players",
+    hat: "party_hat",
+    test: function(match, cumulative) {
+      return match.PlayerCount >= 4;
+    },
+    progress: function(cumulative) {
+      return 0;
+    }
+  },
   "no_deaths": {
     name: "No Deaths",
     description: "No deaths as skeleton in a single match",
@@ -1018,7 +1041,7 @@ async function loadAssets() {
   // Skeleton Assets
   textures.skeleton = [];
   textures.skeleton[0] = new SkeletonImg("assets/skeleton/1.png",-2,-4);
-  textures.skeleton[1] = new SkeletonImg("assets/skeleton/2.png",2,0);
+  textures.skeleton[1] = new SkeletonImg("assets/skeleton/2.png",2,-2);
   textures.skeleton[2] = new SkeletonImg("assets/skeleton/3.png",0,0);
   textures.skeleton[3] = new SkeletonImg("assets/skeleton/joining.png",0,0);
   textures.bone_pile = new FitImage("assets/skeleton/bone_pile.png");
@@ -1035,6 +1058,8 @@ async function loadAssets() {
 
   // Hats
   textures.hats = {};
+  textures.hats.tophat = new HatDisplay("assets/hats/tophat.png",8,2);
+  textures.hats.party_hat = new HatDisplay("assets/hats/party_hat.png",14,4);
   textures.hats.santa = new HatDisplay("assets/hats/santa.png",0,12);
   textures.hats.pumpkin = new HatDisplay("assets/hats/pumpkin.png",14,20);
   textures.hats.red_beanie = new HatDisplay("assets/hats/red_beanie.png",12,12);
