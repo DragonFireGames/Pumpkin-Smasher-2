@@ -743,6 +743,7 @@ class TutorialRoom extends Room {
     this.spawnRandom("rusher",4,null,filter);
     this.spawnRandom("speeder",4,null,filter);
     this.spawnRandom("monster",8,null,filter);
+    this.spawnRandom("mine",4,null,filter);
     this.spawnRandom("catapult",2,null,filter);
     this.spawnRandom("debuffer",1,null,filter);
 
@@ -2600,18 +2601,18 @@ CandyData.lolipop = {
       var v = room.vines[i];
       if (isfar(v)) continue;
       v.health = 0;
-      this.gamestats.AbilityDamage.vines+=v.health;
-      this.gamestats.AbilitiesDestroyed.vines++;
+      player.gamestats.AbilityDamage.vines+=v.health;
+      player.gamestats.AbilitiesDestroyed.vines++;
       room.vines.splice(i,1);
     }
     // Check for generators
     for (i in room.generators) {
       var gen = room.generators[i];
       if (isfar(gen)) continue;
-      this.addScore(0.2 * gen.health);
+      player.addScore(0.2 * gen.health);
       gen.health = 0;
-      this.gamestats.AbilityDamage.generators+=gen.health;
-      this.gamestats.AbilitiesDestroyed.generators++;
+      player.gamestats.AbilityDamage.generators+=gen.health;
+      player.gamestats.AbilitiesDestroyed.generators++;
       delete room.generators[i];
     }
   },
