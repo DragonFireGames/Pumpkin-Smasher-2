@@ -46,7 +46,7 @@ socket.on("disconnect", async () => {
     await wait(1000);
     if (socket.connected) return;
   }
-  location.reload();
+  __cpLocation.reload();
 });
 //^^Connects to the socket.io server
 
@@ -88,7 +88,7 @@ homeDis.clickTutorial = function() {
 homeDis.clickInstructions = function() {
   setDisplay("instructions");
   //cam.scroll = 0;
-  //location.href = location.origin+"/instructions";
+  //__cpLocation.href = __cpLocation.origin+"/instructions";
 }
 homeDis.clickSettings = function() {
   setDisplay("settings");
@@ -487,8 +487,8 @@ EntityDisplay.mine = (function() {
     display: function(e) {
       if (e.img == "exploding") {
         var frame = Math.floor((Date.now()-e.f_start)/75) + (e.f || 0);
-        if (frame < 24) tex.explode.show(36 * tex.explode.w / tex.armed.w, 0, frame);
-      } else tex[e.img].show(36, 0, e.f);
+        if (frame < 24) tex.explode.show(0, 36 * tex.explode.h / tex.armed.h, frame);
+      } else tex[e.img].show(0, 36, e.f);
     }
   };
 });
@@ -1747,7 +1747,7 @@ Displays.lobby = function() {
     // Skeleton
     var w = textures.skeleton[p.skin].calc(0, 46).w;
     textures.skeleton[p.skin].show(w, 46);
-    if (p.hat) textures.hats[p.hat].show(w, 46, sel);
+    if (p.hat) textures.hats[p.hat].show(w, 46, p.skin);
     pop();
   }
   for (var i in players) {
@@ -1757,7 +1757,7 @@ Displays.lobby = function() {
     translate(p.x, p.y);
     // Name
     format("#ffffff", false, 0, 12, CENTER);
-    if (p.name == "DragonFire7z") fill("#ff0000");
+    if (p.name == "DragonFire7z" || p.name == "DragonFireGames") fill("#ff0000");
     text(p.name, -4 * p.facing, -20);
     pop();
   }
@@ -2026,10 +2026,10 @@ function setDisplay(d, sd) {
   subdisplay = sd ?? "";
   DiscordWidget.style.visibility = "hidden";
   user.lastSession = {};
-  history.pushState({}, "", location.origin);
+  history.pushState({}, "", __cpLocation.origin);
   if (display == "lobby") {
-    history.pushState({}, "", location.origin + "?room=" + room);
-    if (isNext) history.pushState({}, "", location.origin + "?room=next");
+    history.pushState({}, "", __cpLocation.origin + "?room=" + room);
+    if (isNext) history.pushState({}, "", __cpLocation.origin + "?room=next");
     return;
   }
   if (display == "home" || display == "loading") return;
@@ -2049,7 +2049,7 @@ function endAssetLoad() {
   }
 
   // Get params
-  var params_str = location.href.split('?')[1];
+  var params_str = __cpLocation.href.split('?')[1];
   if (params_str) {
     var params_arr = params_str.split('&');
 
@@ -2815,9 +2815,9 @@ socket.on('rejoinFailed', returnToHome);
 function returnToHome() {
   user.lastSession = {};
   localStorage.user = JSON.stringify(user);
-  //location.href = location.origin;
+  //__cpLocation.href = __cpLocation.origin;
   setDisplay("home");
-  history.pushState({}, "", location.origin);
+  history.pushState({}, "", __cpLocation.origin);
 }
 socket.on('rejoinSuccess', function(id) {
   player.id = id;
