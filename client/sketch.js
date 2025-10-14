@@ -1490,11 +1490,14 @@ Displays.game = function() {
 
     // Health
     push();
-    var hw = (player.maxhealth - 1) * 40;
+    var hmax = Math.max(player.maxhealth,Math.ceil(player.health));
+    var hw = (hmax - 1) * 40;
     translate(-hw / 2, wHeight / 2 - 40);
     var h = player.health;
-    for (var i = 0; i < player.maxhealth; i++) {
+    for (var i = 0; i < hmax; i++) {
+      if (i >= player.maxhealth) tint(128,255,176);
       gui[h > (i + 0.5) ? "bone" : h > i ? "bone_damaged" : "bone_broken"].show(40);
+      if (i >= player.maxhealth) tint(255,255,255);
       translate(40, 0);
     }
     pop();
