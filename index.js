@@ -2158,7 +2158,7 @@ Entities.mine = class extends Entity {
       }
     }
     if (this.img == "ticking") {
-      if (nearest.dist > 2.2) {
+      if (nearest.dist > 2.5) {
         this.img = "armed";
       }
       if (Date.now()-this.countdown >= 1500) {
@@ -2181,9 +2181,9 @@ Entities.mine = class extends Entity {
     this.destroy();
   }
   async explode() {
-    this.img = "exploding";
-    this.f = 0;
     this.f_start = Date.now();
+    this.f = 0;
+    this.img = "exploding";
     await wait(17 * 75);
     this.damagePlayers();
   }
