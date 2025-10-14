@@ -224,6 +224,17 @@ defaultUser.doneTutorial = false;
 defaultUser.stats = {};
 defaultUser.achievements = {};
 var AchievementData = {
+  "new_recruit": {
+    name: "New Recruit",
+    description: "Complete the entire tutorial",
+    hat: false,
+    test: function(match, cumulative) {
+      return cumulative.TutorialComplete;
+    },
+    progress: function(cumulative) {
+      return 0;
+    }
+  },
   "full_party": {
     name: "Full Party",
     description: "Play a full game with 4 or more players",
@@ -289,6 +300,17 @@ var AchievementData = {
     },
     progress: function(cumulative) {
       return cumulative.EntitiesKilled.debuffer / 20;
+    }
+  },
+  "ghost_infighting": {
+    name: "Ghost Infighting",
+    description: "Kill 5 ghosts with ghost candy",
+    hat: false,
+    test: function(match, cumulative) {
+      return cumulative.GhostsKilledWithGhost >= 5;
+    },
+    progress: function(cumulative) {
+      return 0;
     }
   },
 };
@@ -1082,10 +1104,10 @@ async function loadAssets() {
   }
   for (var a in AchievementData) {
     var ach = AchievementData[a];
-    var h = textures.hats[ach.hat].hat.url;
+    var h = textures.hats[ach.hat];
     var html = `
       <div class="achievement" id="ach_${a}">
-        ${h?`<img class="achievement-hat-image" src="${h}">`:''}
+        ${h?`<img class="achievement-hat-image" src="${h.hat.url}">`:''}
         <h3 class="achievement-name">${ach.name}</h3>
         <p class="achievement-desc">${ach.description}</p>
       </div>
