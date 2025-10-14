@@ -628,6 +628,7 @@ class TutorialRoom extends Room {
   async tutorial() {
     // Start game
     this.start();
+    var tutorialStartTime = Date.now();
 
     // Place vines
     this.ability("vines",0,0,null);
@@ -902,7 +903,7 @@ class TutorialRoom extends Room {
     await this.waitForContinue();
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
-    this.socket.emit("tutorialComplete");
+    this.socket.emit("tutorialComplete",Date.now()-tutorialStartTime);
     
     this.socket.emit('tutorialMsg',[
       "Yeah, I do too.",
