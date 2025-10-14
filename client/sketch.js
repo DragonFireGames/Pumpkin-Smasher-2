@@ -3160,7 +3160,7 @@ socket.on('skeleton_win', async function(stats) {
     spawnConfetti();
   }
   await wait(5000);
-  processStats(stats,player.pumpkinMaster,true);
+  processStats(stats,player.pumpkinMaster,false);
   setDisplay("gameover", player.pumpkinMaster ? "lose" : "win");
   endGame();
 });
@@ -3205,8 +3205,9 @@ function processStats(stats,is_pm,pm_win) {
   };
   stats.GamesPlayed = 1;
   if (is_pm) {
-    if (pm_win) { stats.Wins++; stats.PumpkinMasterWins++; }
-    else { stats.Losses++; stats.PumpkinMasterLosses++; }
+    stats.PlayedAsPumpkinMaster = 1;
+    if (pm_win) { stats.Wins = 1; stats.PumpkinMasterWins = 1; }
+    else { stats.Losses = 1; stats.PumpkinMasterLosses = 1; }
     stats.SkeletonDamage = total(stats.DamagedSkeletonsWith);
     stats.SkeletonKills = total(stats.KilledSkeletonsWith);
     stats.TotalMonstersSpawned = total(stats.MonstersSpawned);
@@ -3216,8 +3217,9 @@ function processStats(stats,is_pm,pm_win) {
     for (var i in stats.AbilitiesUsed) stats.CoinsSpent += AbilityDisplay[i].cost * stats.AbilitiesUsed[i];
     stats.TotalCoins = stats.CoinsSpent + stats.CoinsLeft;
   } else {
-    if (pm_win) { stats.Losses++; stats.SkeletonLosses++; }
-    else { stats.Wins++; stats.SkeletonWins++; }
+    stats.PlayedAsSkeleton = 1;
+    if (pm_win) { stats.Losses = 1; stats.SkeletonLosses = 1; }
+    else { stats.Wins = 1; stats.SkeletonWins = 1; }
     stats.TotalUpgrades = total(stats.Upgrades);
     stats.TotalEntitiesKilled = total(stats.EntitiesKilled);
     stats.TotalCandiesCollected = total(stats.CandiesCollected);
