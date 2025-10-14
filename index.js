@@ -474,17 +474,15 @@ class Room {
     if (player.activeCandy && candy.duration) return;
     delete this.candies[i];
     io.to(this.id).emit('candies',this.candies);
-    player.activeCandy = c.type;
+    if (candy.duration) player.activeCandy = c.type;
     player.gamestats.CandiesCollected[c.type]++;
     candy.collect(player,this,tx,ty);
-    if (candy.duration) {
-      player.candyDuration = Date.now() + candy.duration*1000;
-      await wait(candy.duration*1000);
-    }
-    if (player.activeCandy) {
-      candy.expire(player,this);
-      player.activeCandy = false;
-    }
+    if (!candy.duration) return;
+    player.candyDuration = Date.now() + candy.duration*1000;
+    await wait(candy.duration*1000);
+    if (!player.activeCandy) return;
+    candy.expire(player,this);
+    player.activeCandy = false;
   }
   spawnCandies(n) {
     for (var i = 0; i < n; i++) {
