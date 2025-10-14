@@ -3202,7 +3202,7 @@ function processStats(stats,is_pm,pm_win) {
     c = c || {};
     for (var i in o) {
       if (o[i] instanceof Object) c[i] = add(c[i],o[i]);
-      c[i] = (c[i]||0)+o[i];
+      else c[i] = (c[i]||0)+o[i];
     }
     return c;
   };
