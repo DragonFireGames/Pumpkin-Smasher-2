@@ -902,6 +902,8 @@ class TutorialRoom extends Room {
     await this.waitForContinue();
     if (!ROOM_LIST[this.id] || this.freeplay) return;
 
+    this.socket.emit("tutorialComplete");
+    
     this.socket.emit('tutorialMsg',[
       "Yeah, I do too.",
       "Press ESCAPE to leave the",
@@ -1047,9 +1049,6 @@ class TutorialRoom extends Room {
       this.player.axelength = axeLengthDefault;
       this.player.maxhealth = healthDefault;
       this.player.health = healthDefault;
-      //
-      this.candies = {};
-      this.spawnCandies(3);
     } 
     else {
       this.socket.emit('PM', true);
@@ -1057,6 +1056,9 @@ class TutorialRoom extends Room {
       this.skeletons = [];
       this.player.pumpkinMaster = true;
       this.coinMult = 1;
+      //
+      this.candies = {};
+      this.spawnCandies(5);
       // Restore objective
       if (this.objectives.length == 0) {
         const o = {
@@ -1164,6 +1166,7 @@ class Player {
       SmashedDiamond: 0,
       EntitiesKilled: {},
       EntitiesKilledWithLolipop: 0,
+      GhostsKilledAsGhost: 0,
       Deaths: 0,
       ObjectiveDamage: 0,
       ObjectivesDestroyed: 0,
@@ -1717,6 +1720,10 @@ Entities.ghost = class extends Entity {
 
     this.x += dir.x;
     this.y += dir.y;
+  }
+  hit(player) {
+    if (player.activeCandies == "ghost_chew") player.gamestats.GhostsKilledAsGhost++;
+    return super.hit(player);
   }
 };
 Entities.nuke = class extends Entity {
