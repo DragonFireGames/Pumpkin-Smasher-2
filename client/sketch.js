@@ -3235,6 +3235,11 @@ function processStats(stats,is_pm,pm_win) {
     if (a.test(stats,user.stats)) user.achievements[i] = true;
   }
 }
+socket.on('tutorialComplete', function(time) {
+  user.stats = user.stats || {};
+  user.stats.TutorialComplete = 1;
+  user.stats.TutorialTime = Math.min(time,user.stats.TutorialTime||Infinity);
+});
 
 function changeUsername() {
   var name = homeDis.username.value;
