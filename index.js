@@ -2590,9 +2590,9 @@ CandyData.lolipop = {
   collect: async function(player) {},
   expire: async function(player,room) {
     var isfar = function(e) {
-      var dx = e.x-this.x;
-      var dy = e.y-this.y;
-      return dx * dx + dy * dy > 64;
+      var dx = e.x-player.x;
+      var dy = e.y-player.y;
+      return dx * dx + dy * dy > 100;
     };
     // Kill Entities
     for (var i = room.entities.length - 1; i >= 0; i--) {
