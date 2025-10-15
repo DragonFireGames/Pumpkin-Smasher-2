@@ -122,7 +122,7 @@ settingsDis.clickAchievements = function() {
     var n = achs[i].id.slice(4);
     var a = AchievementData[n];
     var p = (a.progress(user.stats) * 100).toFixed(1);
-    achs[i].children[1].innerText = a.name+" ("+p+"%)";
+    achs[i].children[a.hat?1:0].innerText = a.name+" ("+p+"%)";
   }
   for (var i in user.achievements) {
     var ach = document.getElementById("ach_"+i);
