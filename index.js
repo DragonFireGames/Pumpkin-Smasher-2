@@ -2158,7 +2158,7 @@ Entities.mine = class extends Entity {
       }
     }
     if (this.img == "ticking") {
-      if (nearest.dist > 2.5) {
+      if (nearest.dist > 3) {
         this.img = "armed";
       }
       if (Date.now()-this.countdown >= 1500) {
@@ -2592,7 +2592,7 @@ CandyData.lolipop = {
     var isfar = function(e) {
       var dx = e.x-player.x;
       var dy = e.y-player.y;
-      return dx * dx + dy * dy > 100;
+      return dx * dx + dy * dy > 64;
     };
     // Kill Entities
     for (var i = room.entities.length - 1; i >= 0; i--) {
