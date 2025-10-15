@@ -1420,6 +1420,8 @@ class Player {
         gen.health--;
         this.gamestats.AbilityDamage.generators++;
         if (gen.health <= 0) {
+          room.startTime += 12 * 1000;
+          io.to(room.id).emit('setTime',room.startTime);
           this.gamestats.AbilitiesDestroyed.generators++;
           delete room.generators[i];
         }
