@@ -2160,7 +2160,7 @@ Entities.mine = class extends Entity {
       }
     }
     if (this.img == "ticking") {
-      if (nearest.dist > 3) {
+      if (nearest.dist > 4) {
         this.img = "armed";
       }
       if (Date.now()-this.countdown >= 1500) {
@@ -2549,7 +2549,7 @@ AbilityData.swarm = {
 };
 AbilityData.shield = {
   cost: 75,
-  cooldown: 90 * 1000,
+  cooldown: 120 * 1000,
 };
 AbilityData.generators = {
   cost: 18,
