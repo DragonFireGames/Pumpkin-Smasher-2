@@ -664,7 +664,7 @@ AbilityDisplay.shield = (function() {
   var shieldImg = new Animation("assets/abilities/shield/shield.png", 3, 8);
   return {
     cost: 75,
-    cooldown: 180 * 1000,
+    cooldown: 120 * 1000,
     wait: 0,
     icon: function() {
       icon.show(0, 40);
