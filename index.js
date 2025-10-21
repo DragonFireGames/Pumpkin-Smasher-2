@@ -333,7 +333,7 @@ class Room {
     this.potentialRoomMap = {}; 
 
     var s = this.amount-this.pm_amount;
-    var regularRooms = 3+Math.floor(s*2.5);
+    var regularRooms = 1+Math.floor(s*2.5);
     this.objectiveRooms = 1+s;
 
     this.potentialRoomMap["0,0"] = 0;

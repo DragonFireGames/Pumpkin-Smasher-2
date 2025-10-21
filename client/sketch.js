@@ -1087,7 +1087,7 @@ async function loadAssets() {
   textures.hats = {};
   textures.hats.tophat = new HatDisplay("assets/hats/tophat.png",8,2);
   textures.hats.black_red_tophat = new HatDisplay("assets/hats/black_red_tophat.png",8,2);
-  //textures.hats.mad_hatter = new HatDisplay("assets/hats/mad_hatter.png",8,2);
+  textures.hats.mad_hatter = new HatDisplay("assets/hats/mad_hatter.png",8,2);
   textures.hats.purple_tophat = new HatDisplay("assets/hats/purple_tophat.png",8,2);
   textures.hats.brown_tophat = new HatDisplay("assets/hats/brown_tophat.png",8,2);
   textures.hats.white_tophat = new HatDisplay("assets/hats/white_tophat.png",8,2);
@@ -1102,7 +1102,7 @@ async function loadAssets() {
   textures.hats.witch_hat = new HatDisplay("assets/hats/witch_hat.png",4,4);
   textures.hats.purple_witch_hat = new HatDisplay("assets/hats/purple_witch_hat.png",4,6);
   textures.hats.green_witch_hat = new HatDisplay("assets/hats/green_witch_hat.png",6,0);
-  //textures.hats.orange_witch_hat = new HatDisplay("assets/hats/orange_witch_hat.png",6,0);
+  textures.hats.orange_witch_hat = new HatDisplay("assets/hats/orange_witch_hat.png",6,0);
   textures.hats.pirate = new HatDisplay("assets/hats/pirate.png",6,6);
   textures.hats.demon_horns = new HatDisplay("assets/hats/demon_horns.png",14,20);
   textures.hats.halo = new HatDisplay("assets/hats/halo.png",14,10);
@@ -1130,7 +1130,7 @@ async function loadAssets() {
   textures.hats.black_bandana = new HatDisplay("assets/hats/black_bandana.png",8,22);
   textures.hats.among_us = new HatDisplay("assets/hats/among_us.png",16,6);
   textures.hats.viking_helmet = new HatDisplay("assets/hats/viking_helmet.png",10,12);
-  //textures.hats.paper_bag = new HatDisplay("assets/hats/paper_bag.png",8,6);
+  textures.hats.paper_bag = new HatDisplay("assets/hats/paper_bag.png",8,6);
   textures.hats.paper_hat = new HatDisplay("assets/hats/paper_hat.png",12,12);
   textures.hats.iron_man = new HatDisplay("assets/hats/iron_man.png",14,26);
   textures.hats.jason_mask = new HatDisplay("assets/hats/jason_mask.png",14,24);
