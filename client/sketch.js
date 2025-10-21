@@ -1693,13 +1693,15 @@ Displays.pmgame = function() {
       red: "#ff0000",
       green: "#00ff00",
       orange: "#ffa500",
-      grey: "#a5a5a5"
+      grey: "#a5a5a5",
+      white: "#ffffff"
     }
     var hideColors = {
       red: "#640000",
       green: "#006400",
       orange: "#644000",
-      grey: "#404040"
+      grey: "#404040",
+      white: "#808080"
     }
 
 
@@ -1757,7 +1759,7 @@ Displays.pmgame = function() {
       text(txt, 0, 40);
       if (Date.now() < data.wait) {
         var time = Math.floor((data.wait-Date.now())/1000);
-        format("#ffffff", false, 0, 20, CENTER, BOTTOM);
+        format(c.white, false, 0, 20, CENTER, CENTER);
         text(time, 0, 0);
       }
       translate(70, 0);
@@ -3358,8 +3360,8 @@ function format(Fill, Stroke, StrokeWidth, TextSize, TextAlignX, TextAlignY) {
 
   strokeWeight(StrokeWidth ?? 1);
   textSize(TextSize ?? 10);
-  if (!textAlignY) textAlign(TextAlignX ?? LEFT);
-  else textAlign(textAlignX ?? LEFT, TextAlignY);
+  if (!TextAlignY) textAlign(TextAlignX ?? LEFT);
+  else textAlign(TextAlignX ?? LEFT, TextAlignY);
 }
 function wait(time) {
   return new Promise((resolve) => {
