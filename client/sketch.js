@@ -1745,7 +1745,7 @@ Displays.pmgame = function() {
       var txt = data.cost;
       var afford = cam.coins >= data.cost ? c.green : c.red;
       if (afford == c.red) sel = c.red;
-      if (data.wait < Date.now()) {
+      if (Date.now() < data.wait) {
         over = "#202020";
         sel = c.grey;
         afford = c.grey;
@@ -1753,8 +1753,13 @@ Displays.pmgame = function() {
       format(over, sel, 3);
       circle(0, 0, 50);
       data.icon();
-      format("#000000", afford, 2, 15, CENTER);
+      format("#000000", afford, 2, 15, CENTER, BASELINE);
       text(txt, 0, 40);
+      if (Date.now() < data.wait) {
+        var time = Math.floor((data.wait-Date.now())/1000);
+        format("#ffffff", false, 0, 20, CENTER, BOTTOM);
+        text(time, 0, 0);
+      }
       translate(70, 0);
       t.x += 70;
     }
@@ -3344,7 +3349,7 @@ function randomValueArray(arr) {
 function randomIndex(arr) {
   return arr.length * Math.random() << 0;
 }
-function format(Fill, Stroke, StrokeWidth, TextSize, TextAlign) {
+function format(Fill, Stroke, StrokeWidth, TextSize, TextAlignX, TextAlignY) {
   if (Fill || Fill === 0) fill(Fill);
   else noFill();
 
@@ -3353,7 +3358,8 @@ function format(Fill, Stroke, StrokeWidth, TextSize, TextAlign) {
 
   strokeWeight(StrokeWidth ?? 1);
   textSize(TextSize ?? 10);
-  textAlign(TextAlign ?? LEFT);
+  if (!textAlignY) textAlign(TextAlignX ?? LEFT);
+  else textAlign(textAlignX ?? LEFT, TextAlignY);
 }
 function wait(time) {
   return new Promise((resolve) => {
