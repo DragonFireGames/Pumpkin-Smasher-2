@@ -590,7 +590,7 @@ AbilityDisplay.fog = (function() {
   return {
     cost: 5,
     cooldown: 1,
-    wait: false,
+    wait: 0,
     icon: function() {
       icon.show(0, 40);
     },
@@ -636,7 +636,7 @@ AbilityDisplay.vines = (function() {
   return {
     cost: 8,
     cooldown: 1,
-    wait: false,
+    wait: 0,
     icon: function() {
       icon.show(0, 40);
     },
@@ -653,7 +653,7 @@ AbilityDisplay.swarm = (function() {
   return {
     cost: 22,
     cooldown: 10 * 1000,
-    wait: false,
+    wait: 0,
     icon: function() {
       icon.show(0, 40);
     }
@@ -665,7 +665,7 @@ AbilityDisplay.shield = (function() {
   return {
     cost: 75,
     cooldown: 180 * 1000,
-    wait: false,
+    wait: 0,
     icon: function() {
       icon.show(0, 40);
     },
@@ -680,7 +680,7 @@ AbilityDisplay.generators = (function() {
   return {
     cost: 18,
     cooldown: 1,
-    wait: false,
+    wait: 0,
     icon: function() {
       icon.show(0, 40);
     },
@@ -690,9 +690,9 @@ AbilityDisplay.generators = (function() {
       var percent = fract(Date.now() / seconds);
       translate(0, -25 * percent + 10);
       if (percent >= 0.85) {
-        if (g.amount >= 1.2) {
+        if (g.amount >= 1) {
           textures.diamondpumpkin.show(percent * 60);
-        } else if (g.amount >= 0.85) {
+        } else if (g.amount >= 0.7) {
           textures.goldpumpkin.show(percent * 60);
         } else {
           textures.pumpkin.show(percent * 60);
@@ -1657,7 +1657,8 @@ Displays.pmgame = function() {
     }
 
     // Ability Select
-    if (cam.mode == "ability" && AbilityDisplay[cam.selA].wait == false && AbilityDisplay[cam.selA].cost < cam.coins) {
+    var selAbility = AbilityDisplay[cam.selA];
+    if (cam.mode == "ability" && Date.now() >= selAbility.wait && selAbility.cost < cam.coins) {
       var rx = floor(msx / (36 * 14));
       var ry = floor(msy / (36 * 14));
       if (roomMap[rx + "," + ry]) {
@@ -1744,7 +1745,7 @@ Displays.pmgame = function() {
       var txt = data.cost;
       var afford = cam.coins >= data.cost ? c.green : c.red;
       if (afford == c.red) sel = c.red;
-      if (data.wait == true) {
+      if (data.wait < Date.now()) {
         over = "#202020";
         sel = c.grey;
         afford = c.grey;
@@ -2654,15 +2655,12 @@ function mousePressed() {
       socket.emit('spawn', cam.selE, sx, sy);
     }
     // Do Abilities
-    else if (cam.mode == "ability" && selAbility.wait == false && selAbility.cost < cam.coins) {
+    else if (cam.mode == "ability" && Date.now() >= selAbility.wait && selAbility.cost < cam.coins) {
       var rx = floor(sx / (36 * 14));
       var ry = floor(sy / (36 * 14));
       if (roomMap[rx + "," + ry]) {
         socket.emit('ability', cam.selA, rx, ry);
-        selAbility.wait = true;
-        setTimeout(() => {
-          selAbility.wait = false;
-        }, selAbility.cooldown);
+        selAbility.wait = Date.now()+selAbility.cooldown;
       }
     }
     user.cam = cam;
