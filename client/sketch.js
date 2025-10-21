@@ -263,6 +263,7 @@ var AchievementData = {
     description: "No deaths as skeleton in a single match",
     hat: "pumpkin",
     test: function(match, cumulative) {
+      if (!match.PlayedAsSkeleton) return;
       return match.Deaths == 0;
     },
     progress: function(cumulative) {
