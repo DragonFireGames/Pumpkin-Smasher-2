@@ -2696,7 +2696,7 @@ var keybindContent = [
               {
                 type: "keybind",
                 name: "Select Generator: ",
-                id: "selectgenerator",
+                id: "selectgenerators",
                 value: "T"
               },
             ]
