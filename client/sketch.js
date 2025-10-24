@@ -3247,7 +3247,8 @@ Keybinds.onpress("switchTracks", function(){
       if (display != "pmgame") return;
       if (settingsIdMap.usageMode.value != "Hotbar") return;
       var sel = cam.mode == "entity" ? "selE" : "selA";
-      cam[sel] = i;
+      var item = cam.mode == "entity" ? EntityIDs[i] : AbilityIDs[i];
+      if (item) cam[sel] = item;
     });
   })(i);
   for (var i = 0; i < EntityIDs.length; i++) (function(i){
@@ -3255,7 +3256,7 @@ Keybinds.onpress("switchTracks", function(){
       if (display != "pmgame") return;
       if (settingsIdMap.usageMode.value != "Item") return;
       cam.mode = "ability";
-      cam.selE = i;
+      cam.selE = EntityIDs[i];
     });
   })(i);
   for (var i = 0; i < AbilityIDs.length; i++) (function(i){
@@ -3263,7 +3264,7 @@ Keybinds.onpress("switchTracks", function(){
       if (display != "pmgame") return;
       if (settingsIdMap.usageMode.value != "Item") return;
       cam.mode = "entity";
-      cam.selA = i;
+      cam.selA = AbilityIDs[i];
     });
   })(i);
 })();
@@ -3326,7 +3327,7 @@ function keybinds() {
   }
   switch (settingsIdMap.facingMode.value) {
     case "Movement": 
-      f = (r ? 1 : 0) + (r ? -1 : 0);
+      f = (r ? 1 : 0) + (l ? -1 : 0);
       if (Keybinds.test("faceReverse")) f = -f;
     break;
     case "Mouse": 
