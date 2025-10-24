@@ -1280,6 +1280,7 @@ class Player {
     //this.facing = dx == 0 ? this.facing : dx > 0 ? 1 : -1;
     var myspeed = this.speed;
     if (this.disabled) myspeed = speedDefault * speed;
+    if (this.facing != Math.sign(dx)) myspeed /= 2;
     const mag = myspeed / Math.sqrt(dx*dx+dy*dy);
     dx *= mag;
     dy *= mag;
