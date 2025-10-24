@@ -3255,7 +3255,7 @@ Keybinds.onpress("switchTracks", function(){
     Keybinds.onpress("select"+EntityIDs[i], function(){
       if (display != "pmgame") return;
       if (settingsIdMap.usageMode.value != "Item") return;
-      cam.mode = "ability";
+      cam.mode = "entity";
       cam.selE = EntityIDs[i];
     });
   })(i);
@@ -3263,7 +3263,7 @@ Keybinds.onpress("switchTracks", function(){
     Keybinds.onpress("select"+AbilityIDs[i], function(){
       if (display != "pmgame") return;
       if (settingsIdMap.usageMode.value != "Item") return;
-      cam.mode = "entity";
+      cam.mode = "ability";
       cam.selA = AbilityIDs[i];
     });
   })(i);
