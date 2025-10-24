@@ -2784,9 +2784,9 @@ io.sockets.on('connection', function (socket) {
   });
 
   // Skeleton Actions
-  socket.on('move',(u,d,l,r) => {
+  socket.on('move',(u,d,l,r,f) => {
     if (!client.player) return;
-    client.player.move(u,d,l,r);
+    client.player.move(u,d,l,r,f);
   });
   socket.on('smash',() => {
     if (!client.player) return;
