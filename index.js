@@ -1277,7 +1277,7 @@ class Player {
     }
 
     // Collision
-    this.facing = dx == 0 ? this.facing : dx > 0 ? 1 : -1;
+    //this.facing = dx == 0 ? this.facing : dx > 0 ? 1 : -1;
     var myspeed = this.speed;
     if (this.disabled) myspeed = speedDefault * speed;
     const mag = myspeed / Math.sqrt(dx*dx+dy*dy);
@@ -1296,7 +1296,7 @@ class Player {
 
     room.checkCandies(this);
   }
-  move(u, d, l, r) {
+  move(u, d, l, r, f) {
     var dx = 0;
     var dy = 0;
     if (u) {dy--;}
@@ -1305,6 +1305,7 @@ class Player {
     if (r) {dx++;}
     this.dx = dx;
     this.dy = dy;
+    if (f) this.facing = f;
   }
   upgrade(name) {
     if (this.upgradeLvls[name] >= upgradeMaxes[name]) return;

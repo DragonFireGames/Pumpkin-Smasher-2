@@ -1,3 +1,4 @@
+
 html, body {
   margin: 0;
   padding: 0;
@@ -137,60 +138,66 @@ canvas {
 
 /* Settings */
 
-#wardrobeBtn {
-  top: calc(50vh - 18vmin);
-  left: calc(50vw - 42vmin);
+.settingBtn {
   height: 8vmin;
   width: 40vmin;
   font-size: 4vmin;
+}
+
+#wardrobeBtn {
+  top: calc(50vh - 18vmin);
+  left: calc(50vw - 42vmin);
 }
 
 #achievementBtn {
   top: calc(50vh - 6vmin);
   left: calc(50vw - 42vmin);
-  height: 8vmin;
-  width: 40vmin;
-  font-size: 4vmin;
 }
 
 #statBtn {
   top: calc(50vh + 6vmin);
   left: calc(50vw - 42vmin);
-  height: 8vmin;
-  width: 40vmin;
-  font-size: 4vmin;
 }
 
 #keybindBtn {
   top: calc(50vh - 18vmin);
   left: calc(50vw + 2vmin);
-  height: 8vmin;
-  width: 40vmin;
-  font-size: 4vmin;
 }
 
 #displaySettingsBtn {
   top: calc(50vh - 6vmin);
   left: calc(50vw + 2vmin);
-  height: 8vmin;
-  width: 40vmin;
-  font-size: 4vmin;
 }
 
 #miscBtn {
   top: calc(50vh + 6vmin);
   left: calc(50vw + 2vmin);
+}
+
+.panel {
+  position: absolute;
+  background: #0C2504;
+  border: 0.6vmin solid #303030;
+  color: #ffa500;
+  top: 17.5vmin;
+  left: calc(50vw - 40vmin);
+  height: calc(100vh - 32.5vmin);
+  width: 80vmin;
+  overflow-y: scroll;
+  padding: 1vmin;
+  font-size: 4vmin;
+}
+.return {
+  top: calc(100vh - 10vmin);
+  left: calc(50vw - 15vmin);
   height: 8vmin;
-  width: 40vmin;
+  width: 30vmin;
   font-size: 4vmin;
 }
 
 #returnBtn {
   top: calc(50vh + 18vmin);
   left: calc(50vw - 15vmin);
-  height: 8vmin;
-  width: 30vmin;
-  font-size: 4vmin;
 }
 
 #wardrobe {
@@ -207,9 +214,6 @@ canvas {
 #wardrobeReturnBtn {
   top: calc(50vh + 37.5vmin);
   left: calc(50vw - 15vmin);
-  height: 8vmin;
-  width: 30vmin;
-  font-size: 4vmin;
 }
 
 .hat {
@@ -240,58 +244,15 @@ canvas {
   top: 50%; left: 50%;
   transform: translate(-50%,-50%);
   width: 90%;
-  max-width: 10vmin;
-  max-height: 10vmin;
+  max-height: 90%;
 }
 .hat.disabled > .hat-image {
   filter: brightness(0%);
 }
 
-#stats {
-  position: absolute;
-  background: #0C2504;
-  border: 0.6vmin solid #303030;
-  color: #ffa500;
-  top: calc(50vh - 32.5vmin);
-  left: calc(50vw - 40vmin);
-  height: 67.5vmin;
-  width: 80vmin;
-  overflow-y: scroll;
-  padding: 1vmin;
-  font-size: 4vmin;
-}
-
-#statReturnBtn {
-  top: calc(50vh + 40vmin);
-  left: calc(50vw - 15vmin);
-  height: 8vmin;
-  width: 30vmin;
-  font-size: 4vmin;
-}
-
-
 #achievementList {
-  position: absolute;
-  background: #0C2504;
-  border: 0.6vmin solid #303030;
-  color: #ffa500;
-  top: calc(50vh - 32.5vmin);
-  left: calc(50vw - 40vmin);
-  height: 67.5vmin;
-  width: 80vmin;
-  overflow-y: scroll;
   padding: 0vmin;
-  font-size: 4vmin;
 }
-
-#achievementReturnBtn {
-  top: calc(50vh + 40vmin);
-  left: calc(50vw - 15vmin);
-  height: 8vmin;
-  width: 30vmin;
-  font-size: 4vmin;
-}
-
 
 .achievement {
   display: block;
@@ -321,4 +282,87 @@ canvas {
 }
 .achievement.earned > .achievement-hat-image {
   filter: none;
+}
+
+#loading {
+  background-color: #123904;
+  color: #ffffff;
+  position: absolute;
+  display: block;
+  top: 0px;
+  left: 0px;
+  width: 100vw;
+  height: 100vh;
+  z-index: 5;
+  text-align: center;
+  line-height: 85vh;
+  font-size: 10vmin;
+}
+
+.dropdown-group, .checkbox-group, .keybind {
+  margin-top: 1vmin;
+  margin-bottom: 1vmin;
+  font-size: 5vmin;
+}
+
+.keybind {
+  cursor: pointer;
+}
+
+.dropdown-group :not(:first-child), .checkbox-group :not(:first-child) {
+  margin: 2vmin;
+  padding-left: 2vmin;
+  border-left: 0.6vmin solid #ffa500;
+}
+
+.keybind .key, .dropdown, .dropdown option, .textbox {
+  color: #ffa500;
+  background-color: #231709;
+  border: 0.6vmin solid #ffa500;
+  padding: 0.5vmin 1vmin;
+  margin-left: 1vmin;
+  font-size: 3.5vmin;
+}
+
+.panel > div {
+  margin-left: 2vmin;
+}
+
+.checkbox {
+  position: relative;
+  cursor: pointer;
+  width: 4vmin;
+  height: 4vmin;
+  margin-left: 0.25vmin;
+}
+.checkbox:before {
+  content: "";
+  display: block;
+  position: absolute;
+  width: 4vmin;
+  height: 4vmin;
+  top: -0.25vmin;
+  left: -0.25vmin;
+  border: 0.6vmin solid #ffa500;
+  background-color: #231709;
+  padding: 0.25vmin;
+  margin-left: 0.25vmin;
+}
+.checkbox:checked::before {
+  background-color: #ffa500;
+}
+
+.checkbox:checked::after {
+  content: "";
+  display: block;
+  width: 1.25vmin;
+  height: 2.5vmin;
+  border: solid #000000;
+  border-width: 0 0.5vmin 0.5vmin 0;
+  -webkit-transform: rotate(45deg);
+  -ms-transform: rotate(45deg);
+  transform: rotate(45deg);
+  position: absolute;
+  top: 0.75vmin;
+  left: 1.75vmin;
 }

@@ -21,6 +21,8 @@
     peerjs
 */
 
+//var io=window.io||function(){return {on:()=>{},emit:()=>{}}};
+//setTimeout(()=>{loaded = toLoad},5000);
 var __cpLocation = window["\x6cocation"];
 
 // TODO: 
@@ -136,13 +138,16 @@ settingsDis.clickStats = function() {
   setDisplay("stats");
 };
 settingsDis.clickKeybinds = function() {
-  alert("coming soon!");
+  keybindDis.update();
+  setDisplay("keybinds");
 };
 settingsDis.clickDisplay = function() {
-  alert("coming soon!");
+  keybindDis.update();
+  setDisplay("display");
 };
 settingsDis.clickMisc = function() {
-  alert("coming soon!");
+  keybindDis.update();
+  setDisplay("misc");
 };
 settingsDis.clickReturn = function() {
   setDisplay("home");
@@ -193,6 +198,36 @@ achievementDis.list = document.getElementById("achievementList");
 achievementDis.clickReturn = function() {
   setDisplay("settings");
 };
+var keybindDis = {};
+keybindDis.div = document.getElementById("keybindDis");
+keybindDis.panel = document.getElementById("keybindPanel");
+keybindDis.update = function() {
+  importSettings(user.settings||{},settingsIdMap);
+}
+keybindDis.clickReturn = function() {
+  exportSettings(settingsIdMap,user.settings);
+  setDisplay("settings");
+};
+var displayDis = {};
+displayDis.div = document.getElementById("displayDis");
+displayDis.panel = document.getElementById("displayPanel");
+displayDis.update = function() {
+  importSettings(user.settings||{},settingsIdMap);
+}
+displayDis.clickReturn = function() {
+  exportSettings(settingsIdMap,user.settings);
+  setDisplay("settings");
+};
+var miscDis = {};
+miscDis.div = document.getElementById("miscDis");
+miscDis.panel = document.getElementById("miscPanel");
+miscDis.update = function() {
+  importSettings(user.settings||{},settingsIdMap);
+};
+miscDis.clickReturn = function() {
+  exportSettings(settingsIdMap,user.settings);
+  setDisplay("settings");
+};
 var viewDis = {};
 viewDis.div = document.getElementById("viewDis");
 viewDis.roomCode = document.getElementById("roomCode");
@@ -221,6 +256,7 @@ defaultUser.lastSession = {};
 defaultUser.name = "";
 defaultUser.hat = "";
 defaultUser.doneTutorial = false;
+defaultUser.settings = {};
 defaultUser.stats = {};
 defaultUser.achievements = {};
 var AchievementData = {
@@ -275,10 +311,10 @@ var AchievementData = {
     description: "Kill 40 rushers",
     hat: "red_beanie",
     test: function(match, cumulative) {
-      return cumulative.EntitiesKilled.rusher >= 40;
+      return cumulative.EntitiesKilled?.rusher >= 40;
     },
     progress: function(cumulative) {
-      return cumulative.EntitiesKilled.rusher / 40;
+      return cumulative.EntitiesKilled?.rusher / 40;
     }
   },
   "wizard_killer": {
@@ -286,10 +322,10 @@ var AchievementData = {
     description: "Kill 40 wizards",
     hat: "blue_beanie",
     test: function(match, cumulative) {
-      return cumulative.EntitiesKilled.wizard >= 40;
+      return cumulative.EntitiesKilled?.wizard >= 40;
     },
     progress: function(cumulative) {
-      return cumulative.EntitiesKilled.wizard / 40;
+      return cumulative.EntitiesKilled?.wizard / 40;
     }
   },
   "debuffer_killer": {
@@ -297,10 +333,10 @@ var AchievementData = {
     description: "Kill 20 debuffers",
     hat: "green_beanie",
     test: function(match, cumulative) {
-      return cumulative.EntitiesKilled.debuffer >= 20;
+      return cumulative.EntitiesKilled?.debuffer >= 20;
     },
     progress: function(cumulative) {
-      return cumulative.EntitiesKilled.debuffer / 20;
+      return cumulative.EntitiesKilled?.debuffer / 20;
     }
   },
   "ghost_infighting": {
@@ -314,6 +350,17 @@ var AchievementData = {
       return 0;
     }
   },
+  /*"witch_lover": {
+    name: "Witch Lover",
+    description: "Spawn 100 wizards, rushers, or debuffers",
+    hat: "witch_hat",
+    test: function(match, cumulative) {
+      //return cumulative.EntitiesKilled?.wizard >= 40;
+    },
+    progress: function(cumulative) {
+      //return cumulative.EntitiesKilled?.wizard / 40;
+    }
+  },*/
 };
 for (var i in defaultUser) {
   if (!user[i]) user[i] = defaultUser[i];
@@ -664,7 +711,7 @@ AbilityDisplay.shield = (function() {
   var shieldImg = new Animation("assets/abilities/shield/shield.png", 3, 8);
   return {
     cost: 75,
-    cooldown: 120 * 1000,
+    cooldown: 180 * 1000,
     wait: 0,
     icon: function() {
       icon.show(0, 40);
@@ -1194,11 +1241,15 @@ async function loadAssets() {
 // Load Counting
 var toLoad = 0;
 var loaded = 0;
+var failures = [];
 function LoadImage(url, call) {
   toLoad++;
   return loadImage(url, (img) => {
     loaded++;
     if (call) call(img);
+  },()=>{
+    loaded++;
+    failures.push(url);
   });
 }
 function LoadSound(url, call) {
@@ -1207,6 +1258,9 @@ function LoadSound(url, call) {
   return loadSound(url, (snd) => {
     loaded++;
     if (call) call(snd);
+  },()=>{
+    loaded++;
+    failures.push(url);
   });
 }
 async function LoadFile(url, call) {
@@ -1314,6 +1368,8 @@ class playAnimation {
 }
 
 function setup() {
+  document.getElementById("loading").style.visibility = "hidden";
+  
   frameRate(tickRate);
 
   var canvas_dom = createCanvas(windowWidth, windowHeight).elt;
@@ -1328,6 +1384,7 @@ function setup() {
   userStartAudio();
 
   loadAssets();
+  setupSettings();
 }
 
 var display = "loading";
@@ -1369,6 +1426,9 @@ function draw() {
   wardrobeDis.div.style.visibility = display == "wardrobe" ? "visible" : "hidden";
   statDis.div.style.visibility = display == "stats" ? "visible" : "hidden";
   achievementDis.div.style.visibility = display == "achievements" ? "visible" : "hidden";
+  keybindDis.div.style.visibility = display == "keybinds" ? "visible" : "hidden";
+  displayDis.div.style.visibility = display == "display" ? "visible" : "hidden";
+  miscDis.div.style.visibility = display == "misc" ? "visible" : "hidden";
 
   // Background Blur
   if (display == "home" || display == "view") {
@@ -1951,11 +2011,23 @@ Displays.wardrobe = function() {
 }
 Displays.stats = function() {
   format(0, "#ffa500", 10, 40, CENTER);
-  text("Statistics", 0, -150);
+  text("Statistics", 0, -wHeight/2 + 50);
 }
 Displays.achievements = function() {
   format(0, "#ffa500", 10, 40, CENTER);
-  text("Achievements", 0, -150);
+  text("Achievements", 0, -wHeight/2 + 50);
+}
+Displays.keybinds = function() {
+  format(0, "#ffa500", 10, 40, CENTER);
+  text("Keybinds", 0, -wHeight/2 + 50);
+}
+Displays.display = function() {
+  format(0, "#ffa500", 10, 40, CENTER);
+  text("Display Settings", 0, -wHeight/2 + 50);
+}
+Displays.misc = function() {
+  format(0, "#ffa500", 10, 40, CENTER);
+  text("Mischellaneous", 0, -wHeight/2 + 50);
 }
 
 Displays.view = function() {
@@ -1982,7 +2054,7 @@ Displays.view = function() {
     format("#ffa500", false, 1, 20, CENTER);
     text((i + 1) + ".", 25, 26);
     textAlign(LEFT);
-    if (codes[i].next) text("Public Lobby 🌐", 45, 26)
+    if (codes[i].next) text("Public Lobby ðŸŒ", 45, 26)
     else text("Code: " + codes[i].id, 45, 26);
     textAlign(RIGHT);
     text(codes[i].amount + "/" + codes[i].settings.start_count, wid - 15, 26);
@@ -2312,9 +2384,9 @@ function show() {
 
   // Sort
   //*
-  showing.sort((a, b) => {
+  if (settingsIdMap.sortByDepth?.value) showing.sort((a, b) => {
     if (a.depth == b.depth) return a.y - b.y;
-    return a.depth - b.depth
+    return a.depth - b.depth;
   });
   for (var i = 0; i < showing.length; i++) {
     var s = showing[i];
@@ -2385,14 +2457,835 @@ function healthBar(w, h, percent, alive, dead) {
   rect(-w / 2, -h / 2, w, h);
 }
 function smashFX(x, y) {
+  if (!settingsIdMap.showSmashFX?.value) return;
   var snd = floor(Math.random() * sounds.smash.length);
   sounds.smash[snd].play(1);
   new playAnimation(textures.gutsplat, 12, 50, 50, x, y);
 }
 
 // --------
+// Settings
+// --------
+
+var keybindContent = [
+  {
+    type: "category",
+    header: "Skeleton",
+    content: [ // optional
+      {
+        type: "keybind",
+        name: "Swing Axe: ",
+        id: "swingAxe",
+        usemouse: true,
+        value: "Space"
+      },
+      //
+      {
+        type: "keybind",
+        name: "Move Up: ",
+        id: "moveUp",
+        value: "W"
+      },
+      {
+        type: "keybind",
+        name: "Move Left: ",
+        id: "moveLeft",
+        value: "A"
+      },
+      {
+        type: "keybind",
+        name: "Move Down: ",
+        id: "moveDown",
+        value: "S"
+      },
+      {
+        type: "keybind",
+        name: "Move Right: ",
+        id: "moveRight",
+        value: "D"
+      },
+      //
+      {
+        type: "dropdown",
+        name: "Facing Mode: ",
+        id: "facingMode",
+        value: "Movement",
+        options: [
+          { 
+            name: "Movement", 
+            content: [
+              {
+                type: "keybind",
+                name: "Reverse: ",
+                id: "faceReverse",
+                value: "R"
+              },
+            ],
+          },
+          { 
+            name: "Mouse", 
+            content: []
+          },
+          { 
+            name: "Keybind", 
+            content: [
+              {
+                type: "keybind",
+                name: "Face Left: ",
+                id: "faceLeft",
+                value: "Q"
+              },
+              {
+                type: "keybind",
+                name: "Face Right: ",
+                id: "faceRight",
+                value: "E"
+              },
+            ]
+          },
+        ],
+      },
+      //
+      {
+        type: "keybind",
+        name: "Upgrade Max Health: ",
+        id: "upgrademaxhealth",
+        usemodifier: true,
+        value: "1"
+      },
+      {
+        type: "keybind",
+        name: "Upgrade Axe Reach: ",
+        id: "upgradeaxelength",
+        usemodifier: true,
+        value: "2"
+      },
+      {
+        type: "keybind",
+        name: "Upgrade Speed: ",
+        id: "upgradespeed",
+        usemodifier: true,
+        value: "3"
+      },
+    ]
+  },
+  {
+    type: "category",
+    header: "Pumpkin Master",
+    content: [
+      {
+        type: "keybind",
+        usemouse:true,
+        name: "Use Selection: ",
+        id: "useSelection",
+        value: "Left Click"
+      },
+      {
+        type: "dropdown",
+        name: "Keybind Mode: ",
+        id: "usageMode",
+        value: "Hotbar",
+        options: [
+          { 
+            name: "Hotbar", 
+            content: [ // optional
+              {
+                type: "keybind",
+                name: "Switch Tracks: ",
+                id: "switchTracks",
+                value: "Shift"
+              },
+            ].concat(new Array(Math.max(EntityIDs.length,AbilityIDs.length)).fill(0).map((_,v)=>{
+              v++;
+              return {
+                type: "keybind",
+                name: "Slot "+v+": ",
+                id: "slot"+v,
+                value: (v % 10).toString()
+              };
+            }))
+          },
+          { 
+            name: "Item", 
+            content: [ // optional
+              {
+                type: "keybind",
+                name: "Select Monster: ",
+                id: "selectmonster",
+                value: "1"
+              },
+              {
+                type: "keybind",
+                name: "Select Ghost: ",
+                id: "selectghost",
+                value: "2"
+              },
+              {
+                type: "keybind",
+                name: "Select Nuke: ",
+                id: "selectnuke",
+                value: "3"
+              },
+              {
+                type: "keybind",
+                name: "Select Speeder: ",
+                id: "selectspeeder",
+                value: "4"
+              },
+              {
+                type: "keybind",
+                name: "Select Rusher: ",
+                id: "selectrusher",
+                value: "5"
+              },
+              {
+                type: "keybind",
+                name: "Select Wizard: ",
+                id: "selectwizard",
+                value: "6"
+              },
+              {
+                type: "keybind",
+                name: "Select Brute: ",
+                id: "selectbrute",
+                value: "7"
+              },
+              {
+                type: "keybind",
+                name: "Select Mine: ",
+                id: "selectmine",
+                value: "8"
+              },
+              {
+                type: "keybind",
+                name: "Select Catapult: ",
+                id: "selectcatapult",
+                value: "9"
+              },
+              {
+                type: "keybind",
+                name: "Select Debuffer: ",
+                id: "selectdebuffer",
+                value: "0"
+              },
+              //
+              {
+                type: "keybind",
+                name: "Select Fog: ",
+                id: "selectfog",
+                value: "Q"
+              },
+              {
+                type: "keybind",
+                name: "Select Vines: ",
+                id: "selectvines",
+                value: "W"
+              },
+              {
+                type: "keybind",
+                name: "Select Swarm: ",
+                id: "selectswarm",
+                value: "E"
+              },
+              {
+                type: "keybind",
+                name: "Select Shield: ",
+                id: "selectshield",
+                value: "R"
+              },
+              {
+                type: "keybind",
+                name: "Select Generator: ",
+                id: "selectgenerator",
+                value: "T"
+              },
+            ]
+          },
+        ],
+      },
+    ]
+  },
+  {
+    type: "category",
+    header: "Tutorial",
+    content: [ // optional
+      {
+        type: "keybind",
+        name: "Enter Freeplay: ",
+        id: "enterFreeplay",
+        usemodifier: true,
+        value: "F"
+      },
+      {
+        type: "keybind",
+        name: "Swap Freeplay: ",
+        id: "swapFreeplay",
+        usemodifier: true,
+        value: "P"
+      },
+    ]
+  },
+  {
+    type: "category",
+    header: "Lobby",
+    content: [ // optional
+      {
+        type: "keybind",
+        name: "Toggle Publicity: ",
+        id: "togglePublicity",
+        usemodifier: true,
+        value: "Space"
+      },
+      {
+        type: "keybind",
+        name: "Decrease Start Count: ",
+        id: "decreaseStartCount",
+        usemodifier: true,
+        value: "-"
+      },
+      {
+        type: "keybind",
+        name: "Increase Start Count: ",
+        id: "increaseStartCount",
+        usemodifier: true,
+        value: "+"
+      },
+    ]
+  },
+  {
+    type: "category",
+    header: "Start Screen",
+    content: [ // optional
+      {
+        type: "keybind",
+        name: "Click Start: ",
+        id: "clickStart",
+        value: "Enter"
+      },
+      {
+        type: "keybind",
+        name: "Click Host: ",
+        id: "clickHost",
+        value: "H"
+      },
+      {
+        type: "keybind",
+        name: "Click Join: ",
+        id: "clickJoin",
+        value: "J"
+      },
+      {
+        type: "keybind",
+        name: "Click Tutorial: ",
+        id: "clickTutorial",
+        value: "T"
+      }
+    ]
+  },
+  {
+    type: "category",
+    header: "Mobile",
+    content: [{
+      type: "checkbox",
+      name: "Show Mobile Controls: ",
+      id: "showMobileControls",
+      value: false,
+      truecontent: [
+        {
+          type: "dropdown",
+          name: "Mobile Mode: ",
+          id: "mobileMode",
+          value: "joystick",
+          options: [
+            { 
+              name: "joystick", 
+              content: []
+            },
+            { 
+              name: "buttons", 
+              content: []
+            },
+          ],
+        }
+      ], // optional
+      falsecontent: [] // optional
+    }],
+  }
+];
+var displayContent = [
+  {
+    type: "category",
+    header: "Performance",
+    content: [{
+      type: "checkbox",
+      name: "Sort By Depth: ",
+      id: "sortByDepth",
+      value: true,
+      truecontent: [],
+      falsecontent: []
+    },{
+      type: "checkbox",
+      name: "Show Smash FX: ",
+      id: "showSmashFX",
+      value: true,
+      truecontent: [],
+      falsecontent: []
+    },{
+      type: "checkbox",
+      name: "Show Confetti: ",
+      id: "showConfetti",
+      value: true,
+      truecontent: [],
+      falsecontent: []
+    }],
+  }
+];
+var miscContent = [
+  {
+    type: "checkbox",
+    name: "Take LSD: ",
+    id: "takeLSD",
+    value: false,
+    truecontent: [],
+    falsecontent: []
+  }
+];
+
+var settingsIdMap = {};
+var selectedKeybind = null;
+
+function setupSettings() {
+  settingsIdMap = {};
+  renderSettings(keybindContent,settingsIdMap,keybindDis.panel);
+  renderSettings(displayContent,settingsIdMap,displayDis.panel); 
+  renderSettings(miscContent,settingsIdMap,miscDis.panel);
+  importSettings(user.settings||{},settingsIdMap);
+  Keybinds.loadKeybinds(settingsIdMap);
+}
+function mousePressed() {
+  if (selectedKeybind) {
+    const item = settingsIdMap[selectedKeybind];
+    if (item.usemouse) {
+      let mouseButtonName = mouseButton === LEFT ? "Left Click" :
+                            mouseButton === RIGHT ? "Right Click" :
+                            mouseButton === CENTER ? "Middle Click" : "Mouse Button";
+      updateKeybindValue(item, mouseButtonName);
+      selectedKeybind = null;
+      return false;
+    }
+  }
+  Keybinds.mousePressed();
+  mousePressed2();
+  if (isMobile) mousePressGUI();
+}
+function keyPressed() {
+  if (display == "home" && document.activeElement == homeDis.username) return;
+  if (selectedKeybind) {
+    const item = settingsIdMap[selectedKeybind];
+    let modifiers = [];
+    if (item.usemodifier) {
+      if (keyIsDown(SHIFT)) modifiers.push("Shift");
+      if (keyIsDown(CONTROL)) modifiers.push("Ctrl");
+      if (keyIsDown(ALT)) modifiers.push("Alt");
+      if (keyIsDown(91)) modifiers.push("Meta");
+    }
+
+    if (!item.usemodifier || (key != "Shift" && key != "Control" && key != "Alt" && key != "Meta")) {
+      var baseKey = key.length > 1 ? key : key.toUpperCase();
+      if (baseKey == " ") baseKey = "Space";
+      const fullKey = modifiers.length > 0 ? `${modifiers.join("+")}+${baseKey}` : baseKey;
+
+      updateKeybindValue(item, fullKey);
+      selectedKeybind = null;
+      return false;
+    }
+  }
+  Keybinds.keyPressed();
+}
+function keyReleased() {
+  Keybinds.keyReleased();
+}
+function mouseReleased() {
+  Keybinds.mouseReleased();
+  if (isMobile) mouseReleaseGUI();
+}
+function renderSettings(contentArray, idMap, container) {
+  contentArray.forEach(item => {
+    if (item.type === "category") {
+      const section = document.createElement("div");
+      section.className = "section";
+      section.innerHTML = `<h2>${item.header}</h2>`;
+      renderContentList(item.content, idMap, section);
+      container.appendChild(section);
+    } else {
+      renderContentList([item], idMap, container);
+    }
+  });
+}
+function renderContentList(list, idMap, parent, insertAfter = null) {
+  list.forEach(item => {
+    if (item.id) idMap[item.id] = item;
+    let target = parent;
+    if (item.type === "keybind") {
+      const div = document.createElement("div");
+      div.className = "keybind";
+      div.setAttribute("data-id", item.id);
+      div.innerHTML = `${item.name}<span class="key">${item.value}</span>`;
+      div.addEventListener("click", () => {
+        selectedKeybind = item.id;
+        div.querySelector(".key").textContent = "Press a key...";
+      });
+      item.setValue = val => {
+        div.querySelector(".key").textContent = val;
+      };
+      target.insertBefore(div, insertAfter);
+    }
+    else if (item.type === "checkbox") {
+      const wrapper = document.createElement("div");
+      wrapper.className = "checkbox-group";
+
+      const label = document.createElement("label");
+      label.textContent = item.name;
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = item.value;
+      checkbox.className = "checkbox";
+
+      checkbox.addEventListener("change", () => {
+        idMap[item.id].value = checkbox.checked;
+        renderConditionalContent(item, idMap, wrapper);
+      });
+
+      item.setValue = val => {
+        checkbox.checked = val;
+        renderConditionalContent(item, idMap, wrapper);
+      };
+
+      wrapper.appendChild(label);
+      wrapper.appendChild(checkbox);
+      target.insertBefore(wrapper, insertAfter);
+
+      renderConditionalContent(item, idMap, wrapper);
+    }
+    else if (item.type === "dropdown") {
+      const wrapper = document.createElement("div");
+      wrapper.className = "dropdown-group";
+
+      const label = document.createElement("label");
+      label.textContent = item.name;
+
+      const select = document.createElement("select");
+      select.className = "dropdown";
+
+      item.wrapper = wrapper;
+      item.options.forEach(opt => {
+        const option = document.createElement("option");
+        option.value = opt.name;
+        option.textContent = opt.name;
+        select.appendChild(option);
+      });
+
+      item.setValue = val => {
+        select.value = val;
+        renderDropdownContent(item, idMap, wrapper);
+      };
+
+      select.value = item.value;
+      select.addEventListener("change", () => {
+        item.value = select.value;
+        renderDropdownContent(item, idMap, wrapper);
+      });
+
+      wrapper.appendChild(label);
+      wrapper.appendChild(select);
+      target.insertBefore(wrapper, insertAfter);
+
+      renderDropdownContent(item, idMap, wrapper);
+    }
+    else if (item.type === "text") {
+      const label = document.createElement("label");
+      label.textContent = item.name;
+
+      const input = document.createElement("input");
+      input.type = "text";
+      input.value = item.value;
+      input.addEventListener("input", () => {
+        item.value = input.value;
+      });
+      input.className = "textbox";
+
+      item.setValue = val => {
+        select.value = val;
+        input.value = val;
+      };
+
+      target.insertBefore(label, insertAfter);
+      target.insertBefore(input, insertAfter);
+    }
+  });
+}
+function renderConditionalContent(item, idMap, wrapper) {
+  // Remove previous conditional content
+  wrapper.querySelectorAll(`[data-cond="${item.id}"]`).forEach(el => el.remove());
+
+  const content = item[idMap[item.id].value ? "truecontent" : "falsecontent"];
+  if (content && content.length > 0) {
+    const container = document.createElement("div");
+    container.setAttribute("data-cond", item.id);
+    renderContentList(content, idMap, container);
+    wrapper.appendChild(container);
+  }
+}
+function renderDropdownContent(item, idMap, parent) {
+  const existing = parent.querySelectorAll(`[data-dropdown="${item.id}"]`);
+  existing.forEach(el => el.remove());
+
+  const selected = item.options.find(opt => opt.name === idMap[item.id].value);
+  if (selected?.content) {
+    selected.content.forEach(sub => {
+      const wrapper = document.createElement("div");
+      wrapper.setAttribute("data-dropdown", item.id);
+      renderContentList([sub], idMap, wrapper);
+      parent.appendChild(wrapper);
+    });
+  }
+}
+function exportSettings(idMap,result) {
+  result = result || {};
+  for (var i in idMap) {
+    var item = idMap[i];
+    result[item.id] = item.value;
+  }
+  return result;
+}
+function importSettings(settings, idMap) {
+  for (var i in idMap) {
+    var item = idMap[i];
+    if (settings[i] !== undefined) {
+      item.value = settings[i];
+      if (item.setValue) item.setValue(settings[i]);
+    }
+  }
+}
+function updateKeybindValue(item, newKey) {
+  var id = item.id;
+  const el = document.querySelector(`[data-id="${id}"] .key`);
+  if (el) el.textContent = newKey;
+  item.value = newKey;
+}
+
+// --------
 // Keybinds
 // --------
+const Keybinds = (() => {
+  const keyMap = {}; // id -> keybind value (e.g. "Ctrl+A", "Right Click")
+  const callbacks = {}; // id -> callback function
+  const activeKeys = new Set(); // currently held keys
+  const mouseButtons = new Set(); // currently held mouse buttons
+
+  // Initialize keyMap from keybindContent
+  function loadKeybinds(idMap) {
+    for (var i in idMap) {
+      if (idMap[i].type != "keybind") continue;
+      keyMap[i] = idMap[i];
+    }
+  }
+
+  // Register a callback
+  function onpress(id, fn) {
+    if (!callbacks[id]) callbacks[id] = [];
+    callbacks[id].push(fn);
+  }
+
+  // Check if keybind is active
+  function test(id) {
+    const bind = keyMap[id]?.value;
+    if (!bind) return false;
+
+    const parts = bind.split("+");
+    var last = parts[parts.length - 1];
+    if (last == "Space") last = " ";
+
+    const modifiers = parts.slice(0, -1);
+    const hasModifiers =
+      (!modifiers.includes("Ctrl") || keyIsDown(CONTROL)) &&
+      (!modifiers.includes("Shift") || keyIsDown(SHIFT)) &&
+      (!modifiers.includes("Alt") || keyIsDown(ALT)) &&
+      (!modifiers.includes("Meta") || keyIsDown(91));
+
+    if (!hasModifiers) return false;
+
+    if (["Left Click", "Right Click", "Middle Click"].includes(last)) {
+      return mouseButtons.has(last);
+    }
+
+    return activeKeys.has(last.toUpperCase());
+  }
+
+  // Internal event hooks
+  function keyPressed() {
+    activeKeys.add(key.toUpperCase());
+    triggerCallbacks();
+  }
+
+  function keyReleased() {
+    activeKeys.delete(key.toUpperCase());
+  }
+
+  function mousePressed() {
+    const btn = mouseButton === LEFT ? "Left Click" :
+                mouseButton === RIGHT ? "Right Click" :
+                mouseButton === CENTER ? "Middle Click" : "Mouse Button";
+    mouseButtons.add(btn);
+    triggerCallbacks();
+  }
+
+  function mouseReleased() {
+    mouseButtons.clear();
+  }
+
+  function triggerCallbacks() {
+    for (const id in callbacks) {
+      if (test(id)) {
+        if (callbacks[id]) {
+          for (var i = 0; i < callbacks[id].length; i++) {
+            callbacks[id][i]();
+          }
+        }
+      }
+    }
+  }
+
+  function setKeybind(id, newValue) {
+    keyMap[id] = newValue;
+  }
+
+  return {
+    loadKeybinds,
+    onpress,
+    setKeybind,
+    test,
+    keyPressed,
+    keyReleased,
+    mousePressed,
+    mouseReleased
+  };
+})();
+Keybinds.onpress("clickStart",function(){
+  if (display != "home") return;
+  homeDis.clickStart();
+});
+Keybinds.onpress("clickHost",function(){
+  if (display != "home") return;
+  homeDis.clickHost();
+});
+Keybinds.onpress("clickJoin",function(){
+  if (display != "home") return;
+  homeDis.clickJoin();
+});
+Keybinds.onpress("clickTutorial",function(){
+  if (display != "home") return;
+  homeDis.clickTutorial();
+});
+Keybinds.onpress("enterFreeplay",function(){
+  if (display != "game" && display != "pmgame") return;
+  if (room != player.id) return;
+  socket.emit('freeplay');
+});
+Keybinds.onpress("swapFreeplay",function(){
+  if (display != "game" && display != "pmgame") return;
+  if (room != player.id) return;
+  socket.emit('swap');
+});
+Keybinds.onpress("togglePublicity",function(){
+  if (display != "lobby" || subdisplay != "host") return;
+  roomSettings.hidden = !roomSettings.hidden;
+  socket.emit('updateSettings', room, roomSettings);
+});
+Keybinds.onpress("decreaseStartCount",function(){
+  if (display != "lobby" || subdisplay != "host") return;
+  if (roomSettings.start_count <= max(amount,2)) return; 
+  roomSettings.start_count--;
+  socket.emit('updateSettings', room, roomSettings);
+});
+Keybinds.onpress("increaseStartCount",function(){
+  if (display != "lobby" || subdisplay != "host") return;
+  if (roomSettings.start_count >= 12) return;
+  roomSettings.start_count++;
+  socket.emit('updateSettings', room, roomSettings);
+});
+Keybinds.onpress("swingAxe",function(){
+  if (display != "game" || subdisplay == "dead") return;
+  if (!smashcooldown) return;
+  doSmash();
+});
+Object.keys(upgradeMaxes).forEach((v)=>{
+  Keybinds.onpress("upgrade"+v,function(){
+    if (display != "game" || subdisplay == "dead") return;
+    if (player.upgradePts <= 0) return;
+    if (upgrades[v] >= upgradeMaxes[v]) return;
+    upgrades[v]++;
+    socket.emit('upgrade', v);
+    player.upgradePts--;
+    if (player.upgradePts == 0) {
+      setTimeout(() => {
+        upgradeDisplay = false;
+      }, 1000);
+    }
+  });
+});
+Keybinds.onpress("switchTracks", function(){
+  if (display != "pmgame") return;
+  if (settingsIdMap.usageMode.value != "Hotbar") return;
+  cam.mode = cam.mode == "entity" ? "ability" : "entity";
+});
+(function(){
+  var len = Math.max(EntityIDs.length,AbilityIDs.length);
+  for (var i = 0; i < len; i++) (function(i){
+    Keybinds.onpress("slot"+(i+1), function(){
+      if (display != "pmgame") return;
+      if (settingsIdMap.usageMode.value != "Hotbar") return;
+      var sel = cam.mode == "entity" ? "selE" : "selA";
+      cam[sel] = i;
+    });
+  })(i);
+  for (var i = 0; i < EntityIDs.length; i++) (function(i){
+    Keybinds.onpress("select"+EntityIDs[i], function(){
+      if (display != "pmgame") return;
+      if (settingsIdMap.usageMode.value != "Item") return;
+      cam.mode = "ability";
+      cam.selE = i;
+    });
+  })(i);
+  for (var i = 0; i < AbilityIDs.length; i++) (function(i){
+    Keybinds.onpress("select"+AbilityIDs[i], function(){
+      if (display != "pmgame") return;
+      if (settingsIdMap.usageMode.value != "Item") return;
+      cam.mode = "entity";
+      cam.selA = i;
+    });
+  })(i);
+})();
+Keybinds.onpress("useSelection",function(){
+  if (display != "pmgame") return;
+  // Spawn Pumpkin Monsters
+  var sx = (wMouseX - cam.pos.x) / cam.zoom;
+  var sy = (wMouseY - cam.pos.y) / cam.zoom;
+  var selAbility = AbilityDisplay[cam.selA];
+  if (cam.mode == "entity") {
+    sx /= 36;
+    sy /= 36;
+    socket.emit('spawn', cam.selE, sx, sy);
+  } else if (cam.mode == "ability" && Date.now() >= selAbility.wait && selAbility.cost < cam.coins) {
+    var rx = floor(sx / (36 * 14));
+    var ry = floor(sy / (36 * 14));
+    if (roomMap[rx + "," + ry]) {
+      socket.emit('ability', cam.selA, rx, ry);
+      selAbility.wait = Date.now()+selAbility.cooldown;
+    }
+  }
+});
 
 // Holding Keybinds
 function tick() {
@@ -2406,17 +3299,17 @@ function tick() {
   }
 }
 function keybinds() {
-  var u = false, d = false, l = false, r = false;
-  if (keyIsDown(38) || keyIsDown(87)) {
+  var u = false, d = false, l = false, r = false, f = 0;
+  if (keyIsDown(38) || Keybinds.test("moveUp")) {
     u = true;
   }
-  if (keyIsDown(40) || keyIsDown(83)) {
+  if (keyIsDown(40) || Keybinds.test("moveDown")) {
     d = true
   }
-  if (keyIsDown(37) || keyIsDown(65)) {
+  if (keyIsDown(37) || Keybinds.test("moveLeft")) {
     l = true
   }
-  if (keyIsDown(39) || keyIsDown(68)) {
+  if (keyIsDown(39) || Keybinds.test("moveRight")) {
     r = true;
   }
   if (isMobile) {
@@ -2431,7 +3324,20 @@ function keybinds() {
       r = delta.x > 10;
     }
   }
-  socket.emit('move', u, d, l, r);
+  switch (settingsIdMap.facingMode.value) {
+    case "Movement": 
+      f = (r ? 1 : 0) + (r ? -1 : 0);
+      if (Keybinds.test("faceReverse")) f = -f;
+    break;
+    case "Mouse": 
+      f = mouseX > windowWidth/2 ? 1 : -1;
+    break;
+    case "Keybind": 
+      if (Keybinds.test("faceRight")) f = 1;
+      if (Keybinds.test("faceLeft")) f = -1;
+    break;
+  }
+  socket.emit('move', u, d, l, r, f);
 }
 function PMkeybinds() {
   if (keyIsDown(27)) {
@@ -2474,114 +3380,13 @@ async function exit() {
 }
 // Pressed Keybinds
 var smashcooldown = true;
-function keyPressed() {
-  if (display == "game" || display == "pmgame") {
-    if (room == player.id) {
-      if (keyCode == 80) { socket.emit('swap'); return; }
-      if (keyCode == 70) { socket.emit('freeplay'); return; }
-    }
-  }
-  if (display == "home") {
-    // Start
-    if (keyCode == 13) { homeDis.clickStart(); return; }
-    // Host
-    if (keyCode == 72 && document.activeElement != homeDis.username) { homeDis.clickHost(); return; }
-    // Join
-    if (keyCode == 74 && document.activeElement != homeDis.username) { homeDis.clickJoin(); return; }
-    // Tutorial
-    if (keyCode == 84 && document.activeElement != homeDis.username) { homeDis.clickTutorial(); return; }
-  }
-  if (display == "lobby" && subdisplay == "host") {
-    // Toggle Private/Public
-    if (keyCode == 32) {
-      roomSettings.hidden = !roomSettings.hidden;
-      socket.emit('updateSettings', room, roomSettings);
-      return;
-    }
-    if (keyCode == 189) {
-      if (roomSettings.start_count <= max(amount,2)) return; 
-      roomSettings.start_count--;
-      socket.emit('updateSettings', room, roomSettings);
-      return;
-    }
-    if (keyCode == 187) {
-      if (roomSettings.start_count >= 12) return;
-      roomSettings.start_count++;
-      socket.emit('updateSettings', room, roomSettings);
-      return
-    }
-  }
-  if (display == "game" && subdisplay != "dead") {
-    // Spacebar Smash
-    if (keyCode == 32 && smashcooldown) {
-      doSmash();
-      return;
-    }
-    // Upgrade Keybinds
-    if (player.upgradePts > 0) {
-      const upgradeList = {
-        maxhealth: 49,
-        axelength: 50,
-        speed: 51
-      };
-      for (var i in upgradeList) {
-        if (keyCode != upgradeList[i]) continue;
-        if (upgrades[i] >= upgradeMaxes[i]) continue;
-        upgrades[i]++;
-        socket.emit('upgrade', i);
-        player.upgradePts--;
-        if (player.upgradePts == 0) {
-          setTimeout(() => {
-            upgradeDisplay = false;
-          }, 1000);
-        }
-        return;
-      }
-    }
-  }
-  else if (display == "pmgame") {
-    // Switch Tracks
-    if (keyCode == 16) {
-      if (cam.mode == "entity") cam.mode = "ability";
-      else if (cam.mode == "ability") cam.mode = "entity";
-      return;
-    }
-    // assets/abilities/Entities
-    var list = {};
-    var sel = cam.mode == "entity" ? "selE" : "selA";
-    if (cam.mode == "entity") list = {
-      monster: 49,
-      ghost: 50,
-      nuke: 51,
-      speeder: 52,
-      rusher: 53,
-      wizard: 54,
-      brute: 55,
-      mine: 56,
-      catapult: 57,
-      debuffer: 48,
-    };
-    else if (cam.mode == "ability") list = {
-      fog: 49,
-      vines: 50,
-      swarm: 51,
-      shield: 52,
-      generators: 53
-    };
-    for (var i in list) {
-      if (keyCode != list[i]) continue;
-      cam[sel] = i;
-      return;
-    }
-  }
-}
 async function doSmash() {
   smashcooldown = false;
   socket.emit('smash');
   await wait(125);
   smashcooldown = true;
 }
-function mousePressed() {
+function mousePressed2() {
   // wMouseX = (mouseX - windowWidth / 2) / windowScale;
   // wMouseY = (mouseY - windowHeight / 2) / windowScale;
   // wWidth = windowWidth / windowScale;
@@ -2651,32 +3456,8 @@ function mousePressed() {
       }
       t.x += 70;
     }
-
-    // Spawn Pumpkin Monsters
-    var sx = (wMouseX - cam.pos.x) / cam.zoom;
-    var sy = (wMouseY - cam.pos.y) / cam.zoom;
-    var selAbility = AbilityDisplay[cam.selA];
-    if (cam.mode == "entity") {
-      sx /= 36;
-      sy /= 36;
-      socket.emit('spawn', cam.selE, sx, sy);
-    }
-    // Do Abilities
-    else if (cam.mode == "ability" && Date.now() >= selAbility.wait && selAbility.cost < cam.coins) {
-      var rx = floor(sx / (36 * 14));
-      var ry = floor(sy / (36 * 14));
-      if (roomMap[rx + "," + ry]) {
-        socket.emit('ability', cam.selA, rx, ry);
-        selAbility.wait = Date.now()+selAbility.cooldown;
-      }
-    }
     user.cam = cam;
   }
-
-  if (isMobile) mousePressGUI();
-}
-function mouseReleased() {
-  if (isMobile) mouseReleaseGUI();
 }
 // Scroll
 document.addEventListener("wheel", function(e) {
@@ -2719,7 +3500,6 @@ function windowResized() {
 }
 // Mobile GUI
 var mbGUI = {};
-
 async function loadGUI() {
 
   mbGUI.joystick = {};
@@ -3229,6 +4009,7 @@ socket.on('pumpkin_master_win', async function(stats) {
 });
 function spawnConfetti() {
   if (document.hidden) return;
+  if (!settingsIdMap.showConfetti?.value) return;
   for (var i = 0; i < 200; i++) {
     c = {};
     c.pos = createVector(random() * 200 - 100, wHeight / 2);
@@ -3375,14 +4156,17 @@ function mod(x, y) {
 }
 
 // Hehehe
-/*
+
 var counter = 0;
 setInterval(()=>{
+  if (settingsIdMap.takeLSD?.value) {
     document.body.style.filter = "hue-rotate("+counter+"deg)";
     counter += 1;
     counter %= 360;
+  } else if (counter != 0) {
+    counter = 0;
+    document.body.style.filter = "hue-rotate("+counter+"deg)";
+  }
 },10);
-*/
+
 //setInterval(()=>{socket.emit('smash');},10);
-
-
