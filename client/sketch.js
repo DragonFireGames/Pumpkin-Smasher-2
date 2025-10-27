@@ -1190,8 +1190,8 @@ async function loadAssets() {
   textures.gutsplat = new Animation("assets/pumpkins/gut_splat.png", 5);
 
   // Candies
-  textures.lolipop_wave = new Animation("assets/candies/lolipop_wave.png", 6, ()=>{
-    textures.lolipop_wave.tint(255,172);
+  textures.lolipop_wave = new Animation("assets/candies/lolipop_wave.png", 6, false, ()=>{
+    textures.lolipop_wave.tint(255,200);
   });
 
   // Objectives
@@ -4075,7 +4075,7 @@ socket.on('hit', function(x, y) {
   smashFX(x * 36, y * 36);
 });
 socket.on('lolipop_wave', function(x, y, rad) {
-  new playAnimation(textures.lolipop_wave, 12, 36*2*rad, 36*2*rad, x * 36, y * 36);
+  new playAnimation(textures.lolipop_wave, 18, 36*2*rad, 36*2*rad, x * 36, y * 36);
 });
 /*socket.on('swing',function(id) {
   var p = players[id];
