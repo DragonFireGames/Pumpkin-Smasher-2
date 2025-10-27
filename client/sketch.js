@@ -1090,7 +1090,7 @@ class FitImage {
   tint() {
     var tmpGraphic = createGraphics(this.img.width, this.img.height);
     tmpGraphic.tint(...arguments);
-    tmpGraphic.image(this.img);
+    tmpGraphic.image(this.img,0,0);
     this.img = tmpGraphic.get();
     tmpGraphic.remove();
   }
@@ -1190,7 +1190,9 @@ async function loadAssets() {
   textures.gutsplat = new Animation("assets/pumpkins/gut_splat.png", 5);
 
   // Candies
-  textures.lolipop_wave = new Animation("assets/candies/lolipop_wave.png", 6);
+  textures.lolipop_wave = new Animation("assets/candies/lolipop_wave.png", 6, ()=>{
+    textures.lolipop_wave.tint(255,172);
+  });
 
   // Objectives
   textures.objective = new FitImage("assets/pumpkins/objective.png");
