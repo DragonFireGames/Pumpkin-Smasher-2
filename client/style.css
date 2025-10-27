@@ -135,3 +135,239 @@ canvas {
   visibility: hidden;
   z-index: 1;
 }
+
+/* Settings */
+
+.settingBtn {
+  height: 8vmin;
+  width: 40vmin;
+  font-size: 4vmin;
+}
+
+#wardrobeBtn {
+  top: calc(50vh - 18vmin);
+  left: calc(50vw - 42vmin);
+}
+
+#achievementBtn {
+  top: calc(50vh - 6vmin);
+  left: calc(50vw - 42vmin);
+}
+
+#statBtn {
+  top: calc(50vh + 6vmin);
+  left: calc(50vw - 42vmin);
+}
+
+#keybindBtn {
+  top: calc(50vh - 18vmin);
+  left: calc(50vw + 2vmin);
+}
+
+#displaySettingsBtn {
+  top: calc(50vh - 6vmin);
+  left: calc(50vw + 2vmin);
+}
+
+#miscBtn {
+  top: calc(50vh + 6vmin);
+  left: calc(50vw + 2vmin);
+}
+
+.panel {
+  position: absolute;
+  background: #0C2504;
+  border: 0.6vmin solid #303030;
+  color: #ffa500;
+  top: 17.5vmin;
+  left: calc(50vw - 40vmin);
+  height: calc(100vh - 32.5vmin);
+  width: 80vmin;
+  overflow-y: scroll;
+  padding: 1vmin;
+  font-size: 4vmin;
+}
+.return {
+  top: calc(100vh - 10vmin);
+  left: calc(50vw - 15vmin);
+  height: 8vmin;
+  width: 30vmin;
+  font-size: 4vmin;
+}
+
+#returnBtn {
+  top: calc(50vh + 18vmin);
+  left: calc(50vw - 15vmin);
+}
+
+#wardrobe {
+  position: absolute;
+  background: #0C2504;
+  border: 0.6vmin solid #303030;
+  top: calc(50vh - 27.5vmin);
+  left: calc(25vw - 20vmin);
+  height: 60vmin;
+  width: 50vw;
+  overflow-y: scroll;
+}
+
+#wardrobeReturnBtn {
+  top: calc(50vh + 37.5vmin);
+  left: calc(50vw - 15vmin);
+}
+
+.hat {
+  position: relative;
+  display: inline-block;
+  width: 9.5vmin;
+  height: 9.5vmin;
+  background: #123904;
+  border: 0.6vmin solid #303030;
+  vertical-align: middle;
+  margin: 1vmin 0vmin 0vmin 1vmin;
+}
+.hat:hover {
+  background: #1C4E0A;
+  border: 0.6vmin solid #505050;
+}
+.hat.selected {
+  border: 0.6vmin solid #ffa500;
+}
+.hat.disabled {
+  background: #303030;
+  border: 0.6vmin solid #505050;
+}
+
+.hat-image {
+  position: relative;
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  width: 90%;
+  max-height: 90%;
+}
+.hat.disabled > .hat-image {
+  filter: brightness(0%);
+}
+
+#achievementList {
+  padding: 0vmin;
+}
+
+.achievement {
+  display: block;
+  color: #e8e8e8;
+  background-color: #303030;
+  border: 0.6vmin solid #505050;
+  margin: 1vmin;
+  padding: 1vmin;
+}
+.achievement-name {
+  margin: 0vmin;
+}
+.achievement-desc {
+  margin: 0vmin;
+}
+.achievement-hat-image {
+  position: absolute;
+  left: calc(100% - 11vmin);
+  width: 8vmin;
+  max-height: 8vmin;
+  filter: brightness(0%);
+}
+.achievement.earned {
+  color: #ffa500;
+  background-color: #231709;
+  border: 0.6vmin solid #ffa500;
+}
+.achievement.earned > .achievement-hat-image {
+  filter: none;
+}
+
+#loading {
+  background-color: #123904;
+  color: #ffffff;
+  position: absolute;
+  display: block;
+  top: 0px;
+  left: 0px;
+  width: 100vw;
+  height: 100vh;
+  z-index: 5;
+  text-align: center;
+  line-height: 85vh;
+  font-size: 10vmin;
+}
+
+.dropdown-group, .checkbox-group, .keybind, .textbox-label {
+  margin-top: 1vmin;
+  margin-bottom: 1vmin;
+  font-size: 5vmin;
+}
+
+.keybind {
+  cursor: pointer;
+}
+
+.dropdown-group :not(:first-child), .checkbox-group :not(:first-child) {
+  margin: 2vmin;
+  padding-left: 2vmin;
+  border-left: 0.6vmin solid #ffa500;
+}
+
+.keybind .key, .dropdown, .dropdown option, .textbox {
+  color: #ffa500;
+  background-color: #231709;
+  border: 0.6vmin solid #ffa500;
+  padding: 0.5vmin 1vmin;
+  margin-left: 1vmin;
+  font-size: 3.5vmin;
+}
+
+.textbox {
+  width: 20vmin;
+  overflow-x: resize;
+}
+
+.settings-panel > div, .settings-panel > label {
+  margin-left: 2vmin;
+}
+
+.checkbox {
+  position: relative;
+  cursor: pointer;
+  width: 4vmin;
+  height: 4vmin;
+  margin-left: 0.25vmin;
+}
+.checkbox:before {
+  content: "";
+  display: block;
+  position: absolute;
+  width: 4vmin;
+  height: 4vmin;
+  top: -0.25vmin;
+  left: -0.25vmin;
+  border: 0.6vmin solid #ffa500;
+  background-color: #231709;
+  padding: 0.25vmin;
+  margin-left: 0.25vmin;
+}
+.checkbox:checked::before {
+  background-color: #ffa500;
+}
+
+.checkbox:checked::after {
+  content: "";
+  display: block;
+  width: 1.25vmin;
+  height: 2.5vmin;
+  border: solid #000000;
+  border-width: 0 0.5vmin 0.5vmin 0;
+  -webkit-transform: rotate(45deg);
+  -ms-transform: rotate(45deg);
+  transform: rotate(45deg);
+  position: absolute;
+  top: 0.75vmin;
+  left: 1.75vmin;
+}
