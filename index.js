@@ -1162,6 +1162,7 @@ class Player {
     
     this.gamestats = {
       // Skeleton
+      AxeSwings: 0,
       Smashed: 0,
       SmashedGold: 0,
       SmashedDiamond: 0,
@@ -1169,6 +1170,7 @@ class Player {
       EntitiesKilledWithLolipop: 0,
       GhostsKilledAsGhost: 0,
       Deaths: 0,
+      DamageTaken: 0,
       ObjectiveDamage: 0,
       ObjectivesDestroyed: 0,
       AbilityDamage: {},
@@ -1236,7 +1238,7 @@ class Player {
     stats.PlayerCount = room.amount;
     stats.PumpkinMasterCount = room.pm_amount;
     if (this.pumpkinMaster) {
-      stats.CoinsLeft = room.coins[this.id];
+      stats.CoinsLeft = room.coins[this.socket];
       stats.ObjectivesLost = room.objectiveRooms - room.objectives.length;
     } else {
       stats.Upgrades = this.upgradeLvls;
@@ -1505,6 +1507,7 @@ class Player {
     }
     if (this.disabled) amount *= this.maxhealth / healthDefault;
     this.health -= amount;
+    this.gamestats.DamageTaken += amount;
     // Stats
     var pm = room.players[dealer.spawnedBy];
     if (!pm) return;
@@ -2031,7 +2034,7 @@ Entities.brute = class extends Entity {
       if (this.weak == false) {
         this.vely = 0;
         var shockwave = new Entities.shockwave(this.x,this.y,this.room,this.spawnedBy);
-        this.img = "icon";
+        this.img = "vulnerable";
         this.weak = true;
       }
       if (this.leapcount >= 4.5) {
@@ -2593,6 +2596,7 @@ CandyData.lolipop = {
   loseondamaged: true,
   collect: async function(player) {},
   expire: async function(player,room) {
+    io.to(room.id).emit('lolipop_wave', player.x, player.y, 8);
     var isfar = function(e) {
       var dx = e.x-player.x;
       var dy = e.y-player.y;
@@ -2791,6 +2795,7 @@ io.sockets.on('connection', function (socket) {
   });
   socket.on('smash',() => {
     if (!client.player) return;
+    client.player.gamestats.AxeSwings++;
     client.player.smash();
   });
   socket.on('upgrade',(name) => {

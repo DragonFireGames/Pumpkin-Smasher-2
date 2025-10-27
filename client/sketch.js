@@ -22,7 +22,6 @@
 */
 
 //var io=window.io||function(){return {on:()=>{},emit:()=>{}}};
-//setTimeout(()=>{loaded = toLoad},5000);
 var __cpLocation = window["\x6cocation"];
 
 // TODO: 
@@ -123,8 +122,8 @@ settingsDis.clickAchievements = function() {
     achs[i].classList.remove("earned");
     var n = achs[i].id.slice(4);
     var a = AchievementData[n];
-    var p = (a.progress(user.stats) * 100).toFixed(1);
-    achs[i].children[a.hat?1:0].innerText = a.name+" ("+p+"%)";
+    var p = typeof a.progress == "function" ? " ("+((a.progress(user.stats)||0) * 100).toFixed(1)+"%)" : "";
+    achs[i].children[a.hat?1:0].innerText = a.name+p;
   }
   for (var i in user.achievements) {
     var ach = document.getElementById("ach_"+i);
@@ -290,21 +289,14 @@ var AchievementData = {
       for (var i in match.Upgrades) if (match.Upgrades[i] >= 4) return true;
       return false;
     },
-    progress: function(cumulative) {
-      return 0;
-    }
   },
-  "no_deaths": {
-    name: "No Deaths",
-    description: "No deaths as skeleton in a single match",
-    hat: "pumpkin",
+  "novice": {
+    name: "Novice",
+    description: "Play 3 full games",
+    hat: "bow",
     test: function(match, cumulative) {
-      if (!match.PlayedAsSkeleton) return;
-      return match.Deaths == 0;
+      return cumulative.GamesPlayed >= 3;
     },
-    progress: function(cumulative) {
-      return 0;
-    }
   },
   "rusher_killer": {
     name: "Rusher Killer",
@@ -339,6 +331,47 @@ var AchievementData = {
       return cumulative.EntitiesKilled?.debuffer / 20;
     }
   },
+  "trick_or_treater": {
+    name: "Trick or Treater",
+    description: "Collect 10 candies",
+    hat: "paper_bag",
+    test: function(match, cumulative) {
+      return cumulative.TotalCandiesCollected >= 10;
+    },
+    progress: function(cumulative) {
+      return cumulative.TotalCandiesCollected / 10;
+    }
+  },
+  "who_needs_upgrades": {
+    name: "Who Needs Upgrades",
+    description: "Win a game as skeleton without upgrades",
+    hat: false,
+    test: function(match, cumulative) {
+      if (!match.PlayedAsSkeleton) return;
+      if (!match.Wins) return;
+      return match.TotalUpgrades == 0;
+    },
+  },
+  "no_deaths": {
+    name: "No Deaths",
+    description: "No deaths as skeleton in a single match",
+    hat: "pumpkin",
+    test: function(match, cumulative) {
+      if (!match.PlayedAsSkeleton) return;
+      return match.Deaths == 0;
+    },
+  },
+  "objective_destroyer": {
+    name: "Objective Destroyer",
+    description: "Deal 500 damage to objectives",
+    hat: false,
+    test: function(match, cumulative) {
+      return cumulative.ObjectiveDamage >= 500;
+    },
+    progress: function(cumulative) {
+      return cumulative.ObjectiveDamage / 500;
+    }
+  },
   "ghost_infighting": {
     name: "Ghost Infighting",
     description: "Kill 5 ghosts with ghost candy",
@@ -347,8 +380,17 @@ var AchievementData = {
       return cumulative.GhostsKilledWithGhost >= 5;
     },
     progress: function(cumulative) {
-      return 0;
+      return cumulative.GhostsKilledWithGhost / 5;
     }
+  },
+  "invincible": {
+    name: "Invincible",
+    description: "Avoid taking any damage as skeleton in a match",
+    hat: "iron_man",
+    test: function(match, cumulative) {
+      if (!match.PlayedAsSkeleton) return;
+      return match.DamageTaken >= 0;
+    },
   },
   /*"witch_lover": {
     name: "Witch Lover",
@@ -361,6 +403,20 @@ var AchievementData = {
       //return cumulative.EntitiesKilled?.wizard / 40;
     }
   },*/
+  "feelin_funny": {
+    name: "Feeling Funny",
+    description: "Play a match while hallucinating",
+    hat: "shades",
+    test: function(match, cumulative) {
+      return settingsIdMap.takeLSD;
+    },
+  },
+  "among_us": {
+    name: "Hmmmm",
+    description: "Kinda sus",
+    hat: "among_us",
+    test: function(match, cumulative) {},
+  },
 };
 for (var i in defaultUser) {
   if (!user[i]) user[i] = defaultUser[i];
@@ -405,20 +461,20 @@ EntityDisplay.monster = (function() {
 });
 EntityDisplay.ghost = (function() {
   var tex = {};
-  tex.icon = new FitImage("assets/entities/ghost/icon.png");
-  tex.attack = new Animation("assets/entities/ghost/attack.png", 8, 12);
+  tex.icon = new FitImage("assets/entities/ghost/icon.png",()=>{
+    tex.icon.tint(255,128);
+  });
+  tex.attack = new Animation("assets/entities/ghost/attack.png", 8, 12, ()=>{
+    tex.icon.tint(255,128);
+  });
   return {
     cost: 3,
     pumpkin: true,
     icon: function() {
-      tint(255, 255, 255, 128);
       tex.icon.show(0, 60);
-      tint(255, 255, 255, 255);
     },
     display: function(e) {
-      tint(255, 255, 255, 128);
       tex[e.img].show(28, 0, e.f);
-      tint(255, 255, 255, 255);
     }
   };
 });
@@ -511,25 +567,24 @@ EntityDisplay.projectile = (function() {
 });
 EntityDisplay.brute = (function() {
   var tex = {};
-  tex.icon = new FitImage("assets/entities/brute/icon.png");
-  tex.leap = new FitImage("assets/entities/brute/leap.png");
-  tex.attack = new Animation("assets/entities/brute/attack.png", 8, 12);
+  tex.icon = new FitImage("assets/entities/brute/icon.png",()=>{
+    tex.icon.tint(255,128,128);
+  });
+  tex.vulnerable = new FitImage("assets/entities/brute/icon.png");
+  tex.leap = new FitImage("assets/entities/brute/leap.png",()=>{
+    tex.leap.tint(255,128,128);
+  });
+  tex.attack = new Animation("assets/entities/brute/attack.png", 8, 12, ()=>{
+    tex.attack.tint(255,128,128);
+  });
   return {
     cost: 10,
     pumpkin: true,
     icon: function() {
-      tint(255, 128, 128);
       tex.icon.show(0, 40);
-      tint(255, 255, 255);
     },
     display: function(e) {
-      if (e.img == "icon") {
-        tex[e.img].show(38, 0, e.f);
-        return;
-      }
-      tint(255, 128, 128);
       tex[e.img].show(38, 0, e.f);
-      tint(255, 255, 255);
     }
   };
 });
@@ -988,6 +1043,11 @@ class Sound {
         self.length = self.sound.duration;
       }
     });
+    this.sound.addEventListener('error', () => {
+      loaded++;
+      self.length = Infinity;
+      failures.push(url);
+    });
   }
   async play(amp) {
     //amp = amp ?? 1;
@@ -1004,11 +1064,13 @@ class Sound {
   }
 }
 class FitImage {
-  constructor(url) {
+  constructor(url, onload) {
     this.url = url;
-    this.img = LoadImage(url, () => {
-      this.w = this.img.width;
-      this.h = this.img.height;
+    var self = this;
+    this.img = LoadImage(url, img => {
+      self.w = img.width;
+      self.h = img.height;
+      if (typeof onload == "function") onload(self);
     });
   }
   show(w, h, buf) {
@@ -1025,14 +1087,21 @@ class FitImage {
     }
     return { w, h };
   }
+  tint() {
+    var tmpGraphic = createGraphics(this.img.width, this.img.height);
+    tmpGraphic.tint(...arguments);
+    tmpGraphic.image(this.img);
+    this.img = tmpGraphic.get();
+    tmpGraphic.remove();
+  }
 }
-class Animation {
-  constructor(url, length, loop) {
-    this.amount = length;
-    this.img = LoadImage(url, () => {
-      this.w = floor(this.img.width / this.amount);
-      this.h = this.img.height;
+class Animation extends FitImage {
+  constructor(url, length, loop, onload) {
+    super(url,self=>{
+      self.w = floor(self.img.width/self.amount);
+      if (typeof onload == "function") onload(self);
     });
+    this.amount = length;
     this.frame = 0;
     if (!loop) return;
     var self = this;
@@ -1043,20 +1112,12 @@ class Animation {
       }
     }, 1000 / loop);
   }
-  show(w, h, f) {
+  show(w, h, f, buf) {
+    var img = (buf && typeof buf != 'number') ? buf.image : image;
     var { w, h } = this.calc(w, h);
     var f = (f ?? 0) + this.frame;
     f = f % this.amount;
-    image(this.img, -w / 2, -h / 2, w, h, this.w * f, 0, this.w, this.h);
-  }
-  calc(w, h) {
-    if (!h) {
-      h = round((this.h / this.w) * w);
-    }
-    if (!w) {
-      w = round((this.w / this.h) * h);
-    }
-    return { w, h };
+    img(this.img, -w / 2, -h / 2, w, h, this.w * f, 0, this.w, this.h);
   }
 }
 class HatDisplay {
@@ -1105,7 +1166,6 @@ async function loadAssets() {
   // Lobby Image
   textures.lobby = LoadImage("assets/misc/lobby.png");
 
-
   var SkeletonImg = function(url,dx,dy,) {
     var img = new FitImage(url);
     img.hatdx = dx;
@@ -1129,6 +1189,10 @@ async function loadAssets() {
   textures.diamondpumpkin = new FitImage("assets/pumpkins/diamond_pumpkin.png");
   textures.gutsplat = new Animation("assets/pumpkins/gut_splat.png", 5);
 
+  // Candies
+  textures.lolipop_wave = new Animation("assets/candies/lolipop_wave.png", 6);
+
+  // Objectives
   textures.objective = new FitImage("assets/pumpkins/objective.png");
 
   // Hats
@@ -1244,13 +1308,22 @@ var loaded = 0;
 var failures = [];
 function LoadImage(url, call) {
   toLoad++;
-  return loadImage(url, (img) => {
+  var img = loadImage(url, (img) => {
     loaded++;
     if (call) call(img);
   },()=>{
     loaded++;
     failures.push(url);
+    img.resize(2,2);
+    img.loadPixels();
+    img.set(0, 0, color("purple"));
+    img.set(0, 1, color("black"));
+    img.set(1, 0, color("black"));
+    img.set(1, 1, color("purple"));
+    img.updatePixels();
+    if (call) call(img);
   });
+  return img;
 }
 function LoadSound(url, call) {
   toLoad++;
@@ -1392,6 +1465,7 @@ var subdisplay = "assets";
 function draw() {
   //console.log(deltaTime);
   angleMode(DEGREES);
+  noSmooth();
   background("#123904");
   translate(windowWidth / 2, windowHeight / 2);
   scale(windowScale, windowScale);
@@ -1632,19 +1706,30 @@ Displays.game = function() {
     }
 
     // Trick or Treat
-    var time = Date.now()-TrickOrTreatDate;
-    if (time < 5000) {
-      push();
-      format(255, false, 1, 12, CENTER);
-      if (time > 3000) {
-        var opacity = Math.floor((time-3000)/2000*255);
-        fill(255,opacity);
-        tint(255,opacity);
+    var mode = settingsIdMap.trickOrTreatAnnouncement.value;
+    if (mode != "None") {
+      var time = Date.now()-TrickOrTreatDate;
+      if (time < 4000) {
+        push();
+        var opacity = 255;
+        if (time > 2000) {
+          opacity = Math.floor(Math.sqrt(1-(time-2000)/2000)*255);
+          tint(255,opacity);
+        }
+        if (mode == "Minimal") {
+          format(255, false, 1, 12, CENTER);
+          fill(255,opacity);
+          text("Trick or Treat!", 0, wHeight / 2 - 55);
+        } else if (mode == "Full") {
+          format(255, false, 5, 35, CENTER, CENTER);
+          fill(255,opacity);
+          var wid = textWidth("Trick or Treat!");
+          text("Trick or Treat!", 30, wHeight / 2 - 100);
+          translate(-wid/2-15, wHeight / 2 - 105);
+          gui.trick_or_treat.show(60,0);
+        }
+        pop();
       }
-      text("Trick or Treat!", 0, wHeight / 2 - 50);
-      //translate(-100, wHeight / 2 - 50);
-      //gui.trick_or_treat.show(30,0);
-      pop();
     }
 
     // Upgrades
@@ -1769,14 +1854,13 @@ Displays.pmgame = function() {
     push();
     translate(-wWidth / 2 + 35, wHeight / 2 - 45);
     var t = { x: -wWidth / 2 + 35, y: wHeight / 2 - 45 };
-    var pStr = String.fromCodePoint(127875) + " ";
     var c = cam.mode == "entity" ? activeColors : hideColors;
     for (var i = 0; i < EntityIDs.length; i++) {
       var m = EntityIDs[i];
       var over = mouseCircle(t.x, t.y, 25) ? "#381e08" : "#231709";
       var sel = cam.selE == m ? c.green : c.orange;
       var data = EntityDisplay[m];
-      var txt = (data.pumpkin ? pStr : "") + data.cost;
+      var txt = (data.pumpkin ? "\u{1F383} " : "") + data.cost;
       var afford = cam.coins >= data.cost ? c.green : c.red;
       if (afford == c.red) sel = c.red;
       format(over, sel, 3);
@@ -1799,6 +1883,7 @@ Displays.pmgame = function() {
     translate(-wWidth / 2 + 35, wHeight / 2 - 115);
     t = { x: -wWidth / 2 + 35, y: wHeight / 2 - 115 };
     c = cam.mode == "ability" ? activeColors : hideColors;
+    if (settingsIdMap.usageMode.value != "Hotbar") c = activeColors;
     for (var i = 0; i < AbilityIDs.length; i++) {
       var m = AbilityIDs[i];
       var over = mouseCircle(t.x, t.y, 25) ? "#381e08" : "#231709";
@@ -2054,7 +2139,7 @@ Displays.view = function() {
     format("#ffa500", false, 1, 20, CENTER);
     text((i + 1) + ".", 25, 26);
     textAlign(LEFT);
-    if (codes[i].next) text("Public Lobby ðŸŒ", 45, 26)
+    if (codes[i].next) text("Public Lobby \u{1F310}", 45, 26)
     else text("Code: " + codes[i].id, 45, 26);
     textAlign(RIGHT);
     text(codes[i].amount + "/" + codes[i].settings.start_count, wid - 15, 26);
@@ -2110,22 +2195,37 @@ window.onmessage = function(e) {
 // Win/Lose States
 Displays.gameover = function() {
   format(0, "#ffa500", 10, 40, CENTER);
-  if (subdisplay == "win") text("You Won!", 0, -40);
-  else text("You Lost", 0, -40);
-  var overbutton = wMouseX > -37.5 && wMouseX < 37.5 && wMouseY > 0 && wMouseY < 50;
+  var ty = 50;
+  if (subdisplay == "win") text("You Won!", 0, -40-ty);
+  else text("You Lost", 0, -40-ty);
+  var overbutton = wMouseX > -37.5 && wMouseX < 37.5 && wMouseY > -ty && wMouseY < 50-ty;
   fill(overbutton ? "#381e08" : "#231709");
-  rect(-37.5, 0, 75, 50);
+  rect(-37.5, -ty, 75, 50);
   format("#ffa500", false, 1, 20, CENTER);
-  text("Leave", 0, 30);
+  text("Leave", 0, 30-ty);
   // Display code
   push();
-  format("#ffa500", false, 1, 20, LEFT);
-  textAlign(LEFT, BOTTOM);
+  format("#ffa500", false, 1, 20, CENTER, TOP);
+  var stats = MatchStats;
+  var txt = "";
   if (player.pumpkinMaster) {
-    text(`Skeleton Kills: ${MatchStats.SkeletonKills}`,20-wWidth/2,20-wHeight/2);
+    txt = `Skeleton Kills: ${stats.SkeletonKills}
+Skeleton Damage: ${stats.SkeletonDamage}
+Monsters Spawned: ${stats.TotalMonstersSpawned}
+Abilities Used: ${stats.TotalAbilitiesUsed}
+CoinsGenerated: ${stats.CoinsGenerated}
+CoinsSpent: ${stats.CoinsSpent}
+ObjectivesLost: ${stats.ObjectivesLost}`;
   } else {
-    text(`Pumpkins Smashed: ${MatchStats.Smashed}`,20-wWidth/2,20-wHeight/2);
+    txt = `Pumpkins Smashed: ${stats.Smashed}
+Monsters Killed: ${stats.TotalEntitiesKilled}
+Deaths: ${stats.Deaths}
+Damage Taken: ${stats.DamageTaken}
+Objective Damage: ${stats.ObjectiveDamage}
+Candies Collected: ${stats.TotalCandiesCollected}
+Upgrades: ${stats.TotalUpgrades}`;
   }
+  text(txt,0,20);
   pop();
   //
   if ((keyIsDown(13) || (isMobile && mouseIsPressed) || (overbutton && mouseIsPressed))) {
@@ -2782,7 +2882,7 @@ var keybindContent = [
       }
     ]
   },
-  {
+  /*{
     type: "category",
     header: "Mobile",
     content: [{
@@ -2810,9 +2910,24 @@ var keybindContent = [
       ], // optional
       falsecontent: [] // optional
     }],
-  }
+  }*/
 ];
 var displayContent = [
+  {
+    type: "category",
+    header: "Preferences",
+    content: [{
+      type: "dropdown",
+      name: "Trick or Treat: ",
+      id: "trickOrTreatAnnouncement",
+      value: "Full",
+      options: [
+        {name:"None",content:[]},
+        {name:"Minimal",content:[]},
+        {name:"Full",content:[]}
+      ],
+    }],
+  },
   {
     type: "category",
     header: "Performance",
@@ -2846,8 +2961,31 @@ var miscContent = [
     name: "Take LSD: ",
     id: "takeLSD",
     value: false,
+    onchange: function(select) {
+      if (select.checked) {
+        var counter = 0;
+        if (!select.interval) select.interval = setInterval(()=>{
+          document.body.style.filter = "hue-rotate("+counter+"deg)";
+          counter += 1;
+          counter %= 360;
+        },10);
+      } else {
+        document.body.style.filter = "hue-rotate(0deg)";
+        if (select.interval) clearInterval(select.interval);
+        delete select.interval;
+      }
+    },
     truecontent: [],
     falsecontent: []
+  },
+  {
+    type: "text",
+    name: "Promo Code: ",
+    id: "promoCode",
+    value: "",
+    oninput: function(input) {
+      if (input.value == "sus") user.achievements.among_us = true;
+    }
   }
 ];
 
@@ -2950,6 +3088,7 @@ function renderContentList(list, idMap, parent, insertAfter = null) {
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
       checkbox.checked = item.value;
+      if (item.onchange) checkbox.onchange = ()=>item.onchange(checkbox);
       checkbox.className = "checkbox";
 
       checkbox.addEventListener("change", () => {
@@ -2959,6 +3098,7 @@ function renderContentList(list, idMap, parent, insertAfter = null) {
 
       item.setValue = val => {
         checkbox.checked = val;
+        if (item.onchange) item.onchange(checkbox);
         renderConditionalContent(item, idMap, wrapper);
       };
 
@@ -2988,6 +3128,7 @@ function renderContentList(list, idMap, parent, insertAfter = null) {
 
       item.setValue = val => {
         select.value = val;
+        if (item.onchange) item.onchange(select);
         renderDropdownContent(item, idMap, wrapper);
       };
 
@@ -2995,6 +3136,7 @@ function renderContentList(list, idMap, parent, insertAfter = null) {
       select.addEventListener("change", () => {
         item.value = select.value;
         renderDropdownContent(item, idMap, wrapper);
+        if (item.onchange) item.onchange(select);
       });
 
       wrapper.appendChild(label);
@@ -3006,18 +3148,22 @@ function renderContentList(list, idMap, parent, insertAfter = null) {
     else if (item.type === "text") {
       const label = document.createElement("label");
       label.textContent = item.name;
+      label.className = "textbox-label"
 
       const input = document.createElement("input");
       input.type = "text";
       input.value = item.value;
+      if (item.placeholder) input.placeholder = item.placeholder;
       input.addEventListener("input", () => {
         item.value = input.value;
+        if (item.oninput) item.oninput(input);
       });
       input.className = "textbox";
 
       item.setValue = val => {
         select.value = val;
         input.value = val;
+        if (item.oninput) item.oninput(select);
       };
 
       target.insertBefore(label, insertAfter);
@@ -3926,6 +4072,9 @@ socket.on('hit', function(x, y) {
   if (document.hidden) return;
   smashFX(x * 36, y * 36);
 });
+socket.on('lolipop_wave', function(x, y, rad) {
+  new playAnimation(textures.lolipop_wave, 12, 36*2*rad, 36*2*rad, x * 36, y * 36);
+});
 /*socket.on('swing',function(id) {
   var p = players[id];
 
@@ -4155,19 +4304,5 @@ function wait(time) {
 function mod(x, y) {
   return x - floor(x / y) * y;
 }
-
-// Hehehe
-
-var counter = 0;
-setInterval(()=>{
-  if (settingsIdMap.takeLSD?.value) {
-    document.body.style.filter = "hue-rotate("+counter+"deg)";
-    counter += 1;
-    counter %= 360;
-  } else if (counter != 0) {
-    counter = 0;
-    document.body.style.filter = "hue-rotate("+counter+"deg)";
-  }
-},10);
 
 //setInterval(()=>{socket.emit('smash');},10);

@@ -299,7 +299,7 @@ canvas {
   font-size: 10vmin;
 }
 
-.dropdown-group, .checkbox-group, .keybind {
+.dropdown-group, .checkbox-group, .keybind, .textbox-label {
   margin-top: 1vmin;
   margin-bottom: 1vmin;
   font-size: 5vmin;
@@ -324,7 +324,12 @@ canvas {
   font-size: 3.5vmin;
 }
 
-.panel > div {
+.textbox {
+  width: 20vmin;
+  overflow-x: resize;
+}
+
+.settings-panel > div, .settings-panel > label {
   margin-left: 2vmin;
 }
 
