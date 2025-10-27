@@ -465,7 +465,7 @@ EntityDisplay.ghost = (function() {
     tex.icon.tint(255,128);
   });
   tex.attack = new Animation("assets/entities/ghost/attack.png", 8, 12, ()=>{
-    tex.icon.tint(255,128);
+    tex.attack.tint(255,128);
   });
   return {
     cost: 3,
