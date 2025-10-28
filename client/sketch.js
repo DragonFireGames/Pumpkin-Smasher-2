@@ -2906,7 +2906,7 @@ var keybindContent = [
         name: "Increase Start Count: ",
         id: "increaseStartCount",
         usemodifier: true,
-        value: "+"
+        value: "="
       },
     ]
   },
