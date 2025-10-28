@@ -2938,6 +2938,7 @@ async function start(room) {
   io.to(room).emit('start',time);
 
   game.skeletons = Object.keys(game.players);
+  if (game.skeletons.length == 0) return;
   game.pumpkin_masters = [];
   for (var i = 0; i < game.pm_amount; i++) {
     var r = randomIndex(game.skeletons);
