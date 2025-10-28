@@ -312,7 +312,7 @@ var AchievementData = {
     },
   },
   "winner": {
-    name: "winner",
+    name: "Winner",
     description: "Win a game as Pumpkin Master and skeleton",
     hat: "crown",
     test: function(match, cumulative) {
@@ -375,7 +375,7 @@ var AchievementData = {
     },
   },
   "saver": {
-    name: "saver",
+    name: "Saver",
     description: "Win a match with 400 coins to spare",
     hat: "brown_tophat",
     test: function(match, cumulative) {
