@@ -262,13 +262,10 @@ var AchievementData = {
   "new_recruit": {
     name: "New Recruit",
     description: "Complete the entire tutorial",
-    hat: false,
+    hat: "paper_hat",
     test: function(match, cumulative) {
       return cumulative.TutorialComplete;
     },
-    progress: function(cumulative) {
-      return 0;
-    }
   },
   "full_party": {
     name: "Full Party",
@@ -277,14 +274,30 @@ var AchievementData = {
     test: function(match, cumulative) {
       return match.PlayerCount >= 4;
     },
-    progress: function(cumulative) {
-      return 0;
-    }
   },
   "gentleman": {
     name: "Gentleman",
-    description: "Max out one of your upgrades as skeleton",
+    description: "Generate 300 coins in a match",
     hat: "tophat",
+    test: function(match, cumulative) {
+      return match.CoinsGenerated >= 300;
+    },
+  },
+  "economist": {
+    name: "Economist",
+    description: "Generate 3000 coins",
+    hat: "black_red_tophat",
+    test: function(match, cumulative) {
+      return cumulative.CoinsGenerated >= 3000;
+    },
+    progress: function(cumulative) {
+      return cumulative.CoinsGenerated / 3000;
+    }
+  },
+  "upgrade_lover": {
+    name: "Upgrade Lover",
+    description: "Max out one of your upgrades as skeleton",
+    hat: "red_bandana",
     test: function(match, cumulative) {
       for (var i in match.Upgrades) if (match.Upgrades[i] >= 4) return true;
       return false;
@@ -297,6 +310,17 @@ var AchievementData = {
     test: function(match, cumulative) {
       return cumulative.GamesPlayed >= 3;
     },
+  },
+  "winner": {
+    name: "winner",
+    description: "Win a game as Pumpkin Master and skeleton",
+    hat: "crown",
+    test: function(match, cumulative) {
+      return cumulative.PumpkinMasterWins >= 1 && cumulative.SkeletonWins >= 1;
+    },
+    progress: function(cumulative) {
+      return (cumulative.PumpkinMasterWins>=1?0.5:0)+(cumulative.SkeletonWins>=1?0.5:0);
+    }
   },
   "rusher_killer": {
     name: "Rusher Killer",
@@ -342,13 +366,38 @@ var AchievementData = {
       return cumulative.TotalCandiesCollected / 10;
     }
   },
+  "big_spender": {
+    name: "Big Spender",
+    description: "Spend 1000 coins in a match",
+    hat: "white_tophat",
+    test: function(match, cumulative) {
+      return match.CoinsSpent >= 1000;
+    },
+  },
+  "saver": {
+    name: "saver",
+    description: "Win a match with 400 coins to spare",
+    hat: "brown_tophat",
+    test: function(match, cumulative) {
+      if (!match.PumpkinMasterWins) return;
+      return match.CoinsSpent >= 1000;
+    },
+  },
+  "perfect_protector": {
+    name: "Perfect Protector",
+    description: "Win a game as Pumpkin Master without losing any objectives.",
+    hat: "sheriff",
+    test: function(match, cumulative) {
+      if (!match.PlayedAsPumpkinMaster) return;
+      return match.ObjectivesLost == 0;
+    },
+  },
   "who_needs_upgrades": {
     name: "Who Needs Upgrades",
     description: "Win a game as skeleton without upgrades",
-    hat: false,
+    hat: "black_bandana",
     test: function(match, cumulative) {
-      if (!match.PlayedAsSkeleton) return;
-      if (!match.Wins) return;
+      if (!match.SkeletonWins) return;
       return match.TotalUpgrades == 0;
     },
   },
@@ -364,7 +413,7 @@ var AchievementData = {
   "objective_destroyer": {
     name: "Objective Destroyer",
     description: "Deal 500 damage to objectives",
-    hat: false,
+    hat: "pirate",
     test: function(match, cumulative) {
       return cumulative.ObjectiveDamage >= 500;
     },
@@ -375,7 +424,7 @@ var AchievementData = {
   "ghost_infighting": {
     name: "Ghost Infighting",
     description: "Kill 5 ghosts with ghost candy",
-    hat: false,
+    hat: "scream_mask",
     test: function(match, cumulative) {
       return cumulative.GhostsKilledWithGhost >= 5;
     },
@@ -390,6 +439,14 @@ var AchievementData = {
     test: function(match, cumulative) {
       if (!match.PlayedAsSkeleton) return;
       return match.DamageTaken >= 0;
+    },
+  },
+  "candy_magician": {
+    name: "Candy Magician",
+    description: "Kill 10 entities with a lolipop blast in a single match",
+    hat: "purple_witch_hat",
+    test: function(match, cumulative) {
+      return match.EntitiesKilledWithLolipop >= 10;
     },
   },
   /*"witch_lover": {
@@ -1593,6 +1650,24 @@ function draw() {
   if (isMobile) drawGUI();
 }
 
+function showPMname() {
+  var pmName = [];
+  for (var i in players) {
+    var p = players[i];
+    if (!p.pumpkinMaster) continue;
+    pmName.push(p.name);
+    break;
+  }
+  pmName = pmName.join(", ");
+  if (pmName != "") {
+    push();
+    translate(wWidth / 2 - 8, wHeight / 2 - 8);
+    format(255, false, 1, 12, RIGHT);
+    text("Pumpkin Master: " + pmName, 0, 0);
+    pop();
+  }
+}
+
 var Displays = {};
 // Skeleton Display
 Displays.game = function() {
@@ -1691,21 +1766,7 @@ Displays.game = function() {
     pop();
 
     // PM name
-    var pmName = [];
-    for (var i in players) {
-      var p = players[i];
-      if (!p.pumpkinMaster) continue;
-      pmName.push(p.name);
-      break;
-    }
-    pmName = pmName.join(", ");
-    if (pmName != "") {
-      push();
-      translate(wWidth / 2 - 8, wHeight / 2 - 8);
-      format(255, false, 1, 12, RIGHT);
-      text("Pumpkin Master: " + pmName, 0, 0);
-      pop();
-    }
+    showPMname();
 
     // Trick or Treat
     var mode = settingsIdMap.trickOrTreatAnnouncement.value;
@@ -1851,16 +1912,18 @@ Displays.pmgame = function() {
       white: "#808080"
     }
 
+    var hotbar = settingsIdMap.usageMode.value == "Hotbar";
 
     // Select Pumpkin Monsters
     push();
     translate(-wWidth / 2 + 35, wHeight / 2 - 45);
     var t = { x: -wWidth / 2 + 35, y: wHeight / 2 - 45 };
-    var c = cam.mode == "entity" ? activeColors : hideColors;
+    var c = (cam.mode == "entity" || !hotbar) ? activeColors : hideColors;
     for (var i = 0; i < EntityIDs.length; i++) {
       var m = EntityIDs[i];
       var over = mouseCircle(t.x, t.y, 25) ? "#381e08" : "#231709";
       var sel = cam.selE == m ? c.green : c.orange;
+      if (!hotbar && cam.mode != "entity") sel = c.orange;
       var data = EntityDisplay[m];
       var txt = (data.pumpkin ? "\u{1F383} " : "") + data.cost;
       var afford = cam.coins >= data.cost ? c.green : c.red;
@@ -1873,7 +1936,7 @@ Displays.pmgame = function() {
       translate(70, 0);
       t.x += 70;
     }
-    if (cam.mode == "entity") {
+    if (cam.mode == "entity" && hotbar) {
       translate(-20, 0);
       scale(-1, 1);
       image(gui.direction, -10, -10, 20, 20);
@@ -1884,12 +1947,12 @@ Displays.pmgame = function() {
     push();
     translate(-wWidth / 2 + 35, wHeight / 2 - 115);
     t = { x: -wWidth / 2 + 35, y: wHeight / 2 - 115 };
-    c = cam.mode == "ability" ? activeColors : hideColors;
-    if (settingsIdMap.usageMode.value != "Hotbar") c = activeColors;
+    c = (cam.mode == "ability" || !hotbar) ? activeColors : hideColors;
     for (var i = 0; i < AbilityIDs.length; i++) {
       var m = AbilityIDs[i];
       var over = mouseCircle(t.x, t.y, 25) ? "#381e08" : "#231709";
       var sel = cam.selA == m ? c.green : c.orange;
+      if (!hotbar && cam.mode != "ability") sel = c.orange;
       var data = AbilityDisplay[m];
       var txt = data.cost;
       var afford = cam.coins >= data.cost ? c.green : c.red;
@@ -1912,7 +1975,7 @@ Displays.pmgame = function() {
       translate(70, 0);
       t.x += 70;
     }
-    if (cam.mode == "ability") {
+    if (cam.mode == "ability" && hotbar) {
       translate(-20, 0);
       scale(-1, 1);
       image(gui.direction, -10, -10, 20, 20);
@@ -1920,14 +1983,7 @@ Displays.pmgame = function() {
     pop();
 
     // PM Name
-    var pmName = player.name;
-    if (pmName != "") {
-      push();
-      translate(wWidth / 2 - 8, wHeight / 2 - 8);
-      format(255, false, 1, 12, RIGHT);
-      text("Pumpkin Master: " + pmName, 0, 0);
-      pop();
-    }
+    showPMname();
 
     // Timer
     push();
@@ -4194,9 +4250,11 @@ function processStats(stats,is_pm,pm_win) {
     stats.SkeletonKills = total(stats.KilledSkeletonsWith);
     stats.TotalMonstersSpawned = total(stats.MonstersSpawned);
     stats.TotalAbilitiesUsed = total(stats.AbilitiesUsed);
-    stats.CoinsSpent = 0;
-    for (var i in stats.MonstersSpawned) stats.CoinsSpent += EntityDisplay[i].cost * stats.MonstersSpawned[i];
-    for (var i in stats.AbilitiesUsed) stats.CoinsSpent += AbilityDisplay[i].cost * stats.AbilitiesUsed[i];
+    stats.CoinsSpentOnMonsters = 0;
+    stats.CoinsSpentOnAbilities = 0;
+    for (var i in stats.MonstersSpawned) stats.CoinsSpentOnMonsters += EntityDisplay[i].cost * stats.MonstersSpawned[i];
+    for (var i in stats.AbilitiesUsed) stats.CoinsSpentOnAbilities += AbilityDisplay[i].cost * stats.AbilitiesUsed[i];
+    stats.CoinsSpent = stats.CoinsSpentOnMonsters + stats.CoinsSpentOnAbilities;
     stats.TotalCoins = stats.CoinsSpent + stats.CoinsLeft;
   } else {
     stats.PlayedAsSkeleton = 1;
