@@ -267,6 +267,14 @@ var AchievementData = {
       return cumulative.TutorialComplete;
     },
   },
+  "coachs_prodigy": {
+    name: "Coach's Prodigy",
+    description: "Complete the tutorial in less than 5 minutes",
+    hat: "sunhat",
+    test: function(match, cumulative) {
+      return cumulative.TutorialTime <= 5*60*1000;
+    },
+  },
   "full_party": {
     name: "Full Party",
     description: "Play a full game with 4 or more players",
@@ -311,6 +319,14 @@ var AchievementData = {
       return cumulative.GamesPlayed >= 3;
     },
   },
+  "doctor": {
+    name: "Doctor",
+    description: "Collect 2 candy apples in a single match",
+    hat: "doctor",
+    test: function(match, cumulative) {
+      return match.CandiesCollected?.hot_tamale >= 2;
+    },
+  },
   "winner": {
     name: "Winner",
     description: "Win a game as Pumpkin Master and skeleton",
@@ -320,6 +336,39 @@ var AchievementData = {
     },
     progress: function(cumulative) {
       return (cumulative.PumpkinMasterWins>=1?0.5:0)+(cumulative.SkeletonWins>=1?0.5:0);
+    }
+  },
+  "hot_n_spicy": {
+    name: "Hot 'n Spicy",
+    description: "Collect 3 hot tamale candies",
+    hat: "sombrero",
+    test: function(match, cumulative) {
+      return cumulative.CandiesCollected?.hot_tamale >= 3;
+    },
+    progress: function(cumulative) {
+      return cumulative.CandiesCollected?.hot_tamale / 3;
+    }
+  },
+  "neckbeard": {
+    name: "Neckbeard",
+    description: "Generate 3000 coins",
+    hat: "fedora",
+    test: function(match, cumulative) {
+      return cumulative.CoinsGenerated >= 3000;
+    },
+    progress: function(cumulative) {
+      return cumulative.CoinsGenerated / 3000;
+    }
+  },
+  "white_hat": {
+    name: "Neckbeard",
+    description: "Spend 10000 coins",
+    hat: "white_fedora",
+    test: function(match, cumulative) {
+      return cumulative.CoinsSpent >= 10000;
+    },
+    progress: function(cumulative) {
+      return cumulative.CoinsSpent / 10000;
     }
   },
   "rusher_killer": {
@@ -355,16 +404,57 @@ var AchievementData = {
       return cumulative.EntitiesKilled?.debuffer / 20;
     }
   },
-  "trick_or_treater": {
-    name: "Trick or Treater",
-    description: "Collect 10 candies",
-    hat: "paper_bag",
+  "monster_killer": {
+    name: "Monster Killer",
+    description: "Kill 100 basic monsters",
+    hat: "orange_beanie",
     test: function(match, cumulative) {
-      return cumulative.TotalCandiesCollected >= 10;
+      return cumulative.EntitiesKilled?.monster >= 100;
     },
     progress: function(cumulative) {
-      return cumulative.TotalCandiesCollected / 10;
+      return cumulative.EntitiesKilled?.monster / 100;
     }
+  }, 
+  "catapult_destroyer": {
+    name: "Catapult Destroyer",
+    description: "Kill 30 catapults",
+    hat: "yellow_beanie",
+    test: function(match, cumulative) {
+      return cumulative.EntitiesKilled?.catapult >= 30;
+    },
+    progress: function(cumulative) {
+      return cumulative.EntitiesKilled?.catapult / 30;
+    }
+  }, 
+  "brute_destroyer": {
+    name: "Brute Destroyer",
+    description: "Kill 10 brutes",
+    hat: "magenta_beanie",
+    test: function(match, cumulative) {
+      return cumulative.EntitiesKilled?.brute >= 10;
+    },
+    progress: function(cumulative) {
+      return cumulative.EntitiesKilled?.brute / 10;
+    }
+  },
+  "trick_or_treater": {
+    name: "Trick or Treater",
+    description: "Collect 20 candies",
+    hat: "paper_bag",
+    test: function(match, cumulative) {
+      return cumulative.TotalCandiesCollected >= 20;
+    },
+    progress: function(cumulative) {
+      return cumulative.TotalCandiesCollected / 20;
+    }
+  },
+  "sweet_tooth": {
+    name: "Sweet Tooth",
+    description: "Collect 5 candies in a match",
+    hat: "propeller_cap",
+    test: function(match, cumulative) {
+      return match.TotalCandiesCollected >= 5;
+    },
   },
   "big_spender": {
     name: "Big Spender",
@@ -380,8 +470,54 @@ var AchievementData = {
     hat: "brown_tophat",
     test: function(match, cumulative) {
       if (!match.PumpkinMasterWins) return;
-      return match.CoinsSpent >= 1000;
+      return match.CoinsLeft >= 400;
     },
+  },
+  "shield_user": {
+    name: "Shield User",
+    description: "Win a match using 3 shields",
+    hat: "purple_tophat",
+    test: function(match, cumulative) {
+      if (!match.PumpkinMasterWins) return;
+      return match.AbilitiesUsed?.shield >= 3;
+    },
+  },
+  "mad_hatter": {
+    name: "Mad Hatter",
+    description: "Collect 10 hats",
+    hat: "mad_hatter",
+    test: function(match, cumulative) {
+      var c  = 0;
+      for (var a in user.achievements) if (AchievementData[a].hat) c++;
+      return c > 10;
+    },
+    progress: function(match, cumulative) {
+      var c  = 0;
+      for (var a in user.achievements) if (AchievementData[a].hat) c++;
+      return c / 10;
+    },
+  },
+  "cowboy": {
+    name: "Cowboy",
+    description: "Upgrade speed 10 times",
+    hat: "cowboy",
+    test: function(match, cumulative) {
+      return cumulative.Upgrades?.speed >= 10;
+    },
+    progress: function(cumulative) {
+      return cumulative.Upgrades?.speed / 10;
+    }
+  },
+  "dark_cowboy": {
+    name: "Dark Cowboy",
+    description: "Upgrade speed 100 times",
+    hat: "dark_cowboy",
+    test: function(match, cumulative) {
+      return cumulative.Upgrades?.speed >= 100;
+    },
+    progress: function(cumulative) {
+      return cumulative.Upgrades?.speed / 100;
+    }
   },
   "perfect_protector": {
     name: "Perfect Protector",
@@ -421,6 +557,25 @@ var AchievementData = {
       return cumulative.ObjectiveDamage / 500;
     }
   },
+  "devil": {
+    name: "Devil",
+    description: "Kill 100 skeletons as pumpkin master",
+    hat: "demon_horns",
+    test: function(match, cumulative) {
+      return cumulative.SkeletonKills >= 100;
+    },
+    progress: function(cumulative) {
+      return cumulative.SkeletonKills / 100;
+    },
+  },
+  "mercy": {
+    name: "Mercy",
+    description: "Kill no skeletons as pumpkin master",
+    hat: "halo",
+    test: function(match, cumulative) {
+      return match.SkeletonKills == 0;
+    },
+  },
   "ghost_infighting": {
     name: "Ghost Infighting",
     description: "Kill 5 ghosts with ghost candy",
@@ -441,6 +596,41 @@ var AchievementData = {
       return match.DamageTaken >= 0;
     },
   },
+  "thug_shaker": {
+    name: "Thug Shaker",
+    description: "Destroy 10 generators",
+    hat: "durag",
+    test: function(match, cumulative) {
+      return cumulative.AbilitiesDestroyed?.generator >= 10;
+    },
+    progress: function(cumulative) {
+      return cumulative.AbilitiesDestroyed?.generator / 10;
+    }
+  },
+  "let_em_cook": {
+    name: "Let 'em Cook",
+    description: "Spawn every mob type in a single match",
+    hat: "chef",
+    test: function(match, cumulative) {
+      for (var i = 0; i < EntityIDs.length; i++) {
+        var n = EntityIDs[i];
+        if (match.EntitiesSpawned?.[n] >= 1) continue;
+        return false;
+      }
+      return true;
+    },
+  },
+  "magic_user": {
+    name: "Magic User",
+    description: "Spawn 100 wizards, rushers, or debuffers",
+    hat: "witch_hat",
+    test: function(match, cumulative) {
+      return (cumulative.EntitiesSpawned?.wizard + cumulative.EntitiesSpawned?.rushers + cumulative.EntitiesSpawned?.debuffers) >= 100;
+    },
+    progress: function(cumulative) {
+      return (cumulative.EntitiesSpawned?.wizard + cumulative.EntitiesSpawned?.rushers + cumulative.EntitiesSpawned?.debuffers) / 100;
+    }
+  },
   "candy_magician": {
     name: "Candy Magician",
     description: "Kill 10 entities with a lolipop blast in a single match",
@@ -449,17 +639,88 @@ var AchievementData = {
       return match.EntitiesKilledWithLolipop >= 10;
     },
   },
-  /*"witch_lover": {
-    name: "Witch Lover",
-    description: "Spawn 100 wizards, rushers, or debuffers",
-    hat: "witch_hat",
+  "pumpkin_magician": {
+    name: "Pumpkin Magician",
+    description: "Get 5 swarm kills in a match",
+    hat: "orange_witch_hat",
     test: function(match, cumulative) {
-      //return cumulative.EntitiesKilled?.wizard >= 40;
+      return match.KilledSkeletonsWithSwarm >= 5;
+    },
+  },
+  "green_magician": {
+    name: "Green Magician",
+    description: "Use vines 20 times in a match",
+    hat: "green_witch_hat",
+    test: function(match, cumulative) {
+      return match.AbilitiesUsed.vines >= 20;
+    },
+  },
+  "battle_ram": {
+    name: "Battle Ram",
+    description: "Destroy 3 objectives in a match",
+    hat: "viking_helmet",
+    test: function(match, cumulative) {
+      return match.ObjectivesDestroyed >= 3;
+    },
+  },
+  "gotta_get_them_all": {
+    name: "Gotta get 'em all",
+    description: "Kill every type of killable monster",
+    hat: "pokemon_hat",
+    test: function(match, cumulative) {
+      for (var i = 0; i < EntityIDs.length; i++) {
+        var n = EntityIDs[i];
+        if (!EntityDisplay[n].killable) continue;
+        if (cumulative.EntitiesKilled?.[n] >= 1) continue;
+        return false;
+      }
+      return true;
     },
     progress: function(cumulative) {
-      //return cumulative.EntitiesKilled?.wizard / 40;
-    }
-  },*/
+      var total = 0;
+      var killed = 0;
+      for (var i = 0; i < EntityIDs.length; i++) {
+        var n = EntityIDs[i];
+        if (!EntityDisplay[n].killable) continue;
+        total++;
+        if (cumulative.EntitiesKilled?.[n] >= 1) killed++;
+      }
+      return killed/total;
+    },
+  },
+  "serial_killer": {
+    name: "Serial Killer",
+    description: "Kill 100 monsters in a match",
+    hat: "jason_mask",
+    test: function(match, cumulative) {
+      return match.TotalEntitiesKilled >= 100;
+    },
+  }, 
+  "spooky_season": {
+    name: "Spooky Season",
+    description: "Play a match during the month of October",
+    hat: "pumpkin",
+    test: function(match, cumulative) {
+      return new Date().getMonth() == 9;
+    },
+  },
+  "christmas_cheer": {
+    name: "Christmas Season",
+    description: "Play a match during the month of December",
+    hat: "santa",
+    test: function(match, cumulative) {
+      return new Date().getMonth() == 11;
+    },
+  },
+  "beach_day": {
+    name: "Beach Day",
+    description: "Play a match during the months of June or July",
+    hat: "beach_sunhat",
+    test: function(match, cumulative) {
+      var m = new Date().getMonth();
+      return m >= 5 && m <= 6;
+    },
+  },
   "feelin_funny": {
     name: "Feeling Funny",
     description: "Play a match while hallucinating",
@@ -508,6 +769,7 @@ EntityDisplay.monster = (function() {
   return {
     cost: 1,
     pumpkin: true,
+    killable: true,
     icon: function() {
       tex.icon.show(0, 40);
     },
@@ -527,6 +789,7 @@ EntityDisplay.ghost = (function() {
   return {
     cost: 3,
     pumpkin: true,
+    killable: true,
     icon: function() {
       tex.icon.show(0, 60);
     },
@@ -542,6 +805,7 @@ EntityDisplay.nuke = (function() {
   return {
     cost: 3,
     pumpkin: false,
+    killable: false,
     icon: function() {
       tex.icon.show(40, 40);
     },
@@ -557,6 +821,7 @@ EntityDisplay.speeder = (function() {
   return {
     cost: 4,
     pumpkin: true,
+    killable: true,
     icon: function() {
       translate(-5, 0);
       tex.icon.show(0, 40);
@@ -589,6 +854,7 @@ EntityDisplay.rusher = (function() {
   return {
     cost: 5,
     pumpkin: true,
+    killable: true,
     icon: function() {
       tex.icon.show(65, 0);
     },
@@ -637,6 +903,7 @@ EntityDisplay.brute = (function() {
   return {
     cost: 10,
     pumpkin: true,
+    killable: true,
     icon: function() {
       tex.icon.show(0, 40);
     },
@@ -663,6 +930,7 @@ EntityDisplay.mine = (function() {
   return {
     cost: 10,
     pumpkin: true,
+    killable: false,
     icon: function() {
       tex.armed.show(0, 40);
     },
@@ -681,6 +949,7 @@ EntityDisplay.catapult = (function() {
   return {
     cost: 12,
     pumpkin: false,
+    killable: true,
     icon: function() {
       translate(0, -5);
       tex.icon.show(45, 0);
@@ -711,6 +980,7 @@ EntityDisplay.debuffer = (function() {
   return {
     cost: 15,
     pumpkin: true,
+    killable: true,
     icon: function() {
       tex.icon.show(65, 0);
     },
@@ -1265,7 +1535,6 @@ async function loadAssets() {
   textures.hats.sombrero = new HatDisplay("assets/hats/sombrero.png",0,16);
   textures.hats.fedora = new HatDisplay("assets/hats/fedora.png",8,16);
   textures.hats.white_fedora = new HatDisplay("assets/hats/white_fedora.png",8,16);
-  textures.hats.beach_sunhat = new HatDisplay("assets/hats/beach_sunhat.png",2,14);
   textures.hats.sunhat = new HatDisplay("assets/hats/sunhat.png",4,14);
   textures.hats.cowboy = new HatDisplay("assets/hats/cowboy.png",8,10);
   textures.hats.dark_cowboy = new HatDisplay("assets/hats/dark_cowboy.png",8,10);
@@ -1284,6 +1553,7 @@ async function loadAssets() {
   textures.hats.chef = new HatDisplay("assets/hats/chef.png",8,2);
   textures.hats.party_hat = new HatDisplay("assets/hats/party_hat.png",14,4);
   textures.hats.crown = new HatDisplay("assets/hats/crown.png",12,20);
+  textures.hats.beach_sunhat = new HatDisplay("assets/hats/beach_sunhat.png",2,14);
   textures.hats.pumpkin = new HatDisplay("assets/hats/pumpkin.png",14,20);
   textures.hats.santa = new HatDisplay("assets/hats/santa.png",0,12);
   textures.hats.red_beanie = new HatDisplay("assets/hats/red_beanie.png",12,12);
@@ -1293,6 +1563,8 @@ async function loadAssets() {
   textures.hats.blue_beanie = new HatDisplay("assets/hats/blue_beanie.png",12,12);
   textures.hats.magenta_beanie = new HatDisplay("assets/hats/magenta_beanie.png",12,12);
   textures.hats.red_cap = new HatDisplay("assets/hats/red_cap.png",12,12);
+  textures.hats.yellow_cap = new HatDisplay("assets/hats/yellow_cap.png",12,12);
+  textures.hats.green_cap = new HatDisplay("assets/hats/green_cap.png",12,12);
   textures.hats.blue_cap = new HatDisplay("assets/hats/blue_cap.png",12,12);
   textures.hats.purple_cap = new HatDisplay("assets/hats/purple_cap.png",12,12);
   textures.hats.pokemon_hat = new HatDisplay("assets/hats/pokemon_hat.png",12,12);
@@ -3043,6 +3315,9 @@ var miscContent = [
     value: "",
     oninput: function(input) {
       if (input.value == "sus") user.achievements.among_us = true;
+      if (input.value == "halloween") user.achievements.spooky_season = true;
+      if (input.value == "christmas") user.achievements.christmas_cheer = true;
+      if (input.value == "summer break") user.achievements.beach_day = true;
     }
   }
 ];
