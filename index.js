@@ -485,7 +485,7 @@ class Room {
     candy.expire(player,this);
     player.activeCandy = false;
   }
-  spawnCandies(n) {
+  spawnCandies(n,bag) {
     for (var i = 0; i < n; i++) {
       var c = {};
       while (true) {
