@@ -601,10 +601,10 @@ var AchievementData = {
     description: "Destroy 10 generators",
     hat: "durag",
     test: function(match, cumulative) {
-      return cumulative.AbilitiesDestroyed?.generator >= 10;
+      return cumulative.AbilitiesDestroyed?.generators >= 10;
     },
     progress: function(cumulative) {
-      return cumulative.AbilitiesDestroyed?.generator / 10;
+      return cumulative.AbilitiesDestroyed?.generators / 10;
     }
   },
   "let_em_cook": {
