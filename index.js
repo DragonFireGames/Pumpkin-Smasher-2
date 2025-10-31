@@ -110,6 +110,7 @@ class Room {
     this.pumpkins = {};
     this.newPumpkins = [];
     // Candies
+    this.candyBag = [];
     this.candies = {};
     // Objectives
     this.objectiveRooms = 0;
@@ -157,7 +158,7 @@ class Room {
     io.to(this.id).emit('trick-or-treat',Date.now());
 
     var s = this.amount-this.pm_amount;
-    this.spawnCandies(1+s);
+    this.spawnCandies(1+s,true);
 
     var self = this;
     var buffPM = function() {
@@ -494,10 +495,15 @@ class Room {
         if (!this.pumpkins[c.x+","+c.y] && !this.candies[c.x+","+c.y]) break;
       }
       c.timestamp = Date.now();
-      c.type = RandomCandy();
+      c.type = bag ? this.randomCandy() : RandomCandy();
       this.candies[c.x+","+c.y] = c;
     }
     io.to(this.id).emit('candies',this.candies);
+  }
+  randomCandy() {
+    if (this.candyBag.length == 0) this.candyBag = Array.from(CandyBag);
+    var i = randomIndex(this.candyBag);
+    return this.candyBag.splice(i,1)[0];
   }
   checkPoint(x,y,ghost) {
     //Get tile position
@@ -2680,8 +2686,9 @@ CandyData.blue_candy = {
   },
   expire: async function(player) {},
 };
+var CandyBag = ["candy_corn","candy_corn","candy_corn","candy_corn","peppermint","peppermint","smarties","smarties","blue_candy","blue_candy","candied_apple","candied_apple","hot_tamale","ghost_chew","chocolate","lolipop"];
 function RandomCandy() {
-  return weightedRandom(0,["candy_corn","smarties","peppermint","blue_candy","candied_apple","hot_tamale","ghost_chew","chocolate","lolipop"],[0.25,0.2,0.15,0.1,0.1,0.05,0.05,0.05,0.05]);
+  return randomValue(CandyBag);
 }
 
 // --------
