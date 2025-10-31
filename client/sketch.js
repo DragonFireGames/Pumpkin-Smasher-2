@@ -540,7 +540,7 @@ var AchievementData = {
   "no_deaths": {
     name: "No Deaths",
     description: "No deaths as skeleton in a single match",
-    hat: "pumpkin",
+    hat: false,
     test: function(match, cumulative) {
       if (!match.PlayedAsSkeleton) return;
       return match.Deaths == 0;
