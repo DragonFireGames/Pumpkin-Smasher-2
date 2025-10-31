@@ -293,13 +293,13 @@ var AchievementData = {
   },
   "economist": {
     name: "Economist",
-    description: "Generate 3000 coins",
+    description: "Generate 5000 coins",
     hat: "black_red_tophat",
     test: function(match, cumulative) {
-      return cumulative.CoinsGenerated >= 3000;
+      return cumulative.CoinsGenerated >= 5000;
     },
     progress: function(cumulative) {
-      return cumulative.CoinsGenerated / 3000;
+      return cumulative.CoinsGenerated / 5000;
     }
   },
   "upgrade_lover": {
@@ -361,7 +361,7 @@ var AchievementData = {
     }
   },
   "white_hat": {
-    name: "Neckbeard",
+    name: "Crypto Bro",
     description: "Spend 10000 coins",
     hat: "white_fedora",
     test: function(match, cumulative) {
