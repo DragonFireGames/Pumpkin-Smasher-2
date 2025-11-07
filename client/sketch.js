@@ -185,7 +185,9 @@ statDis.updateStats = function(stats) {
         txt += "\n"+serialize(obj[i],depth+1);
         continue;
       }
-      txt += obj[i]+"\n";
+      var v = obj[i];
+      if (typeof v == "number") v = Math.round(v*1e3)/1e3;
+      txt += v+"\n";
     }
     return txt;
   };
