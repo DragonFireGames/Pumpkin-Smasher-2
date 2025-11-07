@@ -69,7 +69,8 @@ createSprite("brute", 8, 12, (frame, canvas, ctx, img) => {
   ctx.drawImage(img, frame * img.width, 0, img.width, img.height, 0, 0, canvas.width, canvas.height);
   ctx.drawImage(buffer, frame * img.width, 0, img.width, img.height, 0, 0, canvas.width, canvas.height);
 });
-createSprite("catapult", 4, 12);
+createSprite("mine", 2, 8);
+createSprite("catapult", 4, 4);
 createSprite("debuffer", 14, 12, (frame, canvas, ctx, img) => {
   frame += 11;
   frame %= 14;
@@ -80,5 +81,5 @@ createSprite("debuffer", 14, 12, (frame, canvas, ctx, img) => {
 createSprite("colorful", 7, 12);
 
 window.onkeydown = (e) => {
-  if (e.key == "Escape") window.top.postMessage('esc');//location.href = location.origin;
+  if (e.key == "Escape") window.top.postMessage(__cpPreparePostMessageData('esc'));//__cpLocation.href = __cpLocation.origin;
 }
