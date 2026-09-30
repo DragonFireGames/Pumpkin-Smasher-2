@@ -81,5 +81,5 @@ createSprite("debuffer", 14, 12, (frame, canvas, ctx, img) => {
 createSprite("colorful", 7, 12);
 
 window.onkeydown = (e) => {
-  if (e.key == "Escape") window.top.postMessage(__cpPreparePostMessageData('esc'));//__cpLocation.href = __cpLocation.origin;
+  if (e.key == "Escape") window.top.postMessage('esc');//location.href = __cpLocation.origin;
 }
