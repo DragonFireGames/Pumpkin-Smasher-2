@@ -1,0 +1,10 @@
+{
+  "serverType": "node",
+  "domain": "http://pumpkin-smasher-2.onrender.com/",
+  "path": "/",
+  "rootfolder": "/",
+  "runfile": "/index.html",
+  "nodeCommand": "node index.js",
+  "cwd": "/",
+  "autoClear": true
+}
