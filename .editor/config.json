@@ -1,6 +1,6 @@
 {
   "serverType": "node",
-  "domain": "http://pumpkin-smasher-2.onrender.com/",
+  "domain": "https://pumpkin-smasher-2.onrender.com/",
   "path": "/",
   "rootfolder": "/",
   "runfile": "/index.html",
