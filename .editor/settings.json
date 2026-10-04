@@ -3,6 +3,6 @@
   "autoClearTerminal": false,
   "confirmBeforeReplace": true,
   "confirmBeforeDelete": true,
-  "showHiddenFolders": false,
+  "showHiddenFolders": true,
   "hideBrowserBar": true
 }

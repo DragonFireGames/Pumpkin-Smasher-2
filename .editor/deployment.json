@@ -1,7 +1,7 @@
 {
   "mode": "editor",
   "url": "/",
-  "usePeerServer": false,
+  "usePeerServer": true,
   "branch": "main",
   "commit": "",
   "externalUrl": "",
