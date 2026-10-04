@@ -8,6 +8,7 @@
   "externalMode": "iframe",
   "hookUrl": "",
   "peerLayer": "rjqVdl",
+  "saveEnvironmentVariables": false,
   "repo": {
     "owner": "DragonFireGames",
     "name": "Pumpkin-Smasher-2"
