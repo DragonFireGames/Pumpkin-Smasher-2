@@ -1,14 +1,9 @@
 {
-  "mode": "editor",
-  "url": "/",
-  "usePeerServer": true,
-  "branch": "main",
-  "commit": "",
+  "thirdParty": false,
   "externalUrl": "",
-  "externalMode": "iframe",
-  "hookUrl": "",
-  "peerLayer": "rjqVdl",
-  "saveEnvironmentVariables": false,
+  "branch": "main",
+  "commit": "latest",
+  "path": "/",
   "repo": {
     "owner": "DragonFireGames",
     "name": "Pumpkin-Smasher-2"
