@@ -4,5 +4,6 @@
   "confirmBeforeReplace": true,
   "confirmBeforeDelete": true,
   "showHiddenFolders": true,
+  "ignoreNodeModules": false,
   "hideBrowserBar": true
 }
