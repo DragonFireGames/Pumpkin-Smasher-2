@@ -35,8 +35,8 @@ window.CodeOrgCompat = (() => {
   function dimensions(sprite) {
     const scale = sprite.scale === undefined ? 1 : sprite.scale;
     return {
-      width: Math.abs((sprite.width || 46) * scale),
-      height: Math.abs((sprite.height || 46) * scale)
+      width: Math.abs((sprite.width === undefined ? 46 : sprite.width) * scale),
+      height: Math.abs((sprite.height === undefined ? 46 : sprite.height) * scale)
     };
   }
 
@@ -48,17 +48,17 @@ window.CodeOrgCompat = (() => {
       Math.abs(a.y - b.y) * 2 < ad.height + bd.height;
   }
 
-  function drawImageSprite(sprite, image, options = {}) {
-    if (!sprite || sprite.visible === false || !image || !image.width || !image.height) return;
-    const size = dimensions(sprite);
-    const width = options.width === undefined ? image.width * size.height / image.height : options.width * (sprite.scale ?? 1);
-    const height = options.height === undefined ? size.height : options.height * (sprite.scale ?? 1);
+  function drawImageSprite(sprite, imageAsset, options = {}) {
+    if (!sprite || sprite.visible === false || !imageAsset || !imageAsset.width || !imageAsset.height) return;
+    const scaleFactor = sprite.scale === undefined ? 1 : sprite.scale;
+    const height = (options.height === undefined ? sprite.height || 46 : options.height) * scaleFactor;
+    const width = (options.width === undefined ? imageAsset.width * height / imageAsset.height : options.width * scaleFactor);
     push();
     translate(sprite.x, sprite.y);
     scale(sprite.mirrorX === -1 || sprite.facing === -1 ? -1 : 1, 1);
     if (sprite.rotation) rotate(sprite.rotation);
     imageMode(CENTER);
-    image(image, 0, 0, width, height);
+    image(imageAsset, 0, 0, width, height);
     pop();
   }
 
