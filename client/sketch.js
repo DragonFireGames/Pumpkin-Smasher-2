@@ -1045,7 +1045,11 @@ AbilityDisplay.fog = (function() {
       const fy = player.y - f.y + 270;
       fogGraphic.translate(fx, fy);
       fogGraphic.erase(128, 0);
-      for (var i = 0; i < (5 - f.thick); i++) {
+      const revealFog = !player.disabled &&
+        player.fogRevealUntil > Date.now() &&
+        prx == f.rx && pry == f.ry;
+      const displayThick = revealFog ? max(0, f.thick - 2) : f.thick;
+      for (var i = 0; i < (5 - displayThick); i++) {
         fogGraphic.circle(0, 0, 36 + 36 * i);
       }
       fogGraphic.noErase();
@@ -1690,16 +1694,19 @@ var player = {};
 // Upgrades
 var upgradeDisplay = false;
 var upgrades = {
+  axedamage: 0,
   speed: 0,
   axelength: 0,
   maxhealth: 0
 };
 const upgradeNames = {
+  axedamage: "Axe Damage",
   speed: "Speed",
   axelength: "Axe Reach",
   maxhealth: "Health"
 };
 const upgradeMaxes = {
+  axedamage: 4,
   speed: 4,
   axelength: 4,
   maxhealth: 4
@@ -3070,6 +3077,13 @@ var keybindContent = [
         id: "upgradespeed",
         usemodifier: true,
         value: "3"
+      },
+      {
+        type: "keybind",
+        name: "Upgrade Axe Damage: ",
+        id: "upgradeaxedamage",
+        usemodifier: true,
+        value: "4"
       },
     ]
   },
