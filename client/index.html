@@ -84,8 +84,10 @@
       <input type="button" id="enterBtn" class="menu" value="Enter" onclick="viewDis.clickEnter();">
     </div>
 
-    <div id="arcadeDis" cc>
-      <div id="arcadePanel" class="panel settings-panel" style="background: #0B2004CC;">
+    <div id="arcadeDis" onclick="if (event.target === this) closeArcade();">
+      <div id="arcadeWindow" role="dialog" aria-modal="true" aria-label="Arcade">
+        <button id="arcadeCloseBtn" type="button" onclick="closeArcade();" aria-label="Close arcade">×</button>
+        <iframe id="arcadeFrame" src="about:blank" title="Arcade game" allow="autoplay; fullscreen" loading="eager"></iframe>
       </div>
     </div>
     
