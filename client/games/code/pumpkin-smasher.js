@@ -204,7 +204,8 @@ function spawnPumpkin() {
       depth: 0,
       target: -1,
       visible: true,
-      animation: "growing_pumpkin",\n      smashFrame: 0
+      animation: "growing_pumpkin",
+      smashFrame: 0
     };
     pumpkins.push(pumpkin);
     if (pumpkin.jack) jacks.push(pumpkin);
