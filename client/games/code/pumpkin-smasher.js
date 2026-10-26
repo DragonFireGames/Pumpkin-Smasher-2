@@ -259,9 +259,12 @@ function drawTitleScreen() {
 }
 
 function drawEndScreen() {
-  const resultImage = win === 0 ? images.pumpkin : win >= 3 ? images.jackLantern : images.reveal;
-  // Code.org draws sprites before text, so the result sprite sits behind the title.
-  if (resultImage && resultImage.width) image(resultImage, 200, 100, resultImage.width * 3, resultImage.height * 3);
+  displaypumpkin.visible = true;
+  displaypumpkin.animation = win === 0 ? "pumpkin" : win >= 3 ? "jack_o_lantern" : "reveal";
+  const resultImage = displaypumpkin.animation === "pumpkin" ? images.pumpkin :
+    displaypumpkin.animation === "jack_o_lantern" ? images.jackLantern : images.reveal;
+  CodeOrgCompat.drawImageSprite(displaypumpkin, resultImage);
+
   textAlign(CENTER, CENTER);
   stroke("orange");
   strokeWeight(10);
@@ -274,18 +277,8 @@ function drawEndScreen() {
   noStroke();
   fill("white");
   textSize(15);
-  if (displays === 0) {
-    text("Press “U“ to Scroll", 200, 350);
-    text("Press “P“ to Play Again", 200, 370);
-    text("Your Score: " + player.score, 200, 230);
-    text("Your Smashed: " + player.smashed, 200, 250);
-  } else {
-    text("Your Results", 200, 220);
-    text("Score: " + player.score, 200, 250);
-    text("Smashed: " + player.smashed, 200, 270);
-    text("Press “U“ to Scroll", 200, 350);
-    text("Press “P“ to Play Again", 200, 370);
-  }
+  text("Press “U“ to Scroll", 200, 350);
+  text("Press “P“ to Play Again", 200, 370);
 }
 
 function updateActors() {
@@ -350,9 +343,8 @@ function pointAt(x, y, object) {
 
 function detect(actor) {
   for (const pumpkin of pumpkins.slice()) {
-    if (dist(actor.x, actor.y, pumpkin.x, pumpkin.y) < 28) {
-      // Player's original smash radius comes from sprite overlap; space is the
-      // action trigger. Enemies automatically smash on contact.
+    if (CodeOrgCompat.overlap(actor, pumpkin)) {
+      // Player's original smash action is key-triggered; enemies smash on contact.
       if (actor === player && !keyIsDown(32)) continue;
       pumpkinhit(pumpkin, actor);
       if (actor.enemy) actor.attracted = false;
@@ -387,39 +379,32 @@ function drawWorldBoundary() {
 
 function drawPumpkin(pumpkin) {
   if (!pumpkin.visible) return;
-  push();
-  translate(pumpkin.x, pumpkin.y);
-  scale(pumpkin.scale);
   let img = images.pumpkin;
   if (pumpkin.animation === "growing_pumpkin") img = images.growingPumpkin;
   else if (pumpkin.animation === "reveal") img = images.reveal;
   else if (pumpkin.animation === "jack_o_lantern") img = images.jackLantern;
-  // Code.org's sprite animations use a fixed 46-unit sprite height here;
-  // growth changes only the scale, not the source image's aspect ratio.
-  if (img && img.width && img.height) image(img, 0, 0, img.width * (46 / img.height), 46);
-
-  pop();
+  CodeOrgCompat.drawImageSprite(pumpkin, img, { height: 46 });
 }
 
 function drawSkeleton(actor) {
   if (!actor.visible) return;
   const img = actor.animation === "enemy2" ? images.enemy2 : actor.enemy ? images.enemy1 : images.skeleton;
-  if (img && img.width && img.height) {
-    const spriteHeight = 46;
-    const spriteWidth = img.width * spriteHeight / img.height;
-    const axeHeight = 46.5; // Base game's FitImage.show(0, 62 * 0.75)
-    const axeWidth = images.axe && images.axe.width && images.axe.height
-      ? images.axe.width * axeHeight / images.axe.height : 0;
-    push();
-    translate(actor.x, actor.y);
-    scale(actor.facing, 1);
-    // Match the main game's render order and centering: axe first, skeleton over it.
-    if (images.axe && images.axe.width && images.axe.height) {
-      image(images.axe, (spriteWidth - axeWidth) / 2, 0, axeWidth, axeHeight);
-    }
-    image(img, 0, 0, spriteWidth, spriteHeight);
-    pop();
+  if (!img || !img.width || !img.height) return;
+
+  const spriteWidth = img.width * (46 / img.height);
+  const axeHeight = 46.5;
+  const axeWidth = images.axe && images.axe.width && images.axe.height
+    ? images.axe.width * axeHeight / images.axe.height : 0;
+
+  push();
+  translate(actor.x, actor.y);
+  scale(actor.facing, 1);
+  if (images.axe && images.axe.width && images.axe.height) {
+    image(images.axe, (spriteWidth - axeWidth) / 2, 0, axeWidth, axeHeight);
   }
+  // Shared Sprite Lab helper handles sprite centering, scale and mirroring.
+  CodeOrgCompat.drawImageSprite({ ...actor, x: 0, y: 0, facing: 1 }, img, { height: 46 });
+  pop();
 }
 
 function drawEffect(effect) {
@@ -440,4 +425,3 @@ function drawEffect(effect) {
     image(img, effect.x, effect.y - rise, img.width * (28 / img.height), 28);
   }
 }
-
