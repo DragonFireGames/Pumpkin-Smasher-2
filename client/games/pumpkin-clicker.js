@@ -28,7 +28,7 @@
   ];
   let state, p, images={}, gridBox=null, selected={x:0,y:0}, buildMode="green", lastTick=0, lastSave=0, lastRusher=0, noticeText="", noticeUntil=0, dailyBoostUntil=0, clickPulse=0, autoSell=false, evolveCandidate=null, tileRects=[], resizeObserver;
   const emptyTile=()=>({type:"empty"});
-  function freshState(){return {cash:35,pumpkins:0,lifetimePumpkins:0,totalSold:0,size:START_SIZE,tiles:Array(START_SIZE*START_SIZE).fill(null).map(emptyTile),workers:{},upgrades:{},prestige:0,prestigeBonus:0,autoSell:false,lastSeen:Date.now(),lastDaily:0,boostUntil:0,boostType:"",lastRusher:Date.now(),clicks:0};}
+  function freshState(){return {cash:250,pumpkins:0,lifetimePumpkins:0,totalSold:0,size:START_SIZE,tiles:Array(START_SIZE*START_SIZE).fill(null).map(emptyTile),workers:{},upgrades:{},prestige:0,prestigeBonus:0,autoSell:false,lastSeen:Date.now(),lastDaily:0,boostUntil:0,boostType:"",lastRusher:Date.now(),clicks:0};}
   function loadState(){
     try{
       const raw=localStorage.getItem(SAVE_KEY); if(!raw)return freshState();
@@ -91,6 +91,7 @@
   function buyStructure(type){const count=countType(type);const cost=Math.floor((type==="shield"?90:140)*Math.pow(1.28,count));if(state.cash<cost){setNotice("Not enough cash.");return;}state.cash-=cost;buildMode=type;setNotice((type==="shield"?"Shield":"Vault")+" selected. Click an empty tile to place it.");updateUI();}
   function placeAt(x,y){
     if(x<0||y<0||x>=state.size||y>=state.size)return;const i=y*state.size+x,t=state.tiles[i];
+    if(t.type==="occupied"){const anchor=t.anchor;selected={x:anchor%state.size,y:Math.floor(anchor/state.size)};setNotice("That tile belongs to a mega-generator. Select its top-left tile to inspect it.");updateUI();return;}
     if(t.type!=="empty"){
       selected={x,y};if(t.type==="generator"||t.type==="mega"){buildMode="inspect";setNotice((t.type==="mega"?"Mega-generator":"Generator")+" selected. Production: "+fmt(t.type==="mega"?t.rate:generatorBaseRate(t))+"/sec.");}
       else if(t.type==="vault")setNotice("Vault: +"+fmt(t.capacity||250)+" pumpkin storage. Collects from generators touching its orthogonal edges.");
@@ -123,7 +124,7 @@
     if(!candidate){setNotice("Select the top-left tile of a 2×2 square of four same-tier generators.");return;}
     const rate=candidate.tiles.reduce((a,t)=>a+generatorBaseRate(t),0)*1.35;
     state.tiles[candidate.ids[0]]={type:"mega",tier:candidate.tier,size:2,rate,level:1};
-    for(const id of candidate.ids.slice(1))state.tiles[id]=emptyTile();
+    for(const id of candidate.ids.slice(1))state.tiles[id]={type:"occupied",anchor:candidate.ids[0]};
     selected={x,y};setNotice("Mega-generator evolved! It occupies a 2×2 footprint and produces "+fmt(rate)+"/sec.");updateUI();save();
   }
   function expandFarm(){const old=state.size;if(old>=12){setNotice("Farm has reached its maximum size.");return false;}const next=old+1,tiles=Array(next*next).fill(null).map(emptyTile);for(let y=0;y<old;y++)for(let x=0;x<old;x++)tiles[y*next+x]=state.tiles[y*old+x];state.size=next;state.tiles=tiles;return true;}
@@ -187,13 +188,12 @@
         for(let y=0;y<state.size;y++)for(let x=0;x<state.size;x++){
           const xx=ox+x*cell,yy=oy+y*cell,i=y*state.size+x,t=state.tiles[i];tileRects.push({x:xx,y:yy,w:cell,h:cell,gx:x,gy:y});
           s.fill((x+y)%2?"#496c3e":"#527746");s.stroke("#1b2c20");s.strokeWeight(2);s.rect(xx+1,yy+1,cell-2,cell-2,5);
-          if(t.type==="generator"||t.type==="mega"){
-            const span=t.type==="mega"?Math.min(2,state.size-x,state.size-y):1;
-            if(t.type==="mega"){s.fill("#b77c2e");s.stroke("#f3ca65");s.strokeWeight(3);s.rect(xx+4,yy+4,cell*span-8,cell*span-8,12);}
-            const sprite=images[t.tier]||images.green,sz=cell*(t.type==="mega"?.75:.64);
-            if(sprite&&sprite.width){s.imageMode(s.CENTER);s.image(sprite,xx+cell*span/2,yy+cell*span/2,sz*span,sz*span);}
-            else drawPumpkin(s,xx+cell*span/2,yy+cell*span/2,sz*span,t.tier);
-            if(t.type==="mega"){s.noStroke();s.fill("#fff0bd");s.textAlign(s.CENTER,s.CENTER);s.textStyle(s.BOLD);s.text("MEGA",xx+cell,yy+cell*2-10);s.textStyle(s.NORMAL);}
+          if(t.type==="generator"){
+            const sprite=images[t.tier]||images.green,sz=cell*.64;
+            if(sprite&&sprite.width){s.imageMode(s.CENTER);s.image(sprite,xx+cell/2,yy+cell/2,sz,sz);}
+            else drawPumpkin(s,xx+cell/2,yy+cell/2,sz,t.tier);
+          }else if(t.type==="mega"){
+            // Drawn again after the tile pass so later tile backgrounds never cover its footprint.
           }else if(t.type==="shield"){
             if(images.shield&&images.shield.width){s.imageMode(s.CENTER);s.image(images.shield,xx+cell/2,yy+cell/2,cell*.65,cell*.65);}else{ s.fill("#7d76bd");s.stroke("#d6caff");s.strokeWeight(2);s.beginShape();s.vertex(xx+cell/2,yy+cell*.16);s.vertex(xx+cell*.78,yy+cell*.3);s.vertex(xx+cell*.72,yy+cell*.65);s.vertex(xx+cell/2,yy+cell*.84);s.vertex(xx+cell*.28,yy+cell*.65);s.vertex(xx+cell*.22,yy+cell*.3);s.endShape(s.CLOSE);}
           }else if(t.type==="vault"){
@@ -201,6 +201,8 @@
           }
           if(selected.x===x&&selected.y===y){s.noFill();s.stroke("#fff1a8");s.strokeWeight(3);s.rect(xx+3,yy+3,cell-6,cell-6,5);}
         }
+        // Mega-generators are drawn last across their full 2×2 footprint.
+        state.tiles.forEach((t,i)=>{if(t.type!=="mega")return;const x=i%state.size,y=Math.floor(i/state.size),xx=ox+x*cell,yy=oy+y*cell,span=Math.min(2,state.size-x,state.size-y);s.fill("#b77c2e");s.stroke("#f3ca65");s.strokeWeight(3);s.rect(xx+4,yy+4,cell*span-8,cell*span-8,12);const sprite=images[t.tier]||images.green,sz=cell*.75;if(sprite&&sprite.width){s.imageMode(s.CENTER);s.image(sprite,xx+cell,yy+cell,sz*span,sz*span);}else drawPumpkin(s,xx+cell,yy+cell,sz*span,t.tier);s.noStroke();s.fill("#fff0bd");s.textAlign(s.CENTER,s.CENTER);s.textStyle(s.BOLD);s.text("MEGA",xx+cell,yy+cell*2-10);s.textStyle(s.NORMAL);});
         // Objective pumpkin, drawn as a clickable banner beneath/above the farm grid.
         s.noStroke();s.fill("#17251b");s.rect(8,8,Math.min(w-16,240),32,8);s.fill("#f7e9c3");s.textSize(12);s.textAlign(s.LEFT,s.CENTER);s.text("OBJECTIVE  •  click to harvest",18,24);
         if(Date.now()<clickPulse){s.fill("#ffdc69");s.textAlign(s.CENTER,s.CENTER);s.textSize(18);s.text("+ "+(1+Number(state.upgrades.click||0))+" 🎃",w/2, h-16);}
