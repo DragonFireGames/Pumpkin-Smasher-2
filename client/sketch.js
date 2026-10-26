@@ -1493,7 +1493,7 @@ async function loadAssets() {
 
   // Lobby Image
   textures.lobby = LoadImage("assets/misc/lobby.png");
-  textures.arcade = FitImage("assets/misc/arcade.png");
+  textures.arcade = new FitImage("assets/misc/arcade.png");
 
   var SkeletonImg = function(url,dx,dy,) {
     var img = new FitImage(url);
@@ -2292,6 +2292,17 @@ var currentTip;
 Displays.lobby = function() {
   translate(-player.x, -player.y);
   image(textures.lobby, -495, -500, 1000, 1000);
+
+  push();
+  var arcadeX = 100, arcadeY = -100;
+  translate(arcadeX, arcadeY);
+  textures.arcade.show(0, 56);
+  if ((player.x-arcadeX)**2+(player.y-arcadeY)**2 < 1600) {
+    format("#ffa500", false, 0, 12, CENTER, BOTTOM);
+    text("Press "+Keybinds.getKeybind("openArcade")+" to open Arcade", 0, -30);
+  }
+  pop();
+
   for (var i in players) {
     var p = players[i];
     if (!p) continue;
@@ -3170,6 +3181,12 @@ var keybindContent = [
       },
       {
         type: "keybind",
+        name: "Open Arcade: ",
+        id: "openArcade",
+        value: "E"
+      },
+      {
+        type: "keybind",
         name: "Decrease Start Count: ",
         id: "decreaseStartCount",
         usemodifier: true,
@@ -3642,10 +3659,15 @@ const Keybinds = (() => {
     keyMap[id] = newValue;
   }
 
+  function getKeybind(id) {
+    return keyMap[id]?.value;
+  }
+
   return {
     loadKeybinds,
     onpress,
     setKeybind,
+    getKeybind,
     test,
     keyPressed,
     keyReleased,
