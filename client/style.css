@@ -396,6 +396,7 @@ canvas {
   gap: 1.2vmin;
   width: min(92vw, 100vmin);
   max-height: 94vh;
+  max-height: 94dvh;
   overflow-y: auto;
   background: #0C2504;
   border: 0.8vmin solid #303030;
@@ -417,10 +418,15 @@ canvas {
 }
 #arcadeFrame {
   display: block;
-  width: min(100%, 78vmin);
+  /* Keep the square game viewport small enough to leave room for the controls. */
+  width: min(100%, 78vmin, calc(94vh - 190px));
+  width: min(100%, 78vmin, calc(94dvh - 190px));
+  max-height: calc(94vh - 190px);
+  max-height: calc(94dvh - 190px);
   aspect-ratio: 1 / 1;
   height: auto;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  min-height: 0;
   border: 0.4vmin solid #303030;
   background: #0C2504;
   box-sizing: border-box;
