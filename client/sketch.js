@@ -2623,7 +2623,7 @@ Displays.loading = function() {
 // Arcade games are configured here; each source can be a relative path or URL.
 var GameList = [
   {
-    name: "Pumpkin Smasher",
+    name: "Pumpkin Smasher (The Original)",
     source: "/game/pumpkin-smasher"
   }
 ];
