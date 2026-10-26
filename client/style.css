@@ -387,8 +387,9 @@ canvas {
   visibility: visible;
 }
 #arcadeDis.open {
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
 }
 #arcadeWindow {
   position: relative;
@@ -400,7 +401,7 @@ canvas {
   width: min(92vw, 100vmin);
   max-height: calc(100vh - 24px);
   max-height: calc(100dvh - 24px);
-  margin: auto;
+  margin: 0 auto;
   max-width: 100%;
   overflow-y: auto;
   background: #0C2504;
