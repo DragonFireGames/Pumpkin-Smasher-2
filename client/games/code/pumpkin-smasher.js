@@ -256,6 +256,9 @@ function drawTitleScreen() {
 }
 
 function drawEndScreen() {
+  const resultImage = win === 0 ? images.pumpkin : win >= 3 ? null : images.reveal;
+  // Code.org draws sprites before text, so the result sprite sits behind the title.
+  if (resultImage && resultImage.width) image(resultImage, 200, 100, resultImage.width * 3, resultImage.height * 3);
   textAlign(CENTER, CENTER);
   stroke("orange");
   strokeWeight(10);
@@ -280,8 +283,6 @@ function drawEndScreen() {
     text("Press “U“ to Scroll", 200, 350);
     text("Press “P“ to Play Again", 200, 370);
   }
-  const resultImage = win === 0 ? images.pumpkin : win >= 3 ? null : images.reveal;
-  if (resultImage && resultImage.width) image(resultImage, 200, 100, resultImage.width * 3, resultImage.height * 3);
 }
 
 function updateActors() {
@@ -417,17 +418,17 @@ function drawHUD() {
   noStroke();
   textSize(20);
   textAlign(CENTER, CENTER);
-  text((seconds < 10 ? minutes + ":0" + seconds : minutes + ":" + seconds), player.x, player.y - 175);
+  text((seconds < 10 ? minutes + ":0" + seconds : minutes + ":" + seconds), 200, 25);
   textAlign(LEFT, CENTER);
   textSize(15);
-  text("Your Score: " + player.score, player.x - 185, player.y - 175);
+  text("Your Score: " + player.score, 15, 25);
   textAlign(RIGHT, CENTER);
-  text("Your Smashed: " + player.smashed, player.x + 185, player.y - 175);
+  text("Your Smashed: " + player.smashed, 385, 25);
   for (let i = 0; i < enemies.length; i++) {
     textAlign(LEFT, CENTER);
-    text("Enemy Score: " + enemies[i].score, player.x - 185, player.y - (175 - (i * 15 + 15)));
+    text("Enemy Score: " + enemies[i].score, 15, 25 + (i + 1) * 15);
     textAlign(RIGHT, CENTER);
-    text("Enemy Smashed: " + enemies[i].smashed, player.x + 185, player.y - (175 - (i * 15 + 15)));
+    text("Enemy Smashed: " + enemies[i].smashed, 385, 25 + (i + 1) * 15);
   }
 }
 
