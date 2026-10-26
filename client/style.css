@@ -380,8 +380,9 @@ canvas {
   display: none;
   align-items: center;
   justify-content: center;
-  padding: 3vmin;
+  padding: 12px;
   box-sizing: border-box;
+  overflow-y: auto;
   background: #000000B8;
   visibility: visible;
 }
@@ -395,8 +396,9 @@ canvas {
   align-items: center;
   gap: 1.2vmin;
   width: min(92vw, 100vmin);
-  max-height: 94vh;
-  max-height: 94dvh;
+  max-height: calc(100vh - 24px);
+  max-height: calc(100dvh - 24px);
+  margin-block: auto;
   overflow-y: auto;
   background: #0C2504;
   border: 0.8vmin solid #303030;
