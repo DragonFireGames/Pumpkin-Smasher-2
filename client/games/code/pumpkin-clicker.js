@@ -47,6 +47,13 @@ function pcLoad(){
   pcState.farmCols=Math.max(6,+pcState.farmCols||6);pcState.farmRows=Math.max(4,+pcState.farmRows||4);
   pcState.farm=pcState.farm.slice(0,pcState.farmRows);while(pcState.farm.length<pcState.farmRows)pcState.farm.push([]);
   pcState.farm.forEach(r=>{while(r.length<pcState.farmCols)r.push(null);r.length=pcState.farmCols;});
+  // JSON duplicates repeated mega references; reconnect each 2x2 footprint after loading.
+  for(let r=0;r<pcState.farmRows;r++)for(let c=0;c<pcState.farmCols;c++){
+   const m=pcState.farm[r][c];
+   if(m&&m.kind==="generator"&&m.mega&&m.row===r&&m.col===c&&r+1<pcState.farmRows&&c+1<pcState.farmCols){
+    pcState.farm[r][c]=m;pcState.farm[r][c+1]=m;pcState.farm[r+1][c]=m;pcState.farm[r+1][c+1]=m;
+   }
+  }
  }else{pcState=pcFresh();pcState.farm=Array.from({length:4},()=>Array(6).fill(null));}
  pcState.cash=Math.max(0,+pcState.cash||0);pcState.pumpkins=Math.max(0,+pcState.pumpkins||0);pcState.progress=Math.max(0,+pcState.progress||0);
  try{pcClaimed=localStorage.getItem(PC_DAILY)===pcToday();}catch(e){pcClaimed=false;}
@@ -175,18 +182,27 @@ function pcSprite(id,x,y,s,frames){const img=pcImgs[id];if(img?.width)pcSheet(im
 function pcTile(r,c){
  let o=pcState.farm[r]&&pcState.farm[r][c];
  if(!pcSelected){
-  if(o?.kind==="generator"){
-   if(o.mega){for(let y=o.row;y<o.row+2;y++)for(let x=o.col;x<o.col+2;x++)pcState.farm[y][x]=null;}
-   const cost=Math.ceil(PC_GENS[o.tier].cost*.6);if(pcState.cash<cost){pcSay("Not enough cash to upgrade");return;}
+  if(o&&o.kind==="generator"){
+   const cost=Math.ceil(PC_GENS[o.tier].cost*.6);
+   if(pcState.cash<cost){pcSay("Not enough cash to upgrade");return;}
    if(o.tier>=3){pcSay("Diamond pumpkins are max tier");return;}
-   pcState.cash-=cost;pcState.farm[r][c]={kind:"generator",tier:o.tier+1,row:r,col:c,mega:false};pcMerge();pcSay("Generator upgraded");pcSave();
-  }else pcSay(o?.kind==="vault"?"Vaults increase storage":"Choose a building from BUILD first");
+   if(o.mega){for(let y=o.row;y<o.row+2;y++)for(let x=o.col;x<o.col+2;x++)pcState.farm[y][x]=null;}
+   pcState.cash-=cost;
+   pcState.farm[r][c]={kind:"generator",tier:o.tier+1,row:r,col:c,mega:false};
+   pcMerge();pcSay("Generator upgraded");pcSave();
+  }else pcSay(o&&o.kind==="vault"?"Vaults increase storage":"Choose a building from BUILD first");
   return;
  }
- const b=PC_BUILDS.find(v=>v.id===pcSelected);if(!b)return;if(o){pcSay("That tile is occupied");return;}if(pcState.cash<b.cost){pcSay("Not enough cash");return;}
- if(b.kind==="upgrade"){pcToggleAuto();return;}pcState.cash-=b.cost;
- const obj=b.kind==="generator"?{kind:"generator",tier:b.tier,row:r,col:c,mega:false}:{kind:b.kind,row:r,col:c};pcState.farm[r][c]=obj;
- if(obj.kind==="generator")pcMerge();pcSelected=null;pcSay(b.name+" placed");pcSave();
+ const b=PC_BUILDS.find(v=>v.id===pcSelected);
+ if(!b)return;
+ if(o){pcSay("That tile is occupied");return;}
+ if(pcState.cash<b.cost){pcSay("Not enough cash");return;}
+ if(b.kind==="upgrade"){pcToggleAuto();return;}
+ pcState.cash-=b.cost;
+ const obj=b.kind==="generator"?{kind:"generator",tier:b.tier,row:r,col:c,mega:false}:{kind:b.kind,row:r,col:c};
+ pcState.farm[r][c]=obj;
+ if(obj.kind==="generator")pcMerge();
+ pcSelected=null;pcSay(b.name+" placed");pcSave();
 }
 function pcMerge(){
  for(let r=0;r<pcState.farmRows-1;r++)for(let c=0;c<pcState.farmCols-1;c++){
