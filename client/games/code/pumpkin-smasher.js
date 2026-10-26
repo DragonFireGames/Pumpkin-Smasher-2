@@ -1,322 +1,271 @@
-/* Pumpkin Smasher 1: Code.org Sprite Lab port for the Pumpkin Smasher 2 arcade. */
-export function createGame() {
-  const WORLD_W = 1200;
-  const WORLD_H = 800;
-  const GAME_SECONDS = 121;
-  const REVEAL_FRAMES = 180;
-  const PLAYER_SPEED = 300;
-  const ENEMY_SPEED = 450;
-  const PUMPKIN_COUNT = 180;
-  const ENEMY_COUNT = 5;
+/* Pumpkin Smasher 1 — p5.js global mode port.
+   This file is loaded as a classic script inside the game's iframe.
+   It deliberately defines global setup()/draw() instead of exporting a module. */
 
-  let pumpkinImage;
-  let skeletonImage;
-  let music = [];
-  let musicIndex = -1;
-  let musicStarted = false;
-  let player;
-  let enemies = [];
-  let pumpkins = [];
-  let effects = [];
-  let state = "title";
-  let elapsed = 0;
-  let remaining = GAME_SECONDS;
-  let spawnClock = 0;
-  let totalSpawned = 0;
-  let lastFrame = 0;
-  let winnerPlace = 0;
+const WORLD_W = 1200, WORLD_H = 800;
+const GAME_SECONDS = 121, REVEAL_FRAMES = 180;
+const ENEMY_COUNT = 5, PUMPKIN_TARGET = 180;
+let pumpkinImage, skeletonImage, enemySkeletonImage, jackImage, revealImage, smashImage, score100Image, score500Image;
+let musicTracks = [], musicIndex = -1, musicActive = false;
+let gameState = "title", player, enemies = [], pumpkins = [], effects = [];
+let elapsed = 0, remaining = GAME_SECONDS, spawnCountdown = 0, totalSpawned = 0, lastFrameTime = 0, winnerPlace = 0;
+let resultPage = 0, debugMode = false;
 
-  function resetRound(p) {
-    player = makeSkeleton(0, 0, false);
-    enemies = [];
-    pumpkins = [];
-    effects = [];
-    elapsed = 0;
-    remaining = GAME_SECONDS;
-    spawnClock = 0;
-    totalSpawned = 0;
-    winnerPlace = 0;
-    for (let i = 0; i < ENEMY_COUNT; i++) {
-      enemies.push(makeSkeleton(p.random(-45, 45), p.random(-45, 45), true));
-    }
-    for (let i = 0; i < 30; i++) spawnPumpkin(p);
-    state = "playing";
-    startMusic();
-  }
+function setup() {
+  const side = Math.max(1, Math.floor(Math.min(windowWidth, windowHeight)));
+  createCanvas(side, side);
+  pixelDensity(1);
+  frameRate(60);
+  imageMode(CENTER);
+  pumpkinImage = loadImage("/assets/pumpkins/pumpkin.png", undefined, () => pumpkinImage = null);
+  skeletonImage = loadImage("/assets/skeleton/1.png", undefined, () => skeletonImage = null);
+  enemySkeletonImage = loadImage("/assets/skeleton/2.png", undefined, () => enemySkeletonImage = null);
+  jackImage = loadImage("/assets/pumpkins/jack_o_lantern.png", undefined, () => jackImage = null);
+  revealImage = loadImage("/assets/pumpkins/reveal.png", undefined, () => revealImage = null);
+  smashImage = loadImage("/assets/pumpkins/pumpkin_smash.png", undefined, () => smashImage = null);
+  score100Image = loadImage("/assets/pumpkins/100_score.png", undefined, () => score100Image = null);
+  score500Image = loadImage("/assets/pumpkins/500_score.png", undefined, () => score500Image = null);
+  musicTracks = ["background.mp3", "background1.mp3", "background2.mp3"].map(file => {
+    const audio = new Audio("/assets/music/" + file);
+    audio.volume = 0.22;
+    audio.addEventListener("ended", playNextTrack);
+    return audio;
+  });
+  player = makeActor(0, 0, false);
+  lastFrameTime = millis();
+}
 
-  function makeSkeleton(x, y, enemy) {
-    return { x, y, score: 0, smashed: 0, enemy, target: null, face: 1 };
-  }
+function windowResized() {
+  const side = Math.max(1, Math.floor(Math.min(windowWidth, windowHeight)));
+  resizeCanvas(side, side);
+}
 
-  function spawnPumpkin(p) {
-    if (totalSpawned >= PUMPKIN_COUNT) return;
-    pumpkins.push({
-      x: p.random(-WORLD_W / 2 + 45, WORLD_W / 2 - 45),
-      y: p.random(-WORLD_H / 2 + 45, WORLD_H / 2 - 45),
-      jack: p.random() < 0.2,
+function makeActor(x, y, enemy) {
+  return { x, y, score: 0, smashed: 0, enemy, target: -1, facing: 1, angle: 0, imageIndex: random([1, 2]) };
+}
+
+function resetRound() {
+  stopMusic();
+  player = makeActor(0, 0, false);
+  enemies = [];
+  pumpkins = [];
+  effects = [];
+  elapsed = 0;
+  remaining = GAME_SECONDS;
+  spawnCountdown = 0;
+  totalSpawned = 0;
+  winnerPlace = 0;
+  resultPage = 0;
+  for (let i = 0; i < ENEMY_COUNT; i++) enemies.push(makeActor(random(-45, 45), random(-45, 45), true));
+  // Code.org version begins with the field filled by growing pumpkins.
+  spawnPumpkinBatch(PUMPKIN_TARGET);
+  gameState = "playing";
+  startMusic();
+}
+
+function spawnPumpkinBatch(count) {
+  for (let i = 0; i < count && totalSpawned < PUMPKIN_TARGET; i++) {
+    const pumpkin = {
+      x: randomNumber(-WORLD_W / 2, WORLD_W / 2, 50),
+      y: randomNumber(-WORLD_H / 2, WORLD_H / 2, 50),
+      jack: randomNumber(1, 5) === 1,
       age: 0,
       scale: 0.1,
-      target: null
-    });
+      target: -1
+    };
+    pumpkins.push(pumpkin);
     totalSpawned++;
   }
+}
 
-  function startMusic() {
-    if (musicStarted || !music.length) return;
-    musicStarted = true;
-    playNextTrack();
+function randomNumber(min, max, step) {
+  const value = Math.floor(random(min, max + 1));
+  return step ? Math.round(value / step) * step : value;
+}
+
+function startMusic() {
+  if (musicActive || !musicTracks.length) return;
+  musicActive = true;
+  playNextTrack();
+}
+function playNextTrack() {
+  if (!musicActive || !musicTracks.length) return;
+  musicIndex = (musicIndex + 1) % musicTracks.length;
+  const audio = musicTracks[musicIndex];
+  audio.currentTime = 0;
+  audio.play().catch(() => {});
+}
+function stopMusic() {
+  musicActive = false;
+  musicTracks.forEach(audio => { audio.pause(); audio.currentTime = 0; });
+}
+
+function smash(actor, pumpkin) {
+  const points = pumpkin.jack ? 500 : 100;
+  actor.score += points;
+  actor.smashed++;
+  effects.push({ x: pumpkin.x, y: pumpkin.y, points, jack: pumpkin.jack, age: 0, life: 20 });
+  pumpkins.splice(pumpkins.indexOf(pumpkin), 1);
+  enemies.forEach(enemy => { if (enemy.target === pumpkin) enemy.target = -1; });
+}
+
+function draw() {
+  const now = millis();
+  const dt = Math.min(0.05, Math.max(0, (now - lastFrameTime) / 1000));
+  lastFrameTime = now;
+  background("#123904");
+
+  if (keyWentDown("b") || (keyIsDown(66) && !debugMode)) {
+    debugMode = !debugMode;
   }
 
-  function playNextTrack() {
-    if (!music.length || !musicStarted) return;
-    musicIndex = (musicIndex + 1) % music.length;
-    const track = music[musicIndex];
-    track.onended = playNextTrack;
-    track.play().catch(() => {});
+  if (gameState === "title") {
+    drawOverlay("Pumpkin Smasher", "Press ENTER or SPACE to start", "F for the full version");
+    return;
   }
 
-  function stopMusic() {
-    musicStarted = false;
-    music.forEach(track => {
-      track.pause();
-      track.currentTime = 0;
-    });
-  }
-
-  function smash(skeleton, pumpkin) {
-    const points = pumpkin.jack ? 500 : 100;
-    skeleton.score += points;
-    skeleton.smashed++;
-    effects.push({ x: pumpkin.x, y: pumpkin.y, text: "+" + points, age: 0, life: 0.8, color: pumpkin.jack ? "#ffa500" : "#ffffff" });
-    pumpkins.splice(pumpkins.indexOf(pumpkin), 1);
-    enemies.forEach(enemy => {
-      if (enemy.target === pumpkin) enemy.target = null;
-    });
-  }
-
-  function moveToward(actor, target, speed, dt) {
-    const dx = target.x - actor.x;
-    const dy = target.y - actor.y;
-    const dist = Math.hypot(dx, dy);
-    if (dist < 0.001) return;
-    const step = Math.min(dist, speed * dt);
-    actor.x += dx / dist * step;
-    actor.y += dy / dist * step;
-    if (dx !== 0) actor.face = dx < 0 ? -1 : 1;
-  }
-
-  function updateGame(p, dt) {
-    elapsed += dt;
-    remaining = Math.max(0, GAME_SECONDS - Math.floor(elapsed));
-    spawnClock += dt;
-    if (spawnClock >= 2 && totalSpawned < PUMPKIN_COUNT) {
-      spawnClock = 0;
-      for (let i = 0; i < 4 && totalSpawned < PUMPKIN_COUNT; i++) spawnPumpkin(p);
+  if (gameState === "playing") {
+    updateRound(dt);
+    push();
+    const s = Math.min(width / WORLD_W, height / WORLD_H);
+    translate(width / 2, height / 2);
+    scale(s);
+    translate(-player.x, -player.y);
+    noFill(); stroke("#050805"); strokeWeight(20); rectMode(CENTER); rect(0, 0, WORLD_W, WORLD_H); rectMode(CORNER);
+    pumpkins.forEach(drawPumpkin);
+    enemies.forEach(drawSkeleton);
+    drawSkeleton(player);
+    effects.forEach(drawEffect);
+    if (debugMode) {
+      noFill(); stroke("#ff00ff"); strokeWeight(2);
+      pumpkins.forEach(q => ellipse(q.x, q.y, 55, 55));
+      enemies.concat([player]).forEach(a => rect(a.x - 20, a.y - 27, 40, 54));
     }
-    pumpkins.forEach(pumpkin => {
-      pumpkin.age += dt * 60;
-      pumpkin.scale = Math.min(1, pumpkin.scale + dt * 0.6);
-    });
+    pop();
+    drawHUD();
+    return;
+  }
 
-    const down = p.keyIsDown;
-    const dx = (down(p.RIGHT_ARROW) || down(68) ? 1 : 0) - (down(p.LEFT_ARROW) || down(65) ? 1 : 0);
-    const dy = (down(p.DOWN_ARROW) || down(83) ? 1 : 0) - (down(p.UP_ARROW) || down(87) ? 1 : 0);
-    const length = Math.hypot(dx, dy) || 1;
-    player.x = p.constrain(player.x + dx / length * PLAYER_SPEED * dt, -WORLD_W / 2 + 20, WORLD_W / 2 - 20);
-    player.y = p.constrain(player.y + dy / length * PLAYER_SPEED * dt, -WORLD_H / 2 + 20, WORLD_H / 2 - 20);
-    if (dx) player.face = dx < 0 ? -1 : 1;
+  if (gameState === "ended") {
+    push();
+    const s = Math.min(width / WORLD_W, height / WORLD_H);
+    translate(width / 2, height / 2); scale(s); translate(-player.x, -player.y);
+    noFill(); stroke("#050805"); strokeWeight(20); rectMode(CENTER); rect(0, 0, WORLD_W, WORLD_H); rectMode(CORNER);
+    pumpkins.forEach(drawPumpkin); enemies.forEach(drawSkeleton); drawSkeleton(player);
+    pop();
+    if (winnerPlace === 1) drawOverlay("You Won!", "Your Score: " + player.score, "Press U to scroll • P to play again");
+    else if (winnerPlace === 2) drawOverlay("2nd Place!!", "Your Score: " + player.score, "Press U to scroll • P to play again");
+    else if (winnerPlace === 3) drawOverlay("3rd Place!!", "Your Score: " + player.score, "Press U to scroll • P to play again");
+    else drawOverlay("You Lost", "Your Score: " + player.score, "Press U to scroll • P to play again");
+    if (resultPage === 1) drawOverlay("Your Results", "Smashed: " + player.smashed + " • Score: " + player.score, "Press U to return • P to play again");
+  }
+}
 
-    if (down(32)) {
-      for (const pumpkin of [...pumpkins]) {
-        if (Math.hypot(pumpkin.x - player.x, pumpkin.y - player.y) < 55) smash(player, pumpkin);
-      }
-    }
+function updateRound(dt) {
+  elapsed += dt;
+  remaining = Math.max(0, GAME_SECONDS - Math.floor(elapsed));
+  spawnCountdown += dt;
+  if (spawnCountdown >= random(1, 10) && totalSpawned < PUMPKIN_TARGET) {
+    spawnCountdown = 0;
+    spawnPumpkinBatch(PUMPKIN_TARGET - totalSpawned);
+  }
 
-    enemies.forEach(enemy => {
+  pumpkins.forEach(q => {
+    q.age += dt * 60;
+    q.scale = Math.min(1, q.scale + random(0, 0.025));
+  });
+
+  const right = keyIsDown(RIGHT_ARROW) || keyIsDown(68);
+  const left = keyIsDown(LEFT_ARROW) || keyIsDown(65);
+  const down = keyIsDown(DOWN_ARROW) || keyIsDown(83);
+  const up = keyIsDown(UP_ARROW) || keyIsDown(87);
+  const dx = (right ? 1 : 0) - (left ? 1 : 0);
+  const dy = (down ? 1 : 0) - (up ? 1 : 0);
+  const len = Math.hypot(dx, dy) || 1;
+  player.x = constrain(player.x + dx / len * 300 * dt, -WORLD_W / 2, WORLD_W / 2);
+  player.y = constrain(player.y + dy / len * 300 * dt, -WORLD_H / 2, WORLD_H / 2);
+  if (dx) player.facing = dx < 0 ? -1 : 1;
+
+  if (keyIsDown(32)) {
+    [...pumpkins].forEach(q => { if (dist(q.x, q.y, player.x, player.y) < 55) smash(player, q); });
+  }
+
+  enemies.forEach((enemy, i) => {
+    if (enemy.target < 0 || !pumpkins.includes(enemy.target)) {
       if (!pumpkins.length) return;
-      if (!enemy.target || !pumpkins.includes(enemy.target)) {
-        enemy.target = pumpkins.reduce((best, pumpkin) =>
-          !best || Math.hypot(pumpkin.x - enemy.x, pumpkin.y - enemy.y) < Math.hypot(best.x - enemy.x, best.y - enemy.y) ? pumpkin : best, null);
-      }
-      if (enemy.target) {
-        moveToward(enemy, enemy.target, ENEMY_SPEED, dt);
-        if (Math.hypot(enemy.x - enemy.target.x, enemy.y - enemy.target.y) < 28) smash(enemy, enemy.target);
-      }
-    });
+      enemy.target = pumpkins.reduce((best, q) => !best || dist(enemy.x, enemy.y, q.x, q.y) < dist(enemy.x, enemy.y, best.x, best.y) ? q : best, null);
+    }
+    const target = enemy.target;
+    if (!target || !pumpkins.includes(target)) { enemy.target = -1; return; }
+    enemy.angle = atan2(target.y - enemy.y, target.x - enemy.x);
+    enemy.x += cos(enemy.angle) * 450 * dt;
+    enemy.y += sin(enemy.angle) * 450 * dt;
+    if (cos(enemy.angle)) enemy.facing = cos(enemy.angle) < 0 ? -1 : 1;
+    if (dist(enemy.x, enemy.y, target.x, target.y) < 28) smash(enemy, target);
+  });
 
-    effects = effects.filter(effect => {
-      effect.age += dt;
-      return effect.age < effect.life;
-    });
-    if (remaining <= 0) {
-      winnerPlace = 1 + enemies.filter(enemy => enemy.score > player.score).length;
-      state = "ended";
-      stopMusic();
+  effects = effects.filter(e => (e.age += dt * 60) < e.life);
+  if (remaining <= 0) {
+    winnerPlace = 1 + enemies.filter(enemy => enemy.score > player.score).length;
+    gameState = "ended";
+    stopMusic();
+  }
+}
+
+function drawPumpkin(q) {
+  push(); translate(q.x, q.y); scale(q.scale);
+  if (q.jack && q.age >= REVEAL_FRAMES + 25 && jackImage && jackImage.width) image(jackImage, 0, 0, 48, 48);
+  else if (q.jack && q.age >= REVEAL_FRAMES && revealImage && revealImage.width) image(revealImage, 0, 0, 48, 48);
+  else if (pumpkinImage && pumpkinImage.width) image(pumpkinImage, 0, 0, 48, 48);
+  else {
+    noStroke(); fill("#f58220"); ellipse(0, 0, 42, 38); fill("#234d12"); rect(-3, -24, 6, 9);
+    if (q.jack && q.age >= REVEAL_FRAMES) {
+      fill("#251709"); triangle(-12, -3, -3, -9, -4, 1); triangle(4, -9, 13, -3, 4, 1); triangle(-8, 8, 0, 15, 8, 8);
     }
   }
+  pop();
+}
 
-  function drawPumpkin(p, pumpkin) {
-    p.push();
-    p.translate(pumpkin.x, pumpkin.y);
-    p.scale(pumpkin.scale);
-    if (pumpkinImage && pumpkinImage.width) {
-      p.imageMode(p.CENTER);
-      p.image(pumpkinImage, 0, 0, 48, 48);
-    } else {
-      p.noStroke();
-      p.fill("#f58220");
-      p.ellipse(0, 0, 42, 38);
-      p.fill("#234d12");
-      p.rect(-3, -24, 6, 9);
-      if (pumpkin.jack && pumpkin.age > REVEAL_FRAMES) {
-        p.fill("#251709");
-        p.triangle(-12, -3, -3, -9, -4, 1);
-        p.triangle(4, -9, 13, -3, 4, 1);
-        p.triangle(-8, 8, 0, 15, 8, 8);
-      }
-    }
-    p.pop();
+function drawSkeleton(actor) {
+  push(); translate(actor.x, actor.y); scale(actor.facing, 1);
+  const img = actor.enemy && actor.imageIndex === 2 ? enemySkeletonImage : skeletonImage;
+  if (img && img.width) image(img, 0, 0, 42, 54);
+  else {
+    noStroke(); fill("#f4f4e9"); ellipse(0, -13, 18, 18); rect(-8, -4, 16, 21, 2);
+    stroke("#d8d8d0"); strokeWeight(4); line(-4, 13, -8, 25); line(4, 13, 8, 25); line(-7, 1, -16, 8); line(7, 1, 16, 8);
+    noStroke(); fill("#1a210f"); ellipse(-3, -14, 3, 4); ellipse(3, -14, 3, 4);
   }
+  pop();
+}
 
-  function drawSkeleton(p, actor) {
-    p.push();
-    p.translate(actor.x, actor.y);
-    p.scale(actor.face, 1);
-    if (skeletonImage && skeletonImage.width) {
-      p.imageMode(p.CENTER);
-      p.image(skeletonImage, 0, 0, 42, 54);
-    } else {
-      p.noStroke();
-      p.fill("#f4f4e9");
-      p.ellipse(0, -13, 18, 18);
-      p.rect(-8, -4, 16, 21, 2);
-      p.stroke("#d8d8d0");
-      p.strokeWeight(4);
-      p.line(-4, 13, -8, 25);
-      p.line(4, 13, 8, 25);
-      p.line(-7, 1, -16, 8);
-      p.line(7, 1, 16, 8);
-      p.noStroke();
-      p.fill("#1a210f");
-      p.ellipse(-3, -14, 3, 4);
-      p.ellipse(3, -14, 3, 4);
-    }
-    p.pop();
-  }
+function drawEffect(e) {
+  push();
+  if (e.jack && score500Image && score500Image.width) image(score500Image, e.x, e.y - e.age, 42, 28);
+  else if (!e.jack && score100Image && score100Image.width) image(score100Image, e.x, e.y - e.age, 42, 28);
+  else { noStroke(); fill(e.jack ? "#ffa500" : "#ffffff"); textAlign(CENTER, CENTER); textSize(25); text(e.points, e.x, e.y - e.age); }
+  pop();
+}
 
-  function drawHUD(p) {
-    p.push();
-    p.noStroke();
-    p.fill("#123904");
-    p.rect(0, 0, p.width, Math.max(42, p.height * 0.09));
-    p.fill("#ffffff");
-    p.textSize(Math.max(11, p.width * 0.025));
-    p.textAlign(p.LEFT, p.CENTER);
-    p.text("Your Score: " + player.score, 12, 16);
-    p.text("Smashed: " + player.smashed, 12, 34);
-    p.textAlign(p.CENTER, p.CENTER);
-    p.text(Math.floor(remaining / 60) + ":" + String(remaining % 60).padStart(2, "0"), p.width / 2, 18);
-    p.textAlign(p.RIGHT, p.CENTER);
-    p.text("Best enemy: " + Math.max(0, ...enemies.map(enemy => enemy.score)), p.width - 12, 18);
-    p.pop();
-  }
+function drawHUD() {
+  noStroke(); fill("#123904"); rect(0, 0, width, Math.max(42, height * 0.09)); fill("#ffffff");
+  textSize(Math.max(11, width * 0.025)); textAlign(LEFT, CENTER);
+  text("Your Score: " + player.score, 12, 16); text("Your Smashed: " + player.smashed, 12, 34);
+  textAlign(CENTER, CENTER); text(floor(remaining / 60) + ":" + String(remaining % 60).padStart(2, "0"), width / 2, 18);
+  textAlign(RIGHT, CENTER); text("Enemy Score: " + Math.max(0, ...enemies.map(e => e.score)), width - 12, 18);
+}
 
-  function drawOverlay(p, title, subtitle, hint) {
-    p.push();
-    p.fill(0, 0, 0, 190);
-    p.rect(0, 0, p.width, p.height);
-    p.textAlign(p.CENTER, p.CENTER);
-    p.noStroke();
-    p.fill("#ffa500");
-    p.textStyle(p.BOLD);
-    p.textSize(p.width * 0.075);
-    p.text(title, p.width / 2, p.height * 0.36);
-    p.fill("#ffffff");
-    p.textStyle(p.NORMAL);
-    p.textSize(p.width * 0.035);
-    p.text(subtitle, p.width / 2, p.height * 0.47, p.width * 0.84, p.height * 0.16);
-    p.fill("#ffa500");
-    p.textSize(p.width * 0.03);
-    p.text(hint, p.width / 2, p.height * 0.65, p.width * 0.85, p.height * 0.12);
-    p.pop();
-  }
+function drawOverlay(title, subtitle, hint) {
+  push(); noStroke(); fill(0, 0, 0, 190); rect(0, 0, width, height);
+  textAlign(CENTER, CENTER); fill("#ffa500"); textStyle(BOLD); textSize(width * 0.075); text(title, width / 2, height * 0.36);
+  fill("#ffffff"); textStyle(NORMAL); textSize(width * 0.035); text(subtitle, width / 2, height * 0.47);
+  fill("#ffa500"); textSize(width * 0.03); text(hint, width / 2, height * 0.65);
+  pop();
+}
 
-  return {
-    title: "Pumpkin Smasher",
-    setup(p) {
-      p.frameRate(60);
-      pumpkinImage = p.loadImage("/assets/pumpkins/pumpkin.png", () => {}, () => { pumpkinImage = null; });
-      skeletonImage = p.loadImage("/assets/skeleton/1.png", () => {}, () => { skeletonImage = null; });
-      music = ["background.mp3", "background1.mp3", "background2.mp3"].map(name => {
-        const track = new Audio("/assets/music/" + name);
-        track.volume = 0.22;
-        return track;
-      });
-      player = makeSkeleton(0, 0, false);
-    },
-    draw(p) {
-      const now = p.millis();
-      const dt = Math.min(0.05, Math.max(0, (now - (lastFrame || now)) / 1000));
-      lastFrame = now;
-      p.background("#123904");
-      if (state === "title") {
-        drawOverlay(p, "PUMPKIN SMASHER", "Smash pumpkins before the enemies beat your score.", "Press ENTER or SPACE to start");
-      } else if (state === "playing") {
-        updateGame(p, dt);
-        const scale = Math.min(p.width / WORLD_W, p.height / WORLD_H);
-        p.push();
-        p.translate(p.width / 2, p.height / 2);
-        p.scale(scale);
-        p.translate(-player.x, -player.y);
-        p.noFill();
-        p.stroke("#050805");
-        p.strokeWeight(20);
-        p.rectMode(p.CENTER);
-        p.rect(0, 0, WORLD_W, WORLD_H);
-        p.rectMode(p.CORNER);
-        pumpkins.forEach(pumpkin => drawPumpkin(p, pumpkin));
-        enemies.forEach(enemy => drawSkeleton(p, enemy));
-        drawSkeleton(p, player);
-        effects.forEach(effect => {
-          p.noStroke();
-          p.fill(effect.color);
-          p.textAlign(p.CENTER, p.CENTER);
-          p.textSize(25);
-          p.text(effect.text, effect.x, effect.y - effect.age * 35);
-        });
-        p.pop();
-        drawHUD(p);
-        p.push();
-        p.fill("#ffffff");
-        p.noStroke();
-        p.textAlign(p.CENTER, p.BOTTOM);
-        p.textSize(Math.max(10, p.width * 0.022));
-        p.text("Move: WASD / Arrows     Smash: SPACE", p.width / 2, p.height - 8);
-        p.pop();
-      } else if (state === "ended") {
-        const scale = Math.min(p.width / WORLD_W, p.height / WORLD_H);
-        p.push();
-        p.translate(p.width / 2, p.height / 2);
-        p.scale(scale);
-        p.translate(-player.x, -player.y);
-        p.rectMode(p.CENTER);
-        p.noFill();
-        p.stroke("#050805");
-        p.strokeWeight(20);
-        p.rect(0, 0, WORLD_W, WORLD_H);
-        p.rectMode(p.CORNER);
-        pumpkins.forEach(pumpkin => drawPumpkin(p, pumpkin));
-        enemies.forEach(enemy => drawSkeleton(p, enemy));
-        drawSkeleton(p, player);
-        p.pop();
-        drawHUD(p);
-        const title = winnerPlace === 1 ? "YOU WON!" : winnerPlace === 2 ? "2ND PLACE!" : winnerPlace === 3 ? "3RD PLACE!" : "YOU LOST";
-        drawOverlay(p, title, "Score: " + player.score + "   •   Pumpkins smashed: " + player.smashed, "Press P, ENTER, or SPACE to play again");
-      }
-    },
-    keyPressed(p) {
-      if (state === "title" && (p.keyCode === p.ENTER || p.key === " ")) resetRound(p);
-      else if (state === "ended" && (["p", "P", " "].includes(p.key) || p.keyCode === p.ENTER)) resetRound(p);
-    }
-  };
+function keyPressed() {
+  if (gameState === "title" && (keyCode === ENTER || key === " ")) resetRound();
+  else if (gameState === "ended" && (key === "u" || key === "U")) resultPage = (resultPage + 1) % 2;
+  else if (gameState === "ended" && (key === "p" || key === "P" || key === " " || keyCode === ENTER)) resetRound();
+  if (key === "f" || key === "F") window.open("https://pumpkin-smasher-2.dragonfiregames.repl.co", "_blank");
+  return false;
 }
