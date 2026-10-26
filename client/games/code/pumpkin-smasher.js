@@ -431,10 +431,16 @@ function playercontrol() {
   const down = heldKeys.has("ArrowDown") || heldKeys.has("KeyS") || keyIsDown(DOWN_ARROW) || keyIsDown(83);
   const left = heldKeys.has("ArrowLeft") || heldKeys.has("KeyA") || keyIsDown(LEFT_ARROW) || keyIsDown(65);
   const right = heldKeys.has("ArrowRight") || heldKeys.has("KeyD") || keyIsDown(RIGHT_ARROW) || keyIsDown(68);
-  if (up) player.y = Math.max(-sizeY, player.y - 5);
-  if (down) player.y = Math.min(sizeY, player.y + 5);
-  if (left) { player.x = Math.max(-sizeX, player.x - 5); player.facing = -1; }
-  if (right) { player.x = Math.min(sizeX, player.x + 5); player.facing = 1; }
+  // Half the original movement speed, with diagonal movement normalized
+  // so moving on two axes is not faster than moving on one.
+  const movementSpeed = 2.5;
+  const diagonalScale = up !== down && left !== right ? 1 / Math.SQRT2 : 1;
+  const moveX = (Number(right) - Number(left)) * movementSpeed * diagonalScale;
+  const moveY = (Number(down) - Number(up)) * movementSpeed * diagonalScale;
+  player.x = Math.max(-sizeX, Math.min(sizeX, player.x + moveX));
+  player.y = Math.max(-sizeY, Math.min(sizeY, player.y + moveY));
+  if (left) player.facing = -1;
+  if (right) player.facing = 1;
   if (heldKeys.has("Space") || keyIsDown(32)) detect(player);
 }
 
@@ -456,8 +462,9 @@ function enemymove(enemy, i) {
   // Keep AI inside the same playable bounds as the player. If its current
   // heading carries it into a wall, stop at the edge and choose a new target
   // on the next frame instead of walking off into the distance.
-  const nextY = enemy.y + sin(enemy.rotate) * 7.5;
-  const nextX = enemy.x + cos(enemy.rotate) * 7.5;
+  const enemySpeed = 3.75; // Half the original 7.5-unit movement speed.
+  const nextY = enemy.y + sin(enemy.rotate) * enemySpeed;
+  const nextX = enemy.x + cos(enemy.rotate) * enemySpeed;
   const boundedX = Math.max(-sizeX, Math.min(sizeX, nextX));
   const boundedY = Math.max(-sizeY, Math.min(sizeY, nextY));
   const hitBoundary = boundedX !== nextX || boundedY !== nextY;
