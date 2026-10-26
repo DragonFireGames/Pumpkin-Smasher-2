@@ -59,9 +59,9 @@ function setup() {
   player.visible = false;
   displaypumpkin = { x: 0, y: -100, visible: false, scale: 3, animation: "pumpkin" };
   music = [
-    { file: "/assets/sounds/background0.mp3", length: 94 },
-    { file: "/assets/sounds/background1.mp3", length: 81 },
-    { file: "/assets/sounds/background2.mp3", length: 136 }
+    { file: "/assets/music/background.mp3", length: 94 },
+    { file: "/assets/music/background1.mp3", length: 81 },
+    { file: "/assets/music/background2.mp3", length: 136 }
   ].map(track => {
     const audio = new Audio(track.file);
     audio.volume = 0.22;
@@ -84,7 +84,7 @@ function resizeCanvasToContainer() {
 
 function makeActor(x, y, isEnemy) {
   return {
-    x, y, enemy: isEnemy, visible: true, depth: 1, score: 0, smashed: 0,
+    x, y, width: 46, height: 46, enemy: isEnemy, visible: true, depth: 1, score: 0, smashed: 0,
     attracted: false, target: -1, rotate: 0, facing: 1,
     animation: isEnemy ? (randomNumber(1, 2) === 1 ? "enemy1" : "enemy2") : "skeleton"
   };
@@ -198,6 +198,7 @@ function spawnPumpkin() {
     const pumpkin = {
       x: randomNumber(-sizeX / 50, sizeX / 50) * 50,
       y: randomNumber(-sizeY / 50, sizeY / 50) * 50,
+      width: 46, height: 46,
       jack: randomNumber(1, 5) === 1,
       time: 0,
       scale: 0.1,
@@ -257,6 +258,42 @@ function drawTitleScreen() {
   text("Start", 200, 225);
   textSize(12);
   text("press 'F' for full version", 200, 388);
+}
+
+function drawHUD() {
+  // The HUD is camera-fixed, so it is drawn after the world transform is restored.
+  textAlign(CENTER, CENTER);
+  noStroke();
+  fill("white");
+  textSize(20);
+  text(nf(minutes, 2) + ":" + nf(Math.max(0, seconds), 2), 200, 25);
+
+  textAlign(LEFT, CENTER);
+  textSize(15);
+  text("Score: " + player.score, 15, 25);
+  textAlign(RIGHT, CENTER);
+  text("Smashed: " + player.smashed, 385, 25);
+
+  textAlign(LEFT, CENTER);
+  for (let i = 0; i < enemies.length; i++) {
+    text("Enemy " + (i + 1) + ": " + enemies[i].score, 15, 40 + i * 15);
+    textAlign(RIGHT, CENTER);
+    text("Smashed: " + enemies[i].smashed, 385, 40 + i * 15);
+    textAlign(LEFT, CENTER);
+  }
+}
+
+function drawDebug() {
+  noFill();
+  stroke("red");
+  strokeWeight(1);
+  for (const sprite of [...pumpkins, ...enemies, player]) {
+    const width = (sprite.width || 46) * (sprite.scale || 1);
+    const height = (sprite.height || 46) * (sprite.scale || 1);
+    rectMode(CENTER);
+    rect(sprite.x, sprite.y, width, height);
+  }
+  rectMode(CORNER);
 }
 
 function drawEndScreen() {
@@ -424,5 +461,37 @@ function drawEffect(effect) {
   if (img && img.width && img.height) {
     const rise = 20 - effect.lifetime;
     image(img, effect.x, effect.y - rise, img.width * (28 / img.height), 28);
+  }
+}
+
+
+function keyPressed() {
+  if (!started && !ended && (keyCode === ENTER || key === " ")) {
+    start();
+    return false;
+  }
+  if (ended && (key === "p" || key === "P" || key === " ")) {
+    resetGame();
+    return false;
+  }
+  if (ended && (key === "u" || key === "U")) {
+    displays = (displays + 1) % 2;
+    return false;
+  }
+  if (key === "b" || key === "B") {
+    debug = !debug;
+    return false;
+  }
+  if (key === "f" || key === "F") {
+    window.open("https://studio.code.org/projects/spritelab", "_blank", "noopener");
+    return false;
+  }
+}
+
+function mousePressed() {
+  if (!started && !ended) {
+    const x = mouseX;
+    const y = mouseY;
+    if (x >= 162.5 && x <= 237.5 && y >= 175 && y <= 225) start();
   }
 }
