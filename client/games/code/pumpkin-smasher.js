@@ -35,10 +35,13 @@ let audioUnlocked = false;
 function preload() {
   // These are the matching assets that actually exist in this repository.
   images.pumpkin = loadImage("/assets/pumpkins/pumpkin.png");
+  images.growingPumpkin = loadImage("/assets/pumpkins/new_pumpkin.png");
+  images.jackLantern = loadImage("/assets/pumpkins/jack_o_lantern.png");
+  images.reveal = loadImage("/assets/misc/reveal.png");
   images.skeleton = loadImage("/assets/skeleton/1.png");
   images.enemy1 = loadImage("/assets/skeleton/1.png");
   images.enemy2 = loadImage("/assets/skeleton/2.png");
-  images.reveal = loadImage("/assets/misc/reveal.png");
+  images.axe = loadImage("/assets/skeleton/axe.png");
   images.score100 = loadImage("/assets/misc/100_score.png");
   images.score500 = loadImage("/assets/misc/500_score.png");
   images.smash = loadImage("/assets/pumpkins/gut_splat.png");
@@ -201,7 +204,7 @@ function spawnPumpkin() {
       depth: 0,
       target: -1,
       visible: true,
-      animation: "growing_pumpkin"
+      animation: "growing_pumpkin",\n      smashFrame: 0
     };
     pumpkins.push(pumpkin);
     if (pumpkin.jack) jacks.push(pumpkin);
@@ -256,7 +259,7 @@ function drawTitleScreen() {
 }
 
 function drawEndScreen() {
-  const resultImage = win === 0 ? images.pumpkin : win >= 3 ? null : images.reveal;
+  const resultImage = win === 0 ? images.pumpkin : win >= 3 ? images.jackLantern : images.reveal;
   // Code.org draws sprites before text, so the result sprite sits behind the title.
   if (resultImage && resultImage.width) image(resultImage, 200, 100, resultImage.width * 3, resultImage.height * 3);
   textAlign(CENTER, CENTER);
@@ -302,7 +305,10 @@ function updateActors() {
 
   playercontrol();
   enemies.forEach((enemy, i) => enemymove(enemy, i));
-  effects = effects.filter(effect => --effect.lifetime > 0);
+  effects = effects.filter(effect => {
+    effect.frame++;
+    return --effect.lifetime > 0;
+  });
 }
 
 function playercontrol() {
@@ -359,7 +365,7 @@ function pumpkinhit(pumpkin, actor) {
   const points = jack ? 500 : 100;
   actor.score += points;
   actor.smashed++;
-  effects.push({ x: pumpkin.x, y: pumpkin.y, points, jack, lifetime: 20 });
+  effects.push({ x: pumpkin.x, y: pumpkin.y, points, jack, lifetime: 20, frame: 0 });
   if (pumpkin.target !== -1 && enemies[pumpkin.target]) enemies[pumpkin.target].attracted = false;
   amount--;
   pumpkins.splice(pumpkins.indexOf(pumpkin), 1);
@@ -384,29 +390,43 @@ function drawPumpkin(pumpkin) {
   translate(pumpkin.x, pumpkin.y);
   scale(pumpkin.scale);
   let img = images.pumpkin;
-  if (pumpkin.animation === "reveal" && images.reveal && images.reveal.width) img = images.reveal;
-  // The repository has no standalone jack-o-lantern or growing/smash animation
-  // sprites from the Code.org project, so keep the matching pumpkin art as the
-  // base instead of fabricating a replacement drawing.
-  if (img && img.width) image(img, 0, 0);
+  if (pumpkin.animation === "growing_pumpkin") img = images.growingPumpkin;
+  else if (pumpkin.animation === "reveal") img = images.reveal;
+  else if (pumpkin.animation === "jack_o_lantern") img = images.jackLantern;
+  // Code.org's sprite animations use a fixed 46-unit sprite height here;
+  // growth changes only the scale, not the source image's aspect ratio.
+  if (img && img.width && img.height) image(img, 0, 0, img.width * (46 / img.height), 46);
+
   pop();
 }
 
 function drawSkeleton(actor) {
   if (!actor.visible) return;
   const img = actor.animation === "enemy2" ? images.enemy2 : actor.enemy ? images.enemy1 : images.skeleton;
-  if (img && img.width) {
+  if (img && img.width && img.height) {
+    const spriteHeight = 46;
+    const spriteWidth = img.width * spriteHeight / img.height;
+    const axeHeight = 46.5; // Base game's FitImage.show(0, 62 * 0.75)
+    const axeWidth = images.axe && images.axe.width && images.axe.height
+      ? images.axe.width * axeHeight / images.axe.height : 0;
     push();
     translate(actor.x, actor.y);
     scale(actor.facing, 1);
-    image(img, 0, 0);
+    // Match the main game's render order and centering: axe first, skeleton over it.
+    if (images.axe && images.axe.width && images.axe.height) {
+      image(images.axe, (spriteWidth - axeWidth) / 2, 0, axeWidth, axeHeight);
+    }
+    image(img, 0, 0, spriteWidth, spriteHeight);
     pop();
   }
 }
 
 function drawEffect(effect) {
   const img = effect.jack ? images.score500 : images.score100;
-  if (img && img.width) image(img, effect.x, effect.y, img.width, img.height);
+  if (img && img.width && img.height) {
+    const rise = 20 - effect.lifetime;
+    image(img, effect.x, effect.y - rise, img.width * (28 / img.height), 28);
+  }
   else {
     noStroke(); fill("white"); textAlign(CENTER, CENTER); textSize(20);
     text(effect.points, effect.x, effect.y);
