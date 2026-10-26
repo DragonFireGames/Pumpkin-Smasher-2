@@ -433,7 +433,7 @@ function playercontrol() {
   const right = heldKeys.has("ArrowRight") || heldKeys.has("KeyD") || keyIsDown(RIGHT_ARROW) || keyIsDown(68);
   // Half the original movement speed, with diagonal movement normalized
   // so moving on two axes is not faster than moving on one.
-  const movementSpeed = 2.5;
+  const movementSpeed = 3.75;
   const diagonalScale = up !== down && left !== right ? 1 / Math.SQRT2 : 1;
   const moveX = (Number(right) - Number(left)) * movementSpeed * diagonalScale;
   const moveY = (Number(down) - Number(up)) * movementSpeed * diagonalScale;
@@ -462,7 +462,7 @@ function enemymove(enemy, i) {
   // Keep AI inside the same playable bounds as the player. If its current
   // heading carries it into a wall, stop at the edge and choose a new target
   // on the next frame instead of walking off into the distance.
-  const enemySpeed = 3.75; // Half the original 7.5-unit movement speed.
+  const enemySpeed = 5.625; // 1.5x the current enemy movement speed.
   const nextY = enemy.y + sin(enemy.rotate) * enemySpeed;
   const nextX = enemy.x + cos(enemy.rotate) * enemySpeed;
   const boundedX = Math.max(-sizeX, Math.min(sizeX, nextX));
