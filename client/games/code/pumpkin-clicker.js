@@ -580,7 +580,7 @@
     const hovered = pcLastPointer.x >= x && pcLastPointer.x <= x + w && pcLastPointer.y >= y && pcLastPointer.y <= y + h;
     const disabled = !!opts.disabled;
     noStroke();
-    fill(disabled ? "#344239" : opts.active ? "#627f47" : hovered ? "#617d4b" : "#344d38");
+    fill(disabled ? "#344239" : opts.active ? "#627f47" : hovered ? "#617d4b" : (opts.color || "#344d38"));
     rect(x, y, w, h, Math.min(9, h / 4));
     stroke(disabled ? "#4a5a4e" : opts.active ? "#e9ce77" : hovered ? "#b5cd88" : "#637b5b");
     strokeWeight(opts.active ? 2.5 : 1);
@@ -619,7 +619,7 @@
     if (subtitle) {
       fill("#b7c3a9");
       textSize(10);
-      text(subtitle, box.x + PANEL_PAD, box.y + 39);
+      text(subtitle, box.x + PANEL_PAD, box.y + 39, Math.max(20, box.w - 74), 14);
     }
   }
 
@@ -713,7 +713,7 @@
     }
     const boardTop = farm.y + 48;
     const boardBottom = farm.y + farm.h - 52;
-    const boardW = Math.max(40, farm.w - 28);
+    const boardW = Math.max(40, farm.w - 140);
     const boardH = Math.max(40, boardBottom - boardTop);
     const cell = Math.max(14, Math.min(boardW / pcState.size, boardH / pcState.size));
     const gridW = cell * pcState.size;
@@ -729,6 +729,31 @@
   function pcDrawFarm() {
     const box = pcLayout.farm;
     pcPanel(box, "YOUR FARM", pcState.size + " × " + pcState.size + " plot · " + pcFormat(pcGeneratorCount(pcState)) + " generator slots · " + pcCountType(pcState, "mega") + " mega");
+
+    // The objective pumpkin is a real canvas hit target, not an HTML button.
+    // Clicking it harvests into storage without changing or damaging the sprite.
+    const objectiveX = box.x + box.w - 32;
+    const objectiveY = box.y + 25;
+    const objectiveSize = 36;
+    noStroke();
+    fill("#6c512c");
+    circle(objectiveX, objectiveY, objectiveSize + 9);
+    fill("#8c7140");
+    circle(objectiveX, objectiveY, objectiveSize + 3);
+    if (pcImages.objective && pcImages.objective.width > 0) {
+      imageMode(CENTER);
+      image(pcImages.objective, objectiveX, objectiveY, objectiveSize, objectiveSize);
+    } else {
+      pcDrawPumpkinShape(objectiveX, objectiveY, objectiveSize, "regular");
+    }
+    fill("#f4df9e");
+    textAlign(CENTER, CENTER);
+    textStyle(BOLD);
+    textSize(7.5);
+    text("HARVEST", objectiveX, objectiveY + 24);
+    textStyle(NORMAL);
+    pcRegisterHit("objective-pumpkin", objectiveX - 23, objectiveY - 22, 46, 48, pcHarvestClick);
+
     const board = pcLayout.board;
     const cell = board.cell;
     for (let y = 0; y < pcState.size; y++) {
@@ -1165,6 +1190,7 @@
           id: "footer-" + actions[i].id,
           active: actions[i].id === "autosell" && pcState.autoSell,
           icon: actions[i].id === "daily" ? "candy" : null,
+          color: actions[i].color,
           textSize: 11
         });
         const hit = pcHits[pcHits.length - 1];
@@ -1179,6 +1205,7 @@
           id: "footer-" + actions[i].id,
           active: actions[i].id === "autosell" && pcState.autoSell,
           icon: actions[i].id === "daily" ? "candy" : null,
+          color: actions[i].color,
           textSize: 12
         });
       }
