@@ -268,7 +268,6 @@ function drawTitleScreen() {
   textSize(20);
   text("Start", 200, 225);
   textSize(12);
-  text("press 'F' for full version", 200, 388);
 }
 
 function drawHUD() {
@@ -434,7 +433,19 @@ function drawPumpkin(pumpkin) {
   if (!pumpkin.visible) return;
   let img = images.pumpkin;
   if (pumpkin.animation === "growing_pumpkin") img = images.growingPumpkin;
-  else if (pumpkin.animation === "reveal") img = images.reveal;
+  else if (pumpkin.animation === "reveal") {
+    // reveal.png is a four-frame horizontal spritesheet. Advance through its
+    // frames at 12 fps rather than scaling the entire sheet (which looks like flashing).
+    const sheet = images.reveal;
+    if (sheet && sheet.width && sheet.height) {
+      const frameWidth = sheet.width / 4;
+      const frame = Math.min(3, Math.floor((pumpkin.time - revealtime) / 5));
+      const h = 46;
+      const w = frameWidth * h / sheet.height;
+      image(sheet, pumpkin.x, pumpkin.y, w, h, frame * frameWidth, 0, frameWidth, sheet.height);
+    }
+    return;
+  }
   else if (pumpkin.animation === "jack_o_lantern") img = images.jackLantern;
   CodeOrgCompat.drawImageSprite(pumpkin, img, { height: 46 });
 }
@@ -507,9 +518,6 @@ function handleGameKeyDown(event) {
     debug = !debug;
     return;
   }
-  if (pressedKey === "f" || pressedKey === "F") {
-    window.open("https://studio.code.org/projects/spritelab", "_blank", "noopener");
-  }
 }
 
 function keyPressed() {
@@ -527,10 +535,6 @@ function keyPressed() {
   }
   if (key === "b" || key === "B") {
     debug = !debug;
-    return false;
-  }
-  if (key === "f" || key === "F") {
-    window.open("https://studio.code.org/projects/spritelab", "_blank", "noopener");
     return false;
   }
 }
