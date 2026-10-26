@@ -606,7 +606,7 @@ function handleGameKeyDown(event) {
     resetGame();
     return;
   }
-  if (ended && (pressedKey === "u" || pressedKey === "U")) {
+  if (ended && (event.code === "KeyU" || pressedKey.toLowerCase() === "u")) {
     displays = (displays + 1) % 2;
     return;
   }
@@ -625,7 +625,7 @@ function keyPressed() {
     resetGame();
     return false;
   }
-  if (ended && (key === "u" || key === "U")) {
+  if (ended && (keyCode === 85 || key === "u" || key === "U")) {
     displays = (displays + 1) % 2;
     return false;
   }
@@ -636,9 +636,27 @@ function keyPressed() {
 }
 
 function mousePressed() {
-  if (!started && !ended) {
-    const x = mouseX;
-    const y = mouseY;
-    if (x >= 162.5 && x <= 237.5 && y >= 200 && y <= 250) start();
+  const x = mouseX;
+  const y = mouseY;
+
+  if (ended) {
+    // Make the result/leaderboard switch available by clicking as well as U.
+    if (displays === 0 && y >= 325 && y <= 365) {
+      displays = 1;
+      return;
+    }
+    if (displays === 1 && y >= 320 && y <= 355) {
+      displays = 0;
+      return;
+    }
+    // Keep the restart prompt clickable too.
+    if (y >= 355 && y <= 395 && (x >= 70 && x <= 330)) {
+      resetGame();
+      return;
+    }
+  }
+
+  if (!started && !ended && x >= 162.5 && x <= 237.5 && y >= 200 && y <= 250) {
+    start();
   }
 }
