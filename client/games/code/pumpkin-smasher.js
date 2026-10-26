@@ -93,7 +93,7 @@ function resizeCanvasToContainer() {
 function makeActor(x, y, isEnemy) {
   return {
     x, y, width: 46, height: 46, enemy: isEnemy, visible: true, depth: 1, score: 0, smashed: 0,
-    attracted: false, target: -1, rotate: 0, facing: 1,
+    attracted: false, target: -1, rotate: 0, facing: 1, swing: 0, swingTime: 0,
     animation: isEnemy ? (randomNumber(1, 2) === 1 ? "enemy1" : "enemy2") : "skeleton"
   };
 }
@@ -347,17 +347,21 @@ function updateActors() {
 
   playercontrol();
   enemies.forEach((enemy, i) => enemymove(enemy, i));
-  effects = effects.filter(effect => {
+  if (player.swingTime > 0) { player.swingTime--; player.swing = Math.sin((1 - player.swingTime / 12) * Math.PI) * 1.25; } else player.swing = 0;\n  effects = effects.filter(effect => {
     effect.frame++;
     return --effect.lifetime > 0;
   });
 }
 
 function playercontrol() {
-  if (heldKeys.has("ArrowUp") || keyIsDown(UP_ARROW) && player.y >= -sizeY) player.y -= 5;
-  if (heldKeys.has("ArrowDown") || keyIsDown(DOWN_ARROW) && player.y <= sizeY) player.y += 5;
-  if (heldKeys.has("ArrowLeft") || keyIsDown(LEFT_ARROW) && player.x >= -sizeX) { player.x -= 5; player.facing = -1; }
-  if (heldKeys.has("ArrowRight") || keyIsDown(RIGHT_ARROW) && player.x <= sizeX) { player.x += 5; player.facing = 1; }
+  const up = heldKeys.has("ArrowUp") || heldKeys.has("KeyW") || keyIsDown(UP_ARROW) || keyIsDown(87);
+  const down = heldKeys.has("ArrowDown") || heldKeys.has("KeyS") || keyIsDown(DOWN_ARROW) || keyIsDown(83);
+  const left = heldKeys.has("ArrowLeft") || heldKeys.has("KeyA") || keyIsDown(LEFT_ARROW) || keyIsDown(65);
+  const right = heldKeys.has("ArrowRight") || heldKeys.has("KeyD") || keyIsDown(RIGHT_ARROW) || keyIsDown(68);
+  if (up) player.y = Math.max(-sizeY, player.y - 5);
+  if (down) player.y = Math.min(sizeY, player.y + 5);
+  if (left) { player.x = Math.max(-sizeX, player.x - 5); player.facing = -1; }
+  if (right) { player.x = Math.min(sizeX, player.x + 5); player.facing = 1; }
   if (heldKeys.has("Space") || keyIsDown(32)) detect(player);
 }
 
@@ -449,7 +453,11 @@ function drawSkeleton(actor) {
   translate(actor.x, actor.y);
   scale(actor.facing, 1);
   if (images.axe && images.axe.width && images.axe.height) {
-    image(images.axe, (spriteWidth - axeWidth) / 2, 0, axeWidth, axeHeight);
+    push();
+    translate((spriteWidth - axeWidth) / 2, 0);
+    rotate(actor.swing || 0);
+    image(images.axe, 0, 0, axeWidth, axeHeight);
+    pop();
   }
   // Shared Sprite Lab helper handles sprite centering, scale and mirroring.
   CodeOrgCompat.drawImageSprite({ ...actor, x: 0, y: 0, facing: 1 }, img, { height: 46 });
@@ -471,16 +479,18 @@ function drawEffect(effect) {
   const img = effect.jack ? images.score500 : images.score100;
   if (img && img.width && img.height) {
     const rise = 20 - effect.lifetime;
-    image(img, effect.x, effect.y - rise, img.width * (28 / img.height), 28);
+    const scoreHeight = 14;
+    image(img, effect.x, effect.y - rise, img.width * (scoreHeight / img.height), scoreHeight);
   }
 }
 
 
 function handleGameKeyDown(event) {
   heldKeys.add(event.code);
-  if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(event.code)) event.preventDefault();
+  if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space", "KeyW", "KeyA", "KeyS", "KeyD"].includes(event.code)) event.preventDefault();
   if (event.repeat) return;
   const pressedKey = event.key;
+  if (event.code === "Space" && started && !ended && player) player.swingTime = 12;
   if (!started && !ended && (event.code === "Enter" || event.code === "Space")) {
     start();
     return;
