@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta name="theme-color" content="#17251c">
+  <title>Pumpkin Clicker</title>
+  <style>
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#111a15;color:#f6f0d8;font:14px/1.4 system-ui,-apple-system,sans-serif}
+    body{padding:12px;max-width:1500px;margin:auto}button{border:1px solid #536b4e;background:#273b2b;color:#fff3d1;border-radius:8px;padding:8px 10px;font:inherit;cursor:pointer}button:hover:not(:disabled){background:#39563a}button:disabled{opacity:.42;cursor:not-allowed}
+    .top{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:10px}.brand{font-weight:900;font-size:clamp(20px,3vw,30px);letter-spacing:.02em}.stats{display:flex;gap:8px;flex-wrap:wrap}.stat{background:#202e24;border:1px solid #354a39;border-radius:10px;padding:8px 12px;min-width:110px}.stat b{display:block;font-size:18px;color:#ffcf65}.layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:12px;align-items:start}.panel{background:#1a261e;border:1px solid #354a39;border-radius:12px;padding:12px;min-width:0}.panel h2{font-size:16px;margin:0 0 8px}.hint{color:#aabca6;font-size:12px}.farm-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}.canvas-wrap{width:100%;overflow:hidden;border-radius:9px;background:#253b28}canvas{display:block;max-width:100%;height:auto;image-rendering:pixelated}.actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}.shop{display:grid;gap:8px}.shop-section{border-top:1px solid #354a39;padding-top:10px;margin-top:2px}.shop-section h3{margin:0 0 6px;font-size:13px;color:#dce8c9;text-transform:uppercase;letter-spacing:.07em}.buy{width:100%;display:flex;align-items:center;gap:9px;text-align:left;margin:4px 0}.buy .emoji{font-size:24px;width:30px;text-align:center}.buy .desc{flex:1;min-width:0}.buy .desc b{display:block}.buy small{display:block;color:#b5c6ac;font-size:11px}.buy .price{white-space:nowrap;color:#ffcf65;font-weight:700}.worker{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid #2d3e31}.worker:last-child{border-bottom:0}.worker button{white-space:nowrap}.notice{margin-top:8px;padding:8px;border-radius:8px;background:#2c3d2d;color:#cbdcbc;font-size:12px;min-height:34px}.footer{margin:12px 0;color:#8da18b;font-size:11px;text-align:center}.tabrow{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px}.tabrow button.active{background:#d18c35;color:#1c2116;border-color:#f4bc5c;font-weight:800}.section{display:none}.section.active{display:block}.progress{height:6px;background:#344537;border-radius:5px;overflow:hidden;margin-top:5px}.progress span{display:block;height:100%;background:#d7a64b;width:0%}.mobile-note{display:none}
+    @media(max-width:900px){.layout{grid-template-columns:1fr}.shop{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}.panel{padding:10px}.mobile-note{display:block}}
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="brand">🎃 PUMPKIN CLICKER</div>
+    <div class="stats">
+      <div class="stat">💵 Cash<b id="cash">$0</b></div>
+      <div class="stat">🎃 Pumpkins<b id="pumpkins">0 / 0</b></div>
+      <div class="stat">⚙️ Production<b id="rate">0 / sec</b></div>
+      <div class="stat">🧑‍🌾 Workers<b id="worker-count">0 hired</b></div>
+    </div>
+  </header>
+  <div class="layout">
+    <main class="panel">
+      <div class="farm-head"><div><h2>Your Pumpkin Farm</h2><div class="hint" id="farm-size">3 × 3 farm</div></div><button id="sell">Sell pumpkins (+$0)</button></div>
+      <div class="canvas-wrap" id="canvas-wrap"></div>
+      <div class="actions">
+        <button id="click-pumpkin">🎃 Harvest objective (+1)</button>
+        <button id="auto-sell">Enable auto-sell: OFF</button>
+        <button id="evolve">✨ Evolve square</button>
+        <button id="daily">🍬 Daily Candy Bag</button>
+        <button id="prestige">🌙 Prestige</button>
+      </div>
+      <div class="progress"><span id="storage-bar"></span></div>
+      <div class="hint" id="storage-label">Storage capacity</div>
+      <div class="notice" id="notice">Click the objective pumpkin, buy a generator, then place it on an empty tile.</div>
+      <p class="hint mobile-note">Tip: tap a tile to select it, then choose a building from the shop. Tap a placed building to inspect it.</p>
+      <div class="actions"><button id="save">Save now</button><button id="reset">Reset save</button></div>
+    </main>
+    <aside class="panel">
+      <div class="tabrow">
+        <button class="active" data-tab="build">Build</button><button data-tab="workers">Workers</button><button data-tab="upgrades">Upgrades</button>
+      </div>
+      <section id="tab-build" class="section active">
+        <div class="shop">
+          <div class="shop-section"><h3>Generators</h3><div id="generator-shop"></div></div>
+          <div class="shop-section"><h3>Farm structures</h3><div id="structure-shop"></div></div>
+        </div>
+      </section>
+      <section id="tab-workers" class="section"><h2>Hire workers</h2><p class="hint">One-time hiring costs. No wages. Workers provide passive bonuses automatically and never occupy tiles.</p><div id="worker-shop"></div></section>
+      <section id="tab-upgrades" class="section"><h2>Farm upgrades</h2><div id="upgrade-shop"></div></section>
+    </aside>
+  </div>
+  <div class="footer">Pumpkin Clicker · Your workers' contracts are suspiciously short.</div>
+  <script src="/client/games/pumpkin-clicker.js"></script>
+</body>
+</html>
