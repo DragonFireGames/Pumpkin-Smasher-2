@@ -2613,16 +2613,60 @@ Displays.loading = function() {
   }
 }
 
+// Arcade games are configured here; each source can be a relative path or URL.
+var GameList = [
+  {
+    name: "Pumpkin Smasher",
+    source: "about:blank"
+  }
+];
+var arcadeGameIndex = 0;
+
 function arcadeIsOpen() {
   return document.getElementById("arcadeDis").classList.contains("open");
 }
+function updateArcadeGame() {
+  if (!GameList.length) {
+    document.getElementById("arcadeGameName").textContent = "No games available";
+    document.getElementById("arcadeFrame").src = "about:blank";
+    document.getElementById("arcadePlayBtn").disabled = true;
+    document.getElementById("arcadePrevBtn").disabled = true;
+    document.getElementById("arcadeNextBtn").disabled = true;
+    return;
+  }
+  arcadeGameIndex = (arcadeGameIndex + GameList.length) % GameList.length;
+  var game = GameList[arcadeGameIndex];
+  document.getElementById("arcadeGameName").textContent = game.name;
+  document.getElementById("arcadeFrame").src = game.source;
+  document.getElementById("arcadeFrame").title = game.name;
+  document.getElementById("arcadePlayBtn").disabled = false;
+  document.getElementById("arcadePrevBtn").disabled = GameList.length < 2;
+  document.getElementById("arcadeNextBtn").disabled = GameList.length < 2;
+}
 function openArcade() {
   if (display != "lobby") return;
+  updateArcadeGame();
   document.getElementById("arcadeDis").classList.add("open");
 }
 function closeArcade() {
   var arcade = document.getElementById("arcadeDis");
   if (arcade) arcade.classList.remove("open");
+}
+function previousArcadeGame() {
+  if (!GameList.length) return;
+  arcadeGameIndex = (arcadeGameIndex - 1 + GameList.length) % GameList.length;
+  updateArcadeGame();
+}
+function nextArcadeGame() {
+  if (!GameList.length) return;
+  arcadeGameIndex = (arcadeGameIndex + 1) % GameList.length;
+  updateArcadeGame();
+}
+function playArcadeGame() {
+  if (!GameList.length) return;
+  var game = GameList[arcadeGameIndex];
+  var frame = document.getElementById("arcadeFrame");
+  if (frame.src !== new URL(game.source, location.href).href) frame.src = game.source;
 }
 function setDisplay(d, sd) {
   if (d == "game" || d == "pmgame" || (d == "loading" && sd == "game")) closeArcade();
@@ -3382,7 +3426,9 @@ function mousePressed() {
 }
 function keyPressed() {
   if (arcadeIsOpen()) {
-    if (keyCode === ESCAPE || key === "Escape") closeArcade();
+    var arcadeKeybind = Keybinds.getKeybind("openArcade");
+    var arcadeBaseKey = arcadeKeybind.split("+").pop();
+    if (keyCode === ESCAPE || key === "Escape" || String(key).toUpperCase() === arcadeBaseKey.toUpperCase()) closeArcade();
     return false;
   }
   if (display == "home" && document.activeElement == homeDis.username) return;
