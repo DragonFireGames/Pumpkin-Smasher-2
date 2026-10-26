@@ -1132,7 +1132,7 @@ const axeLengthDefault = 0.55;
 const axeLengthChange = 1/3;
 const healthDefault = 3;
 const healthChange = 1;
-const axeDamageLevels = [1, 2, 3, 4.5, 6];
+const axeDamageLevels = [1, 1.5, 2, 3, 4.5];
 const upgradeMaxes = {
   axedamage:4,
   speed:4,
