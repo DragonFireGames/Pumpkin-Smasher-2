@@ -346,7 +346,8 @@ function updateActors() {
 
   playercontrol();
   enemies.forEach((enemy, i) => enemymove(enemy, i));
-  if (player.swingTime > 0) { player.swingTime--; player.swing = Math.sin((1 - player.swingTime / 12) * Math.PI) * 1.25; } else player.swing = 0;
+  // Axe swing animation temporarily disabled.
+  // if (player.swingTime > 0) { player.swingTime--; player.swing = Math.sin((1 - player.swingTime / 12) * Math.PI) * 1.25; } else player.swing = 0;
   effects = effects.filter(effect => {
     effect.frame++;
     return --effect.lifetime > 0;
@@ -380,8 +381,20 @@ function enemymove(enemy, i) {
     }
   }
   // Code.org's sin/cos use degrees; p5's do too.
-  enemy.y += sin(enemy.rotate) * 7.5;
-  enemy.x += cos(enemy.rotate) * 7.5;
+  // Keep AI inside the same playable bounds as the player. If its current
+  // heading carries it into a wall, stop at the edge and choose a new target
+  // on the next frame instead of walking off into the distance.
+  const nextY = enemy.y + sin(enemy.rotate) * 7.5;
+  const nextX = enemy.x + cos(enemy.rotate) * 7.5;
+  const boundedX = Math.max(-sizeX, Math.min(sizeX, nextX));
+  const boundedY = Math.max(-sizeY, Math.min(sizeY, nextY));
+  const hitBoundary = boundedX !== nextX || boundedY !== nextY;
+  enemy.x = boundedX;
+  enemy.y = boundedY;
+  if (hitBoundary) {
+    enemy.attracted = false;
+    enemy.target = -1;
+  }
   detect(enemy);
 }
 
@@ -467,8 +480,10 @@ function drawSkeleton(actor) {
   if (images.axe && images.axe.width && images.axe.height) {
     push();
     translate((spriteWidth - axeWidth) / 2, 0);
-    rotate(actor.swing || 0);
+    // Axe swing animation temporarily disabled.
+    // rotate(actor.swing || 0);
     image(images.axe, 0, 0, axeWidth, axeHeight);
+    // rotate(-(actor.swing || 0));
     pop();
   }
   // Shared Sprite Lab helper handles sprite centering, scale and mirroring.
@@ -502,7 +517,8 @@ function handleGameKeyDown(event) {
   if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space", "KeyW", "KeyA", "KeyS", "KeyD"].includes(event.code)) event.preventDefault();
   if (event.repeat) return;
   const pressedKey = event.key;
-  if (event.code === "Space" && started && !ended && player) player.swingTime = 12;
+  // Axe swing animation temporarily disabled.
+  // if (event.code === "Space" && started && !ended && player) player.swingTime = 12;
   if (!started && !ended && (event.code === "Enter" || event.code === "Space")) {
     start();
     return;
