@@ -1067,9 +1067,10 @@ class TutorialRoom extends Room {
       this.pumpkin_masters = [];
       this.skeletons = [this.id];
       this.player.pumpkinMaster = false;
-      this.player.level = 12;
-      this.player.upgradePts = 12;
+      this.player.level = 16;
+      this.player.upgradePts = 16;
       this.player.upgradeLvls = {
+        axedamage:0,
         speed:0,
         axelength:0,
         maxhealth:0
@@ -1131,7 +1132,9 @@ const axeLengthDefault = 0.55;
 const axeLengthChange = 1/3;
 const healthDefault = 3;
 const healthChange = 1;
+const axeDamageLevels = [1, 2, 3, 4.5, 6];
 const upgradeMaxes = {
+  axedamage:4,
   speed:4,
   axelength:4,
   maxhealth:4
@@ -1163,6 +1166,7 @@ class Player {
     this.level = 0;
     this.upgradePts = 0;
     this.upgradeLvls = {
+      axedamage:0,
       speed:0,
       axelength:0,
       maxhealth:0
@@ -1182,6 +1186,7 @@ class Player {
     this.depth = 0;
     this.immune = false;
     this.disabled = true;
+    this.fogRevealUntil = 0;
 
     this.activeCandy = false;
     this.candyDuration = 0;
@@ -1235,6 +1240,7 @@ class Player {
     }, 1000);
   }
   pack() {
+    if (this.disabled) this.fogRevealUntil = 0;
     var p = {
       x:this.x,
       y:this.y,
@@ -1244,6 +1250,8 @@ class Player {
       maxhealth:this.maxhealth,
       swing:this.swing,
       axelength:this.axelength,
+      disabled:this.disabled,
+      fogRevealUntil:this.fogRevealUntil,
       countdown:this.countdown,
       pumpkinMaster:this.pumpkinMaster,
       score:Math.round(this.score),
@@ -1339,6 +1347,10 @@ class Player {
     this.dy = dy;
     if (f) this.facing = f;
   }
+  getAxeDamage() {
+    if (this.disabled) return 1;
+    return axeDamageLevels[this.upgradeLvls.axedamage] || 1;
+  }
   upgrade(name) {
     if (this.upgradeLvls[name] >= upgradeMaxes[name]) return;
     if (this.upgradePts <= 0) return;
@@ -1354,6 +1366,16 @@ class Player {
     const room = ROOM_LIST[this.room];
     if (!room) return;
     const self = this;
+
+    // Axe Damage IV briefly cuts through two more layers of fog for this skeleton.
+    if (!this.disabled && this.upgradeLvls.axedamage >= 4) {
+      const rx = Math.floor(this.x / 14);
+      const ry = Math.floor(this.y / 14);
+      if (room.fogs.some(fog => fog.rx === rx && fog.ry === ry)) {
+        this.fogRevealUntil = Date.now() + 2000;
+      }
+    }
+    const axeDamage = this.getAxeDamage();
 
     var candy = CandyData[this.activeCandy];
     if (candy && candy.loseonswing) {
@@ -1435,8 +1457,8 @@ class Player {
       if (Math.sign(dx) != this.facing && v.orient == "vert") continue;
       var dy = v.y-this.y;
       if (dx * dx + dy * dy > 2.25) continue;
-      room.vines[i].health--;
-      this.gamestats.AbilityDamage.vines++;
+      room.vines[i].health -= axeDamage;
+      this.gamestats.AbilityDamage.vines += axeDamage;
       if (room.vines[i].health <= 0 || Date.now()-room.vines[i].spawnedAt < 1000) {
         this.gamestats.AbilitiesDestroyed.vines++;
         room.vines.splice(i,1);
@@ -1450,8 +1472,8 @@ class Player {
       var dy = gen.y-this.y;
       if (dx * dx + dy * dy < 3.2*3.2) {
         this.addScore(0.2);
-        gen.health--;
-        this.gamestats.AbilityDamage.generators++;
+        gen.health -= axeDamage;
+        this.gamestats.AbilityDamage.generators += axeDamage;
         if (gen.health <= 0) {
           //room.startTime += 12 * 1000;
           //io.to(room.id).emit('setTime',room.startTime);
@@ -1467,8 +1489,8 @@ class Player {
       var dy = room.shield.y-this.y;
       if (dx * dx + dy * dy < 3.2*3.2) {
         this.addScore(0.2);
-        room.shield.health--;
-        this.gamestats.AbilityDamage.shield++;
+        room.shield.health -= axeDamage;
+        this.gamestats.AbilityDamage.shield += axeDamage;
         if (room.shield.health <= 0) {
           this.gamestats.AbilitiesDestroyed.shield++;
           room.shield = false;
@@ -1483,8 +1505,8 @@ class Player {
         var dy = o.y-this.y;
         if (dx * dx + dy * dy < 3.2*3.2) {
           this.addScore(0.2);
-          o.health--;
-          this.gamestats.ObjectiveDamage++;
+          o.health -= axeDamage;
+          this.gamestats.ObjectiveDamage += axeDamage;
           if (o.health <= 0) {
             this.gamestats.ObjectivesDestroyed++;
             room.coinMult += 0.5;
@@ -1512,7 +1534,10 @@ class Player {
       "9":925,  // +235 | +45
      "10":1210, // +285 | +50
      "11":1550, // +340 | +55
-     "12":1950  // +400 | +60
+     "12":1950, // +400 | +60
+     "13":2415, // +465 | +65
+     "14":2950, // +535 | +70
+     "15":3560  // +610 | +75
     }
 
     if (this.score >= threshold[this.level]) {
@@ -1932,6 +1957,7 @@ Entities.rusher = class extends Entity {
     }
   }
   hit(p) {
+    if (p.getAxeDamage() >= 4.5) return super.hit(p);
     if (this.rushing == 1) {
       this.rushing = 2;
       this.dir.x *= -1;
@@ -2105,6 +2131,7 @@ Entities.brute = class extends Entity {
     this.moveForward(dir,s);
   }
   hit(p) {
+    if (p.getAxeDamage() >= 4.5) return super.hit(p);
     if (this.weak) return super.hit(p);
     if (this.leaping) return;
     this.recoil = 0.5;
