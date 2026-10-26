@@ -31,6 +31,8 @@ let music = [];
 let currentMusic = null;
 let lastSecond = 0;
 let audioUnlocked = false;
+// Simulation time expressed in 60 Hz frames, so gameplay is independent of FPS.
+let frameDelta = 1;
 const heldKeys = new Set();
 
 function preload() {
@@ -242,6 +244,8 @@ function spawnPumpkin() {
 }
 
 function draw() {
+  // Cap large pauses (e.g. switching tabs) to avoid teleporting actors or skipping animations.
+  frameDelta = Math.min(3, Math.max(0, (deltaTime || (1000 / 60)) / (1000 / 60)));
   background(18, 57, 4);
 
   if (!started && !ended) {
@@ -275,7 +279,7 @@ function drawTitleScreen() {
   strokeWeight(10);
   fill("black");
   textSize(40);
-  text("Pumpkin Smasher", 200, 100);
+  text("Pumpkin Smasher (The Original)", 200, 100);
   noStroke();
   fill("black");
   rect(162.5, 200, 75, 50);
@@ -403,7 +407,7 @@ function drawLeaderboard() {
 
 function updateActors() {
   for (const pumpkin of growing_pumpkins.slice()) {
-    pumpkin.scale += random(0, 0.0125);
+    pumpkin.scale += random(0, 0.0125) * frameDelta;
     if (pumpkin.scale >= 1) {
       pumpkin.scale = 1;
       pumpkin.animation = "pumpkin";
@@ -411,9 +415,9 @@ function updateActors() {
     }
   }
   for (const pumpkin of jacks) {
-    pumpkin.time++;
-    if (pumpkin.time === revealtime) pumpkin.animation = "reveal";
-    if (pumpkin.time === revealtime + 25) pumpkin.animation = "jack_o_lantern";
+    pumpkin.time += frameDelta;
+    if (pumpkin.time >= revealtime && pumpkin.time < revealtime + frameDelta) pumpkin.animation = "reveal";
+    if (pumpkin.time >= revealtime + 25) pumpkin.animation = "jack_o_lantern";
   }
 
   playercontrol();
@@ -421,8 +425,9 @@ function updateActors() {
   // Axe swing animation temporarily disabled.
   // if (player.swingTime > 0) { player.swingTime--; player.swing = Math.sin((1 - player.swingTime / 12) * Math.PI) * 1.25; } else player.swing = 0;
   effects = effects.filter(effect => {
-    effect.frame++;
-    return --effect.lifetime > 0;
+    effect.frame += frameDelta;
+    effect.lifetime -= frameDelta;
+    return effect.lifetime > 0;
   });
 }
 
@@ -435,8 +440,8 @@ function playercontrol() {
   // so moving on two axes is not faster than moving on one.
   const movementSpeed = 3.75;
   const diagonalScale = up !== down && left !== right ? 1 / Math.SQRT2 : 1;
-  const moveX = (Number(right) - Number(left)) * movementSpeed * diagonalScale;
-  const moveY = (Number(down) - Number(up)) * movementSpeed * diagonalScale;
+  const moveX = (Number(right) - Number(left)) * movementSpeed * diagonalScale * frameDelta;
+  const moveY = (Number(down) - Number(up)) * movementSpeed * diagonalScale * frameDelta;
   player.x = Math.max(-sizeX, Math.min(sizeX, player.x + moveX));
   player.y = Math.max(-sizeY, Math.min(sizeY, player.y + moveY));
   if (left) player.facing = -1;
@@ -463,8 +468,8 @@ function enemymove(enemy, i) {
   // heading carries it into a wall, stop at the edge and choose a new target
   // on the next frame instead of walking off into the distance.
   const enemySpeed = 5.625; // 1.5x the current enemy movement speed.
-  const nextY = enemy.y + sin(enemy.rotate) * enemySpeed;
-  const nextX = enemy.x + cos(enemy.rotate) * enemySpeed;
+  const nextY = enemy.y + sin(enemy.rotate) * enemySpeed * frameDelta;
+  const nextX = enemy.x + cos(enemy.rotate) * enemySpeed * frameDelta;
   const boundedX = Math.max(-sizeX, Math.min(sizeX, nextX));
   const boundedY = Math.max(-sizeY, Math.min(sizeY, nextY));
   const hitBoundary = boundedX !== nextX || boundedY !== nextY;
@@ -503,7 +508,9 @@ function pumpkinhit(pumpkin, actor) {
   actor.score += points;
   actor.smashed++;
   effects.push({ x: pumpkin.x, y: pumpkin.y, points, jack, lifetime: 20, frame: 0, type: "score" });
-  effects.push({ x: pumpkin.x, y: pumpkin.y, lifetime: 15, frame: 0, type: "smash" });
+  // Five frames at four simulation frames each need 20 frames to finish.
+  // Keep the splash alive a little longer so the final sprite frame is visible.
+  effects.push({ x: pumpkin.x, y: pumpkin.y, lifetime: 24, frame: 0, type: "smash" });
   if (pumpkin.target !== -1 && enemies[pumpkin.target]) enemies[pumpkin.target].attracted = false;
   amount--;
   pumpkins.splice(pumpkins.indexOf(pumpkin), 1);
@@ -584,7 +591,7 @@ function drawEffect(effect) {
 
   const img = effect.jack ? images.score500 : images.score100;
   if (img && img.width && img.height) {
-    const rise = 20 - effect.lifetime;
+    const rise = effect.frame;
     const scoreHeight = 14;
     image(img, effect.x, effect.y - rise, img.width * (scoreHeight / img.height), scoreHeight);
   }
