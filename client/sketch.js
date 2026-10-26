@@ -1700,7 +1700,7 @@ var upgrades = {
   maxhealth: 0
 };
 const upgradeNames = {
-  axedamage: "Axe Damage",
+  axedamage: "Axe Weight",
   speed: "Speed",
   axelength: "Axe Reach",
   maxhealth: "Health"
@@ -3080,7 +3080,7 @@ var keybindContent = [
       },
       {
         type: "keybind",
-        name: "Upgrade Axe Damage: ",
+        name: "Upgrade Axe Weight: ",
         id: "upgradeaxedamage",
         usemodifier: true,
         value: "4"
