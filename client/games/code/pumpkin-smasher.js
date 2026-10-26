@@ -205,10 +205,25 @@ function stopMusic() {
 function spawnPumpkin() {
   // Original behavior replenishes the live pumpkin count after each smash.
   // It does not cap the total ever spawned at 180.
-  for (let i = 0; i < desired - amount; i++) {
+  // Choose unoccupied grid cells so pumpkins cannot overlap each other.
+  const occupied = new Set(pumpkins.filter(p => p.visible).map(p => `${p.x},${p.y}`));
+  const positions = [];
+  for (let x = -sizeX; x <= sizeX; x += 50) {
+    for (let y = -sizeY; y <= sizeY; y += 50) {
+      if (!occupied.has(`${x},${y}`)) positions.push({ x, y });
+    }
+  }
+  // Shuffle the free cells, then use each at most once in this spawn batch.
+  for (let i = positions.length - 1; i > 0; i--) {
+    const j = randomNumber(0, i);
+    [positions[i], positions[j]] = [positions[j], positions[i]];
+  }
+  const spawnCount = Math.min(desired - amount, positions.length);
+  for (let i = 0; i < spawnCount; i++) {
+    const { x, y } = positions[i];
     const pumpkin = {
-      x: randomNumber(-sizeX / 50, sizeX / 50) * 50,
-      y: randomNumber(-sizeY / 50, sizeY / 50) * 50,
+      x,
+      y,
       width: 46, height: 46,
       jack: randomNumber(1, 5) === 1,
       time: 0,
@@ -331,7 +346,7 @@ function drawEndScreen() {
 
 function updateActors() {
   for (const pumpkin of growing_pumpkins.slice()) {
-    pumpkin.scale += random(0, 0.025);
+    pumpkin.scale += random(0, 0.0125);
     if (pumpkin.scale >= 1) {
       pumpkin.scale = 1;
       pumpkin.animation = "pumpkin";
