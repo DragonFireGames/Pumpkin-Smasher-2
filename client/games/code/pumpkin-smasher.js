@@ -322,6 +322,11 @@ function drawDebug() {
 }
 
 function drawEndScreen() {
+  if (displays === 1) {
+    drawLeaderboard();
+    return;
+  }
+
   displaypumpkin.visible = true;
   displaypumpkin.animation = win === 0 ? "pumpkin" : win >= 3 ? "jack_o_lantern" : "reveal";
   const resultImage = displaypumpkin.animation === "pumpkin" ? images.pumpkin :
@@ -340,8 +345,60 @@ function drawEndScreen() {
   noStroke();
   fill("white");
   textSize(15);
-  text("Press “U“ to Scroll", 200, 350);
-  text("Press “P“ to Play Again", 200, 370);
+  text("Press 'U' to View Leaderboard", 200, 350);
+  text("Press 'P' to Play Again", 200, 370);
+}
+
+function drawLeaderboard() {
+  const standings = [
+    { name: "You", score: player.score, smashed: player.smashed, isPlayer: true },
+    ...enemies.map((enemy, index) => ({
+      name: "Enemy " + (index + 1),
+      score: enemy.score,
+      smashed: enemy.smashed,
+      isPlayer: false,
+      originalIndex: index
+    }))
+  ].sort((a, b) => b.score - a.score);
+
+  background(18, 57, 4);
+  textAlign(CENTER, CENTER);
+  stroke("orange");
+  strokeWeight(5);
+  fill("white");
+  textSize(34);
+  text("Leaderboard", 200, 55);
+  noStroke();
+  textSize(15);
+  textAlign(LEFT, CENTER);
+  text("Rank", 35, 105);
+  text("Player", 95, 105);
+  textAlign(RIGHT, CENTER);
+  text("Score", 280, 105);
+  text("Smashed", 370, 105);
+
+  for (let i = 0; i < standings.length; i++) {
+    const entry = standings[i];
+    const y = 135 + i * 32;
+    if (entry.isPlayer) {
+      noStroke();
+      fill(80, 115, 48);
+      rect(20, y - 14, 360, 28, 4);
+    }
+    fill(entry.isPlayer ? "yellow" : "white");
+    textAlign(LEFT, CENTER);
+    text(String(i + 1), 40, y);
+    text(entry.name, 95, y);
+    textAlign(RIGHT, CENTER);
+    text(String(entry.score), 280, y);
+    text(String(entry.smashed), 370, y);
+  }
+
+  textAlign(CENTER, CENTER);
+  fill("white");
+  textSize(15);
+  text("Press 'U' to Return", 200, 340);
+  text("Press 'P' to Play Again", 200, 370);
 }
 
 function updateActors() {
