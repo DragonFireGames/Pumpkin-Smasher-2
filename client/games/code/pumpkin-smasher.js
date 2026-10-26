@@ -115,10 +115,6 @@ function draw() {
   lastFrameTime = now;
   background("#123904");
 
-  if (keyWentDown("b") || (keyIsDown(66) && !debugMode)) {
-    debugMode = !debugMode;
-  }
-
   if (gameState === "title") {
     drawOverlay("Pumpkin Smasher", "Press ENTER or SPACE to start", "F for the full version");
     return;
@@ -198,9 +194,9 @@ function updateRound(dt) {
     const target = enemy.target;
     if (!target || !pumpkins.includes(target)) { enemy.target = -1; return; }
     enemy.angle = atan2(target.y - enemy.y, target.x - enemy.x);
-    enemy.x += cos(enemy.angle) * 450 * dt;
-    enemy.y += sin(enemy.angle) * 450 * dt;
-    if (cos(enemy.angle)) enemy.facing = cos(enemy.angle) < 0 ? -1 : 1;
+    enemy.x += Math.cos(enemy.angle) * 450 * dt;
+    enemy.y += Math.sin(enemy.angle) * 450 * dt;
+    if (Math.cos(enemy.angle)) enemy.facing = Math.cos(enemy.angle) < 0 ? -1 : 1;
     if (dist(enemy.x, enemy.y, target.x, target.y) < 28) smash(enemy, target);
   });
 
@@ -263,6 +259,7 @@ function drawOverlay(title, subtitle, hint) {
 }
 
 function keyPressed() {
+  if (key === "b" || key === "B") debugMode = !debugMode;
   if (gameState === "title" && (keyCode === ENTER || key === " ")) resetRound();
   else if (gameState === "ended" && (key === "u" || key === "U")) resultPage = (resultPage + 1) % 2;
   else if (gameState === "ended" && (key === "p" || key === "P" || key === " " || keyCode === ENTER)) resetRound();
