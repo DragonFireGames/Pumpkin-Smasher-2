@@ -31,12 +31,13 @@ let music = [];
 let currentMusic = null;
 let lastSecond = 0;
 let audioUnlocked = false;
+const heldKeys = new Set();
 
 function preload() {
   // These are the matching assets that actually exist in this repository.
   images.pumpkin = loadImage("/assets/pumpkins/pumpkin.png");
   images.growingPumpkin = loadImage("/assets/pumpkins/new_pumpkin.png");
-  images.jackLantern = loadImage("/assets/pumpkins/jack_o_lantern.png");
+  images.jackLantern = loadImage("/assets/misc/jack_o_lantern.png");
   images.reveal = loadImage("/assets/misc/reveal.png");
   images.skeleton = loadImage("/assets/skeleton/1.png");
   images.enemy1 = loadImage("/assets/skeleton/1.png");
@@ -70,6 +71,11 @@ function setup() {
     return { ...track, audio };
   });
   window.addEventListener("resize", resizeCanvasToContainer);
+  // The arcade can be embedded in an iframe that does not retain canvas focus.
+  // Listen at window level so keyboard controls still work after clicking the game.
+  window.addEventListener("keydown", handleGameKeyDown);
+  window.addEventListener("keyup", event => heldKeys.delete(event.code));
+  window.addEventListener("blur", () => heldKeys.clear());
   resizeCanvasToContainer();
 }
 
@@ -348,11 +354,11 @@ function updateActors() {
 }
 
 function playercontrol() {
-  if (keyIsDown(UP_ARROW) && player.y >= -sizeY) player.y -= 5;
-  if (keyIsDown(DOWN_ARROW) && player.y <= sizeY) player.y += 5;
-  if (keyIsDown(LEFT_ARROW) && player.x >= -sizeX) { player.x -= 5; player.facing = -1; }
-  if (keyIsDown(RIGHT_ARROW) && player.x <= sizeX) { player.x += 5; player.facing = 1; }
-  if (keyIsDown(32)) detect(player);
+  if (heldKeys.has("ArrowUp") || keyIsDown(UP_ARROW) && player.y >= -sizeY) player.y -= 5;
+  if (heldKeys.has("ArrowDown") || keyIsDown(DOWN_ARROW) && player.y <= sizeY) player.y += 5;
+  if (heldKeys.has("ArrowLeft") || keyIsDown(LEFT_ARROW) && player.x >= -sizeX) { player.x -= 5; player.facing = -1; }
+  if (heldKeys.has("ArrowRight") || keyIsDown(RIGHT_ARROW) && player.x <= sizeX) { player.x += 5; player.facing = 1; }
+  if (heldKeys.has("Space") || keyIsDown(32)) detect(player);
 }
 
 function enemymove(enemy, i) {
@@ -388,7 +394,7 @@ function detect(actor) {
   for (const pumpkin of pumpkins.slice()) {
     if (CodeOrgCompat.overlap(actor, pumpkin)) {
       // Player's original smash action is key-triggered; enemies smash on contact.
-      if (actor === player && !keyIsDown(32)) continue;
+      if (actor === player && !heldKeys.has("Space") && !keyIsDown(32)) continue;
       pumpkinhit(pumpkin, actor);
       if (actor.enemy) actor.attracted = false;
     }
@@ -469,6 +475,32 @@ function drawEffect(effect) {
   }
 }
 
+
+function handleGameKeyDown(event) {
+  heldKeys.add(event.code);
+  if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(event.code)) event.preventDefault();
+  if (event.repeat) return;
+  const pressedKey = event.key;
+  if (!started && !ended && (event.code === "Enter" || event.code === "Space")) {
+    start();
+    return;
+  }
+  if (ended && (pressedKey === "p" || pressedKey === "P" || event.code === "Space")) {
+    resetGame();
+    return;
+  }
+  if (ended && (pressedKey === "u" || pressedKey === "U")) {
+    displays = (displays + 1) % 2;
+    return;
+  }
+  if (pressedKey === "b" || pressedKey === "B") {
+    debug = !debug;
+    return;
+  }
+  if (pressedKey === "f" || pressedKey === "F") {
+    window.open("https://studio.code.org/projects/spritelab", "_blank", "noopener");
+  }
+}
 
 function keyPressed() {
   if (!started && !ended && (keyCode === ENTER || key === " ")) {
