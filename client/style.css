@@ -390,35 +390,82 @@ canvas {
 }
 #arcadeWindow {
   position: relative;
-  width: min(92vw, 110vmin);
-  height: min(92vh, 110vmin);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.2vmin;
+  width: min(92vw, 100vmin);
+  max-height: 94vh;
+  overflow-y: auto;
   background: #0C2504;
   border: 0.8vmin solid #303030;
   box-shadow: 0 0 0 0.5vmin #ffa500, 0 1vmin 4vmin #000000A0;
   box-sizing: border-box;
-  padding: 1.2vmin;
+  padding: 1.5vmin;
+}
+#arcadeGameName {
+  width: 100%;
+  color: #ffa500;
+  text-align: center;
+  font-size: clamp(18px, 3vmin, 32px);
+  font-weight: bold;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-sizing: border-box;
+  padding: 0.5vmin 5vmin;
 }
 #arcadeFrame {
   display: block;
-  width: 100%;
-  height: 100%;
+  width: min(100%, 78vmin);
+  aspect-ratio: 1 / 1;
+  height: auto;
+  flex: 0 0 auto;
   border: 0.4vmin solid #303030;
   background: #0C2504;
   box-sizing: border-box;
 }
+#arcadeControls {
+  display: flex;
+  justify-content: center;
+  gap: 1vmin;
+  width: 100%;
+}
+#arcadeControls button {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 42px;
+  padding: 1vmin;
+  border: 0.4vmin solid #ffa500;
+  background: #231709;
+  color: #ffa500;
+  font: inherit;
+  font-size: clamp(13px, 2.2vmin, 22px);
+  cursor: pointer;
+}
+#arcadeControls button:hover,
+#arcadeControls button:focus-visible {
+  background: #381e08;
+}
 #arcadeCloseBtn {
   position: absolute;
   z-index: 1;
-  top: -2.4vmin;
-  right: -2.4vmin;
-  width: 7vmin;
-  height: 7vmin;
-  min-width: 36px;
-  min-height: 36px;
-  border: 0.5vmin solid #303030;
+  top: 0.5vmin;
+  right: 0.5vmin;
+  width: 5vmin;
+  height: 5vmin;
+  min-width: 32px;
+  min-height: 32px;
+  border: 0.4vmin solid #303030;
   background: #ffa500;
   color: #231709;
-  font-size: 5vmin;
+  font-size: clamp(20px, 4vmin, 36px);
   line-height: 1;
   cursor: pointer;
+}
+@media (max-width: 520px) {
+  #arcadeWindow { width: 96vw; padding: 2vmin; }
+  #arcadeFrame { width: min(100%, 88vmin); }
+  #arcadeControls { gap: 0.6vmin; }
+  #arcadeControls button { padding: 1.5vmin 0.5vmin; }
 }
