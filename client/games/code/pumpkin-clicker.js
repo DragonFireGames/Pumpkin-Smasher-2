@@ -102,7 +102,7 @@ function pcVaultNext(o){
  return false;
 }
 function pcRate(){
- let total=0;const w=pcState.workers,deb=1+w.debuffer*.08*pcCandyMult("workers"),global=(1+w.ghost*.05*deb)*(1+w.speeder*.1*deb)*(1+w.wizard*.18*deb)*(1+w.rusher*.035*deb);
+ let total=0;const w=pcState.workers,deb=(1+w.debuffer*.08)*pcCandyMult("workers"),global=(1+w.ghost*.05*deb)*(1+w.speeder*.1*deb)*(1+w.wizard*.18*deb)*(1+w.rusher*.035*deb);
  pcUnique(o=>{if(o.kind!=="generator")return;total+=(PC_GENS[o.tier].rate+(w.monster*.1+w.brute*.55)*deb)*pcShield(o)*(pcVaultNext(o)?1.15:1)*(o.mega?1.5:1);});
  return total*global*pcCandyMult("production")*(1+pcState.prestige*.5);
 }
