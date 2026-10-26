@@ -279,7 +279,7 @@ function drawTitleScreen() {
   strokeWeight(10);
   fill("black");
   textSize(40);
-  text("Pumpkin Smasher (The Original)", 200, 100);
+  text("Pumpkin Smasher", 200, 100);
   noStroke();
   fill("black");
   rect(162.5, 200, 75, 50);
