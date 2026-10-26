@@ -2625,10 +2625,6 @@ var GameList = [
   {
     name: "Pumpkin Smasher (The Original)",
     source: "/game/pumpkin-smasher"
-  },
-  {
-    name: "Pumpkin Clicker",
-    source: "/game/pumpkin-clicker"
   }
 ];
 var arcadeGameIndex = 0;
