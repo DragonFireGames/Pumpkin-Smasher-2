@@ -1,6 +1,6 @@
 /* Shared arcade-game host. Game modules export createGame(p). */
 (async function () {
-  const gameId = decodeURIComponent(location.pathname.replace(/^\\/game\\/?/, "").split("/")[0] || "pumpkin-smasher");
+  const gameId = decodeURIComponent(location.pathname.split("/").filter(Boolean)[1] || "pumpkin-smasher");
   const moduleUrl = "/client/games/code/" + encodeURIComponent(gameId) + ".js";
   let gameModule;
 
