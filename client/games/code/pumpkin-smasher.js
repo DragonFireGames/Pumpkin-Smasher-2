@@ -532,7 +532,7 @@ function drawPumpkin(pumpkin) {
     const sheet = images.reveal;
     if (sheet && sheet.width && sheet.height) {
       const frameWidth = sheet.width / 4;
-      const frame = Math.min(3, Math.floor((pumpkin.time - revealtime) / 5));
+      const frame = Math.min(3, Math.floor((pumpkin.time - revealtime) / 6));
       const h = 46;
       const w = frameWidth * h / sheet.height;
       image(sheet, pumpkin.x, pumpkin.y, w, h, frame * frameWidth, 0, frameWidth, sheet.height);
@@ -575,7 +575,7 @@ function drawEffect(effect) {
     const sheet = images.smash;
     if (sheet && sheet.width && sheet.height) {
       const frameWidth = sheet.width / 5;
-      const frame = Math.min(4, Math.floor(effect.frame / 3));
+      const frame = Math.min(4, Math.floor(effect.frame / 4));
       // The original gut_splat sprite sheet has five horizontal animation frames.
       image(sheet, effect.x, effect.y, 46, 46, frame * frameWidth, 0, frameWidth, sheet.height);
     }
