@@ -365,7 +365,8 @@ function pumpkinhit(pumpkin, actor) {
   const points = jack ? 500 : 100;
   actor.score += points;
   actor.smashed++;
-  effects.push({ x: pumpkin.x, y: pumpkin.y, points, jack, lifetime: 20, frame: 0 });
+  effects.push({ x: pumpkin.x, y: pumpkin.y, points, jack, lifetime: 20, frame: 0, type: "score" });
+  effects.push({ x: pumpkin.x, y: pumpkin.y, lifetime: 15, frame: 0, type: "smash" });
   if (pumpkin.target !== -1 && enemies[pumpkin.target]) enemies[pumpkin.target].attracted = false;
   amount--;
   pumpkins.splice(pumpkins.indexOf(pumpkin), 1);
@@ -422,57 +423,21 @@ function drawSkeleton(actor) {
 }
 
 function drawEffect(effect) {
+  if (effect.type === "smash") {
+    const sheet = images.smash;
+    if (sheet && sheet.width && sheet.height) {
+      const frameWidth = sheet.width / 5;
+      const frame = Math.min(4, Math.floor(effect.frame / 3));
+      // The original gut_splat sprite sheet has five horizontal animation frames.
+      image(sheet, effect.x, effect.y, 46, 46, frame * frameWidth, 0, frameWidth, sheet.height);
+    }
+    return;
+  }
+
   const img = effect.jack ? images.score500 : images.score100;
   if (img && img.width && img.height) {
     const rise = 20 - effect.lifetime;
     image(img, effect.x, effect.y - rise, img.width * (28 / img.height), 28);
   }
-  else {
-    noStroke(); fill("white"); textAlign(CENTER, CENTER); textSize(20);
-    text(effect.points, effect.x, effect.y);
-  }
 }
 
-function drawHUD() {
-  fill("white");
-  noStroke();
-  textSize(20);
-  textAlign(CENTER, CENTER);
-  text((seconds < 10 ? minutes + ":0" + seconds : minutes + ":" + seconds), 200, 25);
-  textAlign(LEFT, CENTER);
-  textSize(15);
-  text("Your Score: " + player.score, 15, 25);
-  textAlign(RIGHT, CENTER);
-  text("Your Smashed: " + player.smashed, 385, 25);
-  for (let i = 0; i < enemies.length; i++) {
-    textAlign(LEFT, CENTER);
-    text("Enemy Score: " + enemies[i].score, 15, 25 + (i + 1) * 15);
-    textAlign(RIGHT, CENTER);
-    text("Enemy Smashed: " + enemies[i].smashed, 385, 25 + (i + 1) * 15);
-  }
-}
-
-function drawDebug() {
-  noFill();
-  stroke("magenta");
-  strokeWeight(2);
-  pumpkins.forEach(p => ellipse(p.x, p.y, 55, 55));
-  enemies.concat([player]).forEach(a => rect(a.x - 20, a.y - 27, 40, 54));
-}
-
-function keyPressed() {
-  if (key === "b" || key === "B") debug = !debug;
-  if (!started && !ended && (keyCode === ENTER || key === " ")) {
-    started = true;
-    start();
-  } else if (ended && (key === "u" || key === "U")) {
-    displays++;
-    if (displays === 2) displays = 0;
-  } else if (ended && (key === "p" || key === "P" || key === " ")) {
-    resetGame();
-  }
-  if (key === "f" || key === "F") {
-    window.prompt("Go to:", "https://pumpkin-smasher-2.dragonfiregames.repl.co");
-  }
-  return false;
-}
