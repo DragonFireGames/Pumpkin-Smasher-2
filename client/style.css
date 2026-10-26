@@ -392,6 +392,7 @@ canvas {
 }
 #arcadeWindow {
   position: relative;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -423,10 +424,11 @@ canvas {
 #arcadeFrame {
   display: block;
   /* Keep the square game viewport small enough to leave room for the controls. */
-  width: min(100%, 78vmin, calc(94vh - 190px));
-  width: min(100%, 78vmin, calc(94dvh - 190px));
-  max-height: calc(94vh - 190px);
-  max-height: calc(94dvh - 190px);
+  /* Reserve enough vertical room for the title, close button, and all controls. */
+  width: min(100%, 78vmin, calc(100vh - 300px));
+  width: min(100%, 78vmin, calc(100dvh - 300px));
+  max-height: calc(100vh - 300px);
+  max-height: calc(100dvh - 300px);
   aspect-ratio: 1 / 1;
   height: auto;
   flex: 0 1 auto;
