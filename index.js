@@ -1505,8 +1505,9 @@ class Player {
         var dy = o.y-this.y;
         if (dx * dx + dy * dy < 3.2*3.2) {
           this.addScore(0.2);
-          o.health -= axeDamage;
-          this.gamestats.ObjectiveDamage += axeDamage;
+          const objectiveDamage = (1 + axeDamage) / 2;
+          o.health -= objectiveDamage;
+          this.gamestats.ObjectiveDamage += objectiveDamage;
           if (o.health <= 0) {
             this.gamestats.ObjectivesDestroyed++;
             room.coinMult += 0.5;
