@@ -79,7 +79,7 @@ function pcSave(){if(!pcState)return;pcState.lastSavedAt=Date.now();try{localSto
 function pcToday(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 function pcOffline(){
  const secs=Math.max(0,Math.min(2592000,(Date.now()-(pcState.lastSavedAt||Date.now()))/1000)),rate=pcRate();if(secs<1||rate<=0)return;
- if(pcState.autoSell)pcState.cash+=rate*secs;else pcState.pumpkins+=Math.min(Math.max(0,pcCap()-pcState.pumpkins),rate*secs);
+ if(pcState.autoSell)pcState.cash+=rate*secs*pcCandyMult("sell");else pcState.pumpkins+=Math.min(Math.max(0,pcCap()-pcState.pumpkins),rate*secs);
  pcSay("Farm grew while you were away");pcState.lastSavedAt=Date.now();
 }
 function pcFmt(v){
@@ -108,7 +108,7 @@ function pcRate(){
 }
 function pcTick(){
  const now=millis(),dt=Math.max(0,Math.min(.25,(now-pcLast)/1000));pcLast=now;const rate=pcRate();
- if(pcState.autoSell)pcState.cash+=rate*dt;
+ if(pcState.autoSell)pcState.cash+=rate*dt*pcCandyMult("sell");
  else if(pcState.pumpkins<pcCap()){pcState.progress+=rate*dt;const n=Math.min(Math.floor(pcState.progress),Math.floor(pcCap()-pcState.pumpkins));if(n>0){pcState.pumpkins+=n;pcState.progress-=n;}if(pcState.pumpkins>=pcCap())pcState.progress=Math.min(.999,pcState.progress);}
  if(pcState.workers.rusher>0&&frameCount%600===0){const n=pcState.workers.rusher*5;if(pcState.autoSell)pcState.cash+=n;else pcState.pumpkins=Math.min(pcCap(),pcState.pumpkins+n);}
  if(++pcSaveTicks>=60){pcSaveTicks=0;pcSave();}
@@ -206,7 +206,7 @@ function pcGrid(L){
 function pcSheet(img,x,y,size,frames,frame=0){if(!img||!img.width||!img.height)return;const horizontal=img.width>img.height*1.4,fw=horizontal?img.width/frames:img.width,fi=horizontal?((frame%frames)+frames)%frames:0;image(img,x,y,fw*size/img.height,size,fi*fw,0,fw,img.height);}
 function pcGen(t,x,y,s){const img=pcImgs[PC_GENS[t].id];if(img?.width)pcSheet(img,x,y,s,1);else{noStroke();fill(t===0?"#85b54a":t===2?"#e9c33e":t===3?"#74e4e8":"#ed8d20");ellipse(x,y,s*.82,s*.68);fill("#4d7b20");rect(x-s*.04,y-s*.42,s*.08,s*.2);}}
 function pcDrawGrowGenerator(t,x,y,s,isVault=false){
- const pot=pcImgs.generatorPot,fruit=isVault?pcImgs.objective:pcImgs[PC_GENS[t].id],rate=PC_GENS[t].rate,cycle=Math.max(1300,1000/Math.max(.01,rate));
+ const pot=pcImgs.generatorPot,fruit=isVault?pcImgs.objective:pcImgs[t>=3?"diamond":t>=2?"gold":"regular"],rate=PC_GENS[t].rate,cycle=Math.max(1300,1000/Math.max(.01,rate));
  const phase=((Date.now()+Math.round(x*13+y*7))%cycle)/cycle,growth=phase<.84?Math.max(.12,phase/.84):1;
  if(pot&&pot.width&&pot.height)image(pot,x,y+s*.20,pot.width*(s*.70/pot.height),s*.70);else{noStroke();fill("#79502c");stroke("#b87a35");rect(x-s*.32,y+s*.10,s*.64,s*.38);}
  const img=phase<.84?pcImgs.green:fruit;
