@@ -488,6 +488,7 @@
     const totalSold = pcState.totalSold;
     const clicks = pcState.clicks;
     const achievements = pcState.achievements;
+    const lastDailyDay = pcState.lastDailyDay;
     const totalPlaySeconds = pcState.totalPlaySeconds;
     pcState = pcFreshState();
     pcState.prestige = nextPrestige;
@@ -499,6 +500,7 @@
     pcState.totalSold = totalSold;
     pcState.clicks = clicks;
     pcState.achievements = achievements;
+    pcState.lastDailyDay = lastDailyDay;
     pcState.totalPlaySeconds = totalPlaySeconds;
     pcBuildMode = null;
     pcSelected = { x: 0, y: 0 };
@@ -585,11 +587,16 @@
     noFill();
     rect(x + 1, y + 1, w - 2, h - 2, Math.min(8, h / 4));
     noStroke();
+    if (opts.icon && pcImages[opts.icon] && pcImages[opts.icon].width > 0) {
+      imageMode(CENTER);
+      image(pcImages[opts.icon], x + Math.min(18, w * 0.16), y + h / 2, Math.min(22, h - 7), Math.min(22, h - 7));
+    }
     fill(disabled ? "#839184" : "#f6f0d8");
     textAlign(CENTER, CENTER);
     textStyle(opts.bold === false ? NORMAL : BOLD);
     textSize(Math.max(9, Math.min(opts.textSize || 13, h * 0.34, w / Math.max(5, label.length * 0.56))));
-    text(label, x + w / 2, y + h / 2, Math.max(8, w - 8), h - 4);
+    const hasIcon = !!(opts.icon && pcImages[opts.icon] && pcImages[opts.icon].width > 0);
+    text(label, x + w / 2 + (hasIcon ? 7 : 0), y + h / 2, Math.max(8, w - (hasIcon ? 30 : 8)), h - 4);
     textStyle(NORMAL);
     if (action) pcRegisterHit(opts.id || label, x, y, w, h, action, { disabled });
   }
@@ -623,39 +630,67 @@
     fill("#f5e8bd");
     textAlign(LEFT, CENTER);
     textStyle(BOLD);
-    textSize(width < 520 ? 17 : 21);
-    text("PUMPKIN CLICKER", 16, 20);
+    textSize(width < 520 ? 15 : 21);
+    text("PUMPKIN CLICKER", 14, width < 600 ? 15 : 20);
     textStyle(NORMAL);
-    fill("#b7c5ad");
-    textSize(10);
-    text("Grow · harvest · sell · prestige", 17, 43);
 
-    const stats = [
-      { label: "CASH", value: pcMoney(pcState.cash) },
-      { label: "PUMPKINS", value: pcFormat(pcState.pumpkins) + " / " + pcFormat(pcStorageCapacity(pcState)) },
-      { label: "OUTPUT", value: pcFormat(pcDeliveredRate(pcState)) + "/s" },
-      { label: "PRESTIGE", value: String(pcState.prestige) + " · +" + Math.round(pcState.prestigeBonus * 100) + "%" }
-    ];
-    const rightMargin = 14;
-    const left = Math.min(width * 0.31, width < 700 ? width * 0.32 : 340);
-    const x0 = left;
-    const gap = 7;
-    const statW = Math.max(58, (width - x0 - rightMargin - gap * 3) / 4);
-    for (let i = 0; i < stats.length; i++) {
-      const x = x0 + i * (statW + gap);
-      const boxW = Math.min(statW, width - x - rightMargin);
-      if (boxW < 45) continue;
-      fill("#283b2b");
-      rect(x, 12, boxW, 44, 8);
-      fill("#aabb9a");
-      textAlign(LEFT, CENTER);
+    if (width < 600) {
+      fill("#b7c5ad");
+      textSize(8);
+      const compact = [
+        { label: "CASH", value: pcMoney(pcState.cash) },
+        { label: "PUMPKINS", value: pcFormat(pcState.pumpkins) + "/" + pcFormat(pcStorageCapacity(pcState)) },
+        { label: "OUTPUT", value: pcFormat(pcDeliveredRate(pcState)) + "/s" }
+      ];
+      const gap = 5;
+      const statW = (width - 24 - gap * 2) / 3;
+      for (let i = 0; i < compact.length; i++) {
+        const x = 12 + i * (statW + gap);
+        fill("#283b2b");
+        rect(x, 30, statW, 29, 6);
+        fill("#aabb9a");
+        textAlign(LEFT, CENTER);
+        textSize(7);
+        text(compact[i].label, x + 5, 37);
+        fill("#fff0c5");
+        textStyle(BOLD);
+        textSize(Math.max(8, Math.min(10, statW / Math.max(5, compact[i].value.length * 0.62))));
+        text(compact[i].value, x + 5, 50);
+        textStyle(NORMAL);
+      }
+      fill("#c8b578");
+      textAlign(RIGHT, CENTER);
       textSize(9);
-      text(stats[i].label, x + 8, 23);
-      fill("#fff0c5");
-      textStyle(BOLD);
-      textSize(Math.min(13, Math.max(9, boxW / Math.max(6, stats[i].value.length * 0.55))));
-      text(stats[i].value, x + 8, 42);
-      textStyle(NORMAL);
+      text("PRESTIGE " + pcState.prestige + " · +" + Math.round(pcState.prestigeBonus * 100) + "%", width - 12, 15);
+    } else {
+      fill("#b7c5ad");
+      textSize(10);
+      text("Grow · harvest · sell · prestige", 17, 43);
+      const stats = [
+        { label: "CASH", value: pcMoney(pcState.cash) },
+        { label: "PUMPKINS", value: pcFormat(pcState.pumpkins) + " / " + pcFormat(pcStorageCapacity(pcState)) },
+        { label: "OUTPUT", value: pcFormat(pcDeliveredRate(pcState)) + "/s" },
+        { label: "PRESTIGE", value: String(pcState.prestige) + " · +" + Math.round(pcState.prestigeBonus * 100) + "%" }
+      ];
+      const left = Math.min(width * 0.31, 340);
+      const gap = 7;
+      const statW = Math.max(58, (width - left - 14 - gap * 3) / 4);
+      for (let i = 0; i < stats.length; i++) {
+        const x = left + i * (statW + gap);
+        const boxW = Math.min(statW, width - x - 14);
+        if (boxW < 45) continue;
+        fill("#283b2b");
+        rect(x, 12, boxW, 44, 8);
+        fill("#aabb9a");
+        textAlign(LEFT, CENTER);
+        textSize(9);
+        text(stats[i].label, x + 8, 23);
+        fill("#fff0c5");
+        textStyle(BOLD);
+        textSize(Math.min(13, Math.max(9, boxW / Math.max(6, stats[i].value.length * 0.55))));
+        text(stats[i].value, x + 8, 42);
+        textStyle(NORMAL);
+      }
     }
     const capacity = pcStorageCapacity(pcState);
     fill("#435743");
@@ -663,7 +698,6 @@
     fill("#edb55d");
     rect(0, HEADER_H - 3, width * Math.min(1, pcState.pumpkins / Math.max(1, capacity)), 3);
   }
-
   function pcCalculateLayout() {
     const footer = Math.min(FOOTER_H, Math.max(78, height * 0.17));
     const body = { x: 12, y: HEADER_H + 8, w: Math.max(100, width - 24), h: Math.max(110, height - HEADER_H - footer - 20) };
@@ -673,9 +707,9 @@
       farm = { x: body.x, y: body.y, w: body.w - shopW - 10, h: body.h };
       shop = { x: farm.x + farm.w + 10, y: body.y, w: shopW, h: body.h };
     } else {
-      const farmH = Math.max(180, Math.min(body.h * 0.54, body.w * 0.78));
-      farm = { x: body.x, y: body.y, w: body.w, h: Math.min(farmH, body.h) };
-      shop = { x: body.x, y: farm.y + farm.h + 8, w: body.w, h: Math.max(75, body.y + body.h - farm.y - farm.h - 8) };
+      const farmH = Math.max(105, Math.min(Math.max(105, body.h - 82), body.h * 0.54, body.w * 0.78));
+      farm = { x: body.x, y: body.y, w: body.w, h: Math.min(farmH, Math.max(100, body.h - 76)) };
+      shop = { x: body.x, y: farm.y + farm.h + 8, w: body.w, h: Math.max(68, body.y + body.h - farm.y - farm.h - 8) };
     }
     const boardTop = farm.y + 48;
     const boardBottom = farm.y + farm.h - 52;
@@ -697,7 +731,6 @@
     pcPanel(box, "YOUR FARM", pcState.size + " × " + pcState.size + " plot · " + pcFormat(pcGeneratorCount(pcState)) + " generator slots · " + pcCountType(pcState, "mega") + " mega");
     const board = pcLayout.board;
     const cell = board.cell;
-    const records = pcGeneratorRecords(pcState);
     for (let y = 0; y < pcState.size; y++) {
       for (let x = 0; x < pcState.size; x++) {
         const index = y * pcState.size + x;
@@ -941,6 +974,11 @@
     rect(content.x, content.y, content.w, content.h, 8);
     const first = Math.max(0, Math.floor(pcShopScroll[pcActiveTab] / rowH));
     const last = Math.min(rows.length, Math.ceil((pcShopScroll[pcActiveTab] + content.h) / rowH));
+    push();
+    drawingContext.save();
+    drawingContext.beginPath();
+    drawingContext.rect(content.x, content.y, content.w, content.h);
+    drawingContext.clip();
     for (let i = first; i < last; i++) {
       const item = rows[i];
       const y = content.y + i * rowH - pcShopScroll[pcActiveTab];
@@ -970,8 +1008,12 @@
       textSize(Math.max(9, Math.min(11, priceW / 7.3)));
       text(item.price, content.x + content.w - 8, y + rowH / 2, priceW, rowH - 8);
       textStyle(NORMAL);
-      pcRegisterHit("shop-" + item.id, content.x + 2, Math.max(content.y, y), content.w - 4, Math.min(rowH - 4, content.y + content.h - Math.max(content.y, y)), item.action);
+      const hitY = Math.max(content.y, y);
+      const hitBottom = Math.min(content.y + content.h, y + rowH - 4);
+      if (hitBottom > hitY) pcRegisterHit("shop-" + item.id, content.x + 2, hitY, content.w - 4, hitBottom - hitY, item.action);
     }
+    drawingContext.restore();
+    pop();
     if (rows.length * rowH > content.h) {
       pcButton(box.x + box.w - 74, box.y + box.h - 29, 28, 19, "▲", () => {
         pcShopScroll[pcActiveTab] = Math.max(0, pcShopScroll[pcActiveTab] - rowH);
@@ -1122,6 +1164,7 @@
         pcButton(x, by, buttonW, buttonH, actions[i].short, actions[i].action, {
           id: "footer-" + actions[i].id,
           active: actions[i].id === "autosell" && pcState.autoSell,
+          icon: actions[i].id === "daily" ? "candy" : null,
           textSize: 11
         });
         const hit = pcHits[pcHits.length - 1];
@@ -1135,6 +1178,7 @@
         pcButton(x, y + 8, buttonW, buttonH, actions[i].label, actions[i].action, {
           id: "footer-" + actions[i].id,
           active: actions[i].id === "autosell" && pcState.autoSell,
+          icon: actions[i].id === "daily" ? "candy" : null,
           textSize: 12
         });
       }
@@ -1239,9 +1283,10 @@
       }
     }
     if (pcState.autoSell && pcState.pumpkins >= capacity * 0.9 && now - pcLastAutoSell > 700) {
+      const cashBeforeSale = pcState.cash;
       if (pcSellAll(false)) {
         pcLastAutoSell = now;
-        pcNoticeNow("Auto-sold a full basket for " + pcMoney(pcState.cash) + " total cash.");
+        pcNoticeNow("Auto-sold a basket for " + pcMoney(pcState.cash - cashBeforeSale) + ".");
       }
     }
     if (now - pcLastSave > 15000) {
