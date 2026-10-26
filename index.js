@@ -55,11 +55,7 @@ app.get("/game/:game", (request, response) => {
     fs.readFile(path.join(__dirname, "client/games/index.html"), "utf8", (error, html) => {
         if (error) return response.status(500).send("Unable to load arcade shell");
 
-        const gameScript = `<script type="module">
-          import { createGame } from "/client/games/code/${gameId}.js";
-          window.__arcadeGame = createGame();
-          window.dispatchEvent(new Event("arcade-game-ready"));
-        </script>`;
+        const gameScript = `<script src="/client/games/code/${gameId}.js"><\/script>`;
 
         response.type("html").send(html.replace("</head>", gameScript + "\n</head>"));
     });
