@@ -37,6 +37,29 @@ app.get("/", (request, response) => {
 app.get("/instructions", (request, response) => {
     response.sendFile(__dirname + "/client/instructions/index.html");
 });
+
+// Serve the shared arcade shell with the selected game's module injected into its HTML.
+app.get("/game/:game", (request, response) => {
+    const gameId = request.params.game;
+
+    // Restrict IDs to simple filename-safe slugs; never let a URL choose an arbitrary path.
+    if (!/^[a-z0-9-]+$/i.test(gameId)) {
+        return response.status(400).send("Invalid arcade game ID");
+    }
+
+    const gamePath = path.join(__dirname, "client/games/code", gameId + ".js");
+    if (!fs.existsSync(gamePath) || !fs.statSync(gamePath).isFile()) {
+        return response.status(404).send("Arcade game not found: " + gameId);
+    }
+
+    fs.readFile(path.join(__dirname, "client/games/index.html"), "utf8", (error, html) => {
+        if (error) return response.status(500).send("Unable to load arcade shell");
+
+        const gameScript = `<script src="/client/games/code/${gameId}.js"><\/script>`;
+
+        response.type("html").send(html.replace("</head>", gameScript + "\n</head>"));
+    });
+});
 /*
 const axios = require('axios');
 axios.get('https://pumpkin-smasher-discord-bot.onrender.com');
