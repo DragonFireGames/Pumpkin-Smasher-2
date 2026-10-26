@@ -399,8 +399,8 @@ canvas {
   align-items: center;
   gap: 1.2vmin;
   width: min(92vw, 100vmin);
-  max-height: calc(100vh - 24px);
-  max-height: calc(100dvh - 24px);
+  max-height: calc(90vh - 24px);
+  top: calc(5vh + 12px);
   margin: 0 auto;
   max-width: 100%;
   overflow-y: auto;
