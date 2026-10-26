@@ -387,7 +387,8 @@ canvas {
   visibility: visible;
 }
 #arcadeDis.open {
-  display: flex;
+  display: grid;
+  place-items: center;
 }
 #arcadeWindow {
   position: relative;
@@ -398,7 +399,8 @@ canvas {
   width: min(92vw, 100vmin);
   max-height: calc(100vh - 24px);
   max-height: calc(100dvh - 24px);
-  margin-block: auto;
+  margin: auto;
+  max-width: 100%;
   overflow-y: auto;
   background: #0C2504;
   border: 0.8vmin solid #303030;
@@ -473,7 +475,10 @@ canvas {
 }
 @media (max-width: 520px) {
   #arcadeWindow { width: 96vw; padding: 2vmin; }
-  #arcadeFrame { width: min(100%, 88vmin); }
+  #arcadeFrame {
+    width: min(100%, 78vmin, calc(94dvh - 190px));
+    max-height: calc(94dvh - 190px);
+  }
   #arcadeControls { gap: 0.6vmin; }
   #arcadeControls button { padding: 1.5vmin 0.5vmin; }
 }
