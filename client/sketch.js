@@ -2613,7 +2613,19 @@ Displays.loading = function() {
   }
 }
 
+function arcadeIsOpen() {
+  return document.getElementById("arcadeDis").classList.contains("open");
+}
+function openArcade() {
+  if (display != "lobby") return;
+  document.getElementById("arcadeDis").classList.add("open");
+}
+function closeArcade() {
+  var arcade = document.getElementById("arcadeDis");
+  if (arcade) arcade.classList.remove("open");
+}
 function setDisplay(d, sd) {
+  if (d == "game" || d == "pmgame" || (d == "loading" && sd == "game")) closeArcade();
   display = d;
   subdisplay = sd ?? "";
   DiscordWidget.style.visibility = "hidden";
@@ -3369,6 +3381,10 @@ function mousePressed() {
   if (isMobile) mousePressGUI();
 }
 function keyPressed() {
+  if (arcadeIsOpen()) {
+    if (keyCode === ESCAPE || key === "Escape") closeArcade();
+    return false;
+  }
   if (display == "home" && document.activeElement == homeDis.username) return;
   if (selectedKeybind) {
     const item = settingsIdMap[selectedKeybind];
@@ -3700,6 +3716,12 @@ Keybinds.onpress("swapFreeplay",function(){
   if (display != "game" && display != "pmgame") return;
   if (room != player.id) return;
   socket.emit('swap');
+});
+Keybinds.onpress("openArcade",function(){
+  if (display != "lobby") return;
+  var arcadeX = 100, arcadeY = -100;
+  if ((player.x-arcadeX)**2+(player.y-arcadeY)**2 >= 1600) return;
+  openArcade();
 });
 Keybinds.onpress("togglePublicity",function(){
   if (display != "lobby" || subdisplay != "host") return;
@@ -4112,6 +4134,7 @@ socket.on('timer', function(t) {
   timeleft = t;
 });
 socket.on('start', async function(time, quick) {
+  closeArcade();
   setDisplay("loading", "game");
   console.log("Game started!");
   startTime = time + 5000;
