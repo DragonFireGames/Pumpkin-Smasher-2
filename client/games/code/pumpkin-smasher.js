@@ -346,7 +346,8 @@ function updateActors() {
 
   playercontrol();
   enemies.forEach((enemy, i) => enemymove(enemy, i));
-  if (player.swingTime > 0) { player.swingTime--; player.swing = Math.sin((1 - player.swingTime / 12) * Math.PI) * 1.25; } else player.swing = 0;\n  effects = effects.filter(effect => {
+  if (player.swingTime > 0) { player.swingTime--; player.swing = Math.sin((1 - player.swingTime / 12) * Math.PI) * 1.25; } else player.swing = 0;
+  effects = effects.filter(effect => {
     effect.frame++;
     return --effect.lifetime > 0;
   });
