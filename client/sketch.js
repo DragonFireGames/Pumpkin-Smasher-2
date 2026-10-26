@@ -1493,6 +1493,7 @@ async function loadAssets() {
 
   // Lobby Image
   textures.lobby = LoadImage("assets/misc/lobby.png");
+  textures.arcade = FitImage("assets/misc/arcade.png");
 
   var SkeletonImg = function(url,dx,dy,) {
     var img = new FitImage(url);
