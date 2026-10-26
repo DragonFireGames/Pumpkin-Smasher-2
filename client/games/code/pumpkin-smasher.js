@@ -213,8 +213,6 @@ function spawnPumpkin() {
 function draw() {
   background(18, 57, 4);
 
-  if (keyWentDownCompat("b")) debug = !debug;
-
   if (!started && !ended) {
     drawTitleScreen();
     return;
@@ -239,11 +237,6 @@ function draw() {
 
   drawHUD();
 }
-
-function keyWentDownCompat(k) {
-  return keyIsPressed && key.toLowerCase() === k && !keyWentDownCompat._held;
-}
-keyWentDownCompat._held = false;
 
 function drawTitleScreen() {
   textAlign(CENTER, CENTER);
@@ -288,7 +281,7 @@ function drawEndScreen() {
     text("Press “P“ to Play Again", 200, 370);
   }
   const resultImage = win === 0 ? images.pumpkin : win >= 3 ? null : images.reveal;
-  if (resultImage && resultImage.width) image(resultImage, 200, 230, resultImage.width * 3, resultImage.height * 3);
+  if (resultImage && resultImage.width) image(resultImage, 200, 100, resultImage.width * 3, resultImage.height * 3);
 }
 
 function updateActors() {
@@ -447,7 +440,7 @@ function drawDebug() {
 }
 
 function keyPressed() {
-  if ((key === "b" || key === "B") && started) debug = !debug;
+  if (key === "b" || key === "B") debug = !debug;
   if (!started && !ended && (keyCode === ENTER || key === " ")) {
     started = true;
     start();
