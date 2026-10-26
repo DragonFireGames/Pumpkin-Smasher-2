@@ -2637,7 +2637,13 @@ function updateArcadeGame() {
   arcadeGameIndex = (arcadeGameIndex + GameList.length) % GameList.length;
   var game = GameList[arcadeGameIndex];
   document.getElementById("arcadeGameName").textContent = game.name;
-  document.getElementById("arcadeFrame").title = game.name;
+  var frame = document.getElementById("arcadeFrame");
+  frame.title = game.name;
+  // Load immediately when selection changes; Play Game is only a restart.
+  if (frame.dataset.gameSource !== game.source) {
+    frame.dataset.gameSource = game.source;
+    frame.src = game.source;
+  }
   document.getElementById("arcadePlayBtn").disabled = false;
   document.getElementById("arcadePrevBtn").disabled = GameList.length < 2;
   document.getElementById("arcadeNextBtn").disabled = GameList.length < 2;
@@ -2664,6 +2670,7 @@ function nextArcadeGame() {
 function playArcadeGame() {
   if (!GameList.length) return;
   var game = GameList[arcadeGameIndex];
+  // Restart the selected game without changing the selection.
   document.getElementById("arcadeFrame").src = game.source;
 }
 function setDisplay(d, sd) {
