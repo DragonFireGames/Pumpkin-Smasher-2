@@ -497,6 +497,6 @@ function mousePressed() {
   if (!started && !ended) {
     const x = mouseX;
     const y = mouseY;
-    if (x >= 162.5 && x <= 237.5 && y >= 175 && y <= 225) start();
+    if (x >= 162.5 && x <= 237.5 && y >= 200 && y <= 250) start();
   }
 }
