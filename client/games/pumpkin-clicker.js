@@ -52,9 +52,9 @@
   function money(n){return "$"+fmt(n);}
   function setNotice(t){noticeText=t;noticeUntil=Date.now()+6500;const el=document.getElementById("notice");if(el)el.textContent=t;}
   function countType(type){return state.tiles.filter(t=>t.type===type).length;}
-  function generatorCount(){return state.tiles.filter(t=>t.type==="generator").length;}
+  function generatorCount(){return state.tiles.reduce((n,t)=>n+(t.type==="generator"?1:t.type==="mega"?(t.size||2)*(t.size||2):0),0);}
   function storageCapacity(includeBonus=true){let cap=100+Number(state.upgrades.capacity||0)*100;state.tiles.forEach(t=>{if(t.type==="vault")cap+=t.capacity||250;});return cap;}
-  function generatorBaseRate(t){const g=GENERATORS.find(x=>x.id===t.tier)||GENERATORS[0];return g.rate*(t.level||1);}
+  function generatorBaseRate(t){if(t.type==="mega")return Number(t.rate)||0;const g=GENERATORS.find(x=>x.id===t.tier)||GENERATORS[0];return g.rate*(t.level||1);}
   function workerCount(id){return Number(state.workers[id]||0);}
   function workerTotal(){return Object.values(state.workers).reduce((a,b)=>a+Number(b||0),0);}
   function workerSupport(){return 1+workerCount("debuffer")*0.12;}
@@ -87,8 +87,8 @@
     });return total;
   }
   function sellAll(){if(state.pumpkins<=0){setNotice("No pumpkins to sell yet.");return;}const qty=state.pumpkins,earned=qty*sellPrice();state.pumpkins=0;state.cash+=earned;state.totalSold+=qty;setNotice("Sold "+fmt(qty)+" pumpkins for "+money(earned)+".");updateUI();save();}
-  function buyGenerator(id){const g=GENERATORS.find(x=>x.id===id);if(!g)return;const cost=Math.floor(g.cost*Math.pow(1.17,countType("generator")*0.65+countType("mega")*2));if(state.cash<cost){setNotice("Not enough cash for "+g.name+".");return;}state.cash-=cost;buildMode=id;setNotice(g.name+" selected. Click an empty tile to place it.");document.querySelectorAll("[data-build]").forEach(b=>b.classList.toggle("active",b.dataset.build===id));updateUI();}
-  function buyStructure(type){const count=countType(type);const cost=Math.floor((type==="shield"?90:140)*Math.pow(1.28,count));if(state.cash<cost){setNotice("Not enough cash.");return;}state.cash-=cost;buildMode=type;setNotice((type==="shield"?"Shield":"Vault")+" selected. Click an empty tile to place it.");updateUI();}
+  function buyGenerator(id){const g=GENERATORS.find(x=>x.id===id);if(!g)return;const cost=Math.floor(g.cost*Math.pow(1.17,countType("generator")*0.65+countType("mega")*2));if(state.cash<cost){setNotice("Not enough cash for "+g.name+".");return;}buildMode=id;setNotice(g.name+" selected. Click an empty tile to place it.");document.querySelectorAll("[data-build]").forEach(b=>b.classList.toggle("active",b.dataset.build===id));updateUI();}
+  function buyStructure(type){const count=countType(type);const cost=Math.floor((type==="shield"?90:140)*Math.pow(1.28,count));if(state.cash<cost){setNotice("Not enough cash.");return;}buildMode=type;setNotice((type==="shield"?"Shield":"Vault")+" selected. Click an empty tile to place it.");updateUI();}
   function placeAt(x,y){
     if(x<0||y<0||x>=state.size||y>=state.size)return;const i=y*state.size+x,t=state.tiles[i];
     if(t.type==="occupied"){const anchor=t.anchor;selected={x:anchor%state.size,y:Math.floor(anchor/state.size)};setNotice("That tile belongs to a mega-generator. Select its top-left tile to inspect it.");updateUI();return;}
