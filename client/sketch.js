@@ -2617,7 +2617,7 @@ Displays.loading = function() {
 var GameList = [
   {
     name: "Pumpkin Smasher",
-    source: "about:blank"
+    source: "/game/pumpkin-smasher"
   }
 ];
 var arcadeGameIndex = 0;
