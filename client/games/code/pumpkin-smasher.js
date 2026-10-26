@@ -56,6 +56,8 @@ function setup() {
   imageMode(CENTER);
   textFont("Arial");
   player = makeActor(0, 0, false);
+  player.width = images.skeleton && images.skeleton.width && images.skeleton.height
+    ? images.skeleton.width * 46 / images.skeleton.height : 46;
   player.visible = false;
   displaypumpkin = { x: 0, y: -100, visible: false, scale: 3, animation: "pumpkin" };
   music = [
@@ -106,6 +108,9 @@ function start() {
   player.visible = true;
   for (let i = 0; i < ecount; i++) {
     const enemy = makeActor(randomNumber(-3, 3) * 15, randomNumber(-3, 3) * 15, true);
+    const enemyImage = enemy.animation === "enemy2" ? images.enemy2 : images.enemy1;
+    enemy.width = enemyImage && enemyImage.width && enemyImage.height
+      ? enemyImage.width * 46 / enemyImage.height : 46;
     enemy.score = 0;
     enemy.smashed = 0;
     enemy.attracted = false;
@@ -354,7 +359,7 @@ function enemymove(enemy, i) {
   if (enemy.rotate > 90) enemy.facing = -1;
   if (enemy.rotate < 90) enemy.facing = 1;
   if (!enemy.attracted) {
-    if (enemy.lvl === undefined || enemy.lvl === 1) {
+    if (enemy.lvl = 1) {
       if (pumpkins.length) {
         const target = pumpkins[randomNumber(0, pumpkins.length - 1)];
         enemy.rotate = pointAt(target.x, target.y, enemy);
