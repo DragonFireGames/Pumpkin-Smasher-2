@@ -37,6 +37,11 @@ app.get("/", (request, response) => {
 app.get("/instructions", (request, response) => {
     response.sendFile(__dirname + "/client/instructions/index.html");
 });
+
+// Every arcade game uses the shared shell; the pathname selects its module.
+app.get("/game/:game", (request, response) => {
+    response.sendFile(path.join(__dirname, "client/games/index.html"));
+});
 /*
 const axios = require('axios');
 axios.get('https://pumpkin-smasher-discord-bot.onrender.com');
