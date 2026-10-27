@@ -33,14 +33,14 @@ const CS_CANDY_TYPES = [
   { id: "ghost", name: "Ghost Chew", path: "/assets/candies/ghost-chew.png", weight: 1 },
   { id: "smarties", name: "Smarties", path: "/assets/candies/smarties.png", weight: 1 },
   { id: "hot_tamale", name: "Hot Tamale", path: "/assets/candies/hot-tamale.png", weight: 0.10, special: "bomb" },
-  { id: "peppermint", name: "Peppermint", path: "/assets/candies/peppermint.png", weight: 1.0, special: "wildcard" }
+  { id: "peppermint", name: "Peppermint", path: "/assets/candies/peppermint.png", weight: 1.0, special: "time_bonus" }
 ];
 
 const CS_MODES = [
   {
     id: "fast",
     name: "FAST FRENZY",
-    description: "60 seconds. Peppermints match anything and add time.",
+    description: "60 seconds. Peppermints match only each other and add time.",
     candyId: "peppermint",
     moves: null,
     seconds: 60
@@ -254,10 +254,6 @@ function csCreateCandy(id) {
   };
 }
 
-function csIsWildcardType(typeId) {
-  return csMode && csMode.id === "fast" && typeId === "peppermint";
-}
-
 function csRandomCandyId() {
   const candidates = CS_CANDY_TYPES.filter(type => type.id !== "peppermint" || csMode.id === "fast");
   let totalWeight = 0;
@@ -282,17 +278,8 @@ function csRandomCandyId() {
 }
 
 function csCandyRunMatches(types) {
-  // Smarties only match other Smarties; even Fast Frenzy peppermints cannot wildcard them.
-  if (types.includes("smarties")) return types.every(typeId => typeId === "smarties");
-
-  let targetType = null;
-  for (let i = 0; i < types.length; i++) {
-    const typeId = types[i];
-    if (csIsWildcardType(typeId)) continue;
-    if (targetType === null) targetType = typeId;
-    else if (targetType !== typeId) return false;
-  }
-  return true;
+  // Every run must consist of the exact same candy type; special candies are not wildcards.
+  return types.length > 0 && types.every(typeId => typeId === types[0]);
 }
 
 function csWouldMakeMatchAt(board, row, col, type) {
@@ -395,7 +382,7 @@ function csCreateFreshPlayableBoard() {
 function csFindMatches(board) {
   const matches = new Map();
 
-  // Peppermint is a wildcard only in Fast Frenzy.
+  // Only contiguous runs of three identical candy types can match.
   for (let row = 0; row < CS_ROWS; row++) {
     for (let col = 0; col <= CS_COLS - 3; col++) {
       const run = [board[row][col], board[row][col + 1], board[row][col + 2]];
@@ -486,10 +473,7 @@ function csFindBasicHint() {
           if (matchInfo && !matchInfo.special &&
               types.every(type => type === types[0]) && includesSwap) {
             hint = {
-              cells: [
-                { row: from.row, col: from.col },
-                { row: to.row, col: to.col }
-              ],
+              cells: matches.map(cell => ({ row: cell.row, col: cell.col })),
               from: { row: from.row, col: from.col },
               to: { row: to.row, col: to.col }
             };
