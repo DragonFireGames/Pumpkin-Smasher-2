@@ -36,6 +36,7 @@ let boardLayout = { x: 0, y: 0, cellSize: 0 };
 function preload() {
   images.pumpkin = loadImage("/assets/pumpkins/pumpkin.png", () => {}, () => {});
   images.target = loadImage("/assets/entities/nuke/target.png", () => {}, () => {});
+  images.monsterIcon = loadImage("/assets/entities/monster/icon.png", () => {}, () => {});
   images.explosion = loadImage("/assets/entities/mine/explode.png", () => {}, () => {});
 }
 
@@ -255,17 +256,11 @@ function drawTargetMarker(x, y, size) {
 }
 
 function drawMineMarker(cx, cy, size) {
-  const radius = size * 0.2;
-  stroke(black);
-  strokeWeight(Math.max(1, size * 0.075));
-  line(cx + radius * 0.45, cy - radius * 0.55, cx + radius * 1.05, cy - radius * 1.1);
-  noStroke();
-  fill(orange);
-  ellipse(cx, cy, size * 0.43, size * 0.43);
-  fill(black);
-  ellipse(cx, cy, size * 0.16, size * 0.16);
-  fill(orange);
-  ellipse(cx + radius * 1.12, cy - radius * 1.15, Math.max(2, size * 0.09), Math.max(2, size * 0.09));
+  const icon = images.monsterIcon;
+  if (!icon || !icon.width || !icon.height) return;
+  const displayHeight = size * 0.96;
+  const displayWidth = displayHeight * icon.width / icon.height;
+  image(icon, cx, cy, displayWidth, displayHeight);
 }
 
 function drawHUD() {
