@@ -67,7 +67,7 @@ function pcLoad(){
   if(!pcState.vinesSeeded){if(!pcState.farm.some(row=>row.some(o=>o&&o.kind==="vine")))pcSeedVines();else pcState.vinesSeeded=true;}
   // JSON duplicates shared generator references; reconnect every large footprint after loading.
   for(let r=0;r<pcState.farmRows;r++)for(let c=0;c<pcState.farmCols;c++){
-   const m=pcState.farm[r][c],size=m&&m.kind==="generator"?(m.ultra?3:m.mega?2:1):1;
+   const m=pcState.farm[r][c],size=m&&m.kind==="generator"?pcGeneratorSize(m):1;
    if(size>1&&m.row===r&&m.col===c&&r+size<=pcState.farmRows&&c+size<=pcState.farmCols){for(let dy=0;dy<size;dy++)for(let dx=0;dx<size;dx++)pcState.farm[r+dy][c+dx]=m;}
   }
  }else{pcState=pcFresh();pcState.farm=Array.from({length:4},()=>Array(6).fill(null));pcSeedVines();}
@@ -95,7 +95,8 @@ function pcFmt(v){
 function pcUnique(fn){const seen=new Set();for(let r=0;r<pcState.farmRows;r++)for(let c=0;c<pcState.farmCols;c++){const o=pcState.farm[r][c];if(o&&!seen.has(o)){seen.add(o);fn(o);}}}
 function pcHasCandy(id){return pcState.activeCandies.some(v=>v.id===id&&v.expiresAt>Date.now());}
 function pcCandyMult(key){return PC_CANDIES.reduce((n,v)=>n*(v[key]&&pcHasCandy(v.id)?v[key]:1),1);}
-function pcFootprint(o){if(!o)return [];const size=o.ultra?3:o.mega?2:1,cells=[];for(let dr=0;dr<size;dr++)for(let dc=0;dc<size;dc++)cells.push([o.row+dr,o.col+dc]);return cells;}
+function pcGeneratorSize(o){return o&&o.hyper?5:o&&o.ultra?3:o&&o.mega?2:1;}
+function pcFootprint(o){if(!o)return [];const size=pcGeneratorSize(o),cells=[];for(let dr=0;dr<size;dr++)for(let dc=0;dc<size;dc++)cells.push([o.row+dr,o.col+dc]);return cells;}
 function pcVaults(){const out=[];pcUnique(o=>{if(o.kind==="vault")out.push(o);});return out.sort((a,b)=>(a.row-b.row)||(a.col-b.col));}
 function pcBaseCap(){const w=pcState.workers||{},workerBonus=1+(w.monster||0)*.02+(w.brute||0)*.05;return Math.floor(50*workerBonus*pcCandyMult("capacity"));}
 const PC_VAULT_CAPS=[50,125,250,500,1000,3500,7500,15000,50000,125000,250000,500000,1000000,3500000,7500000,15000000,50000000,125000000,250000000,500000000];
@@ -114,7 +115,7 @@ function pcAdvanceGenerator(o,amount){if(!pcGeneratorCanStore(o)){o.clogged=true
 function pcMultiplierAdjacencyCount(o){let count=0;[[o.row-1,o.col],[o.row+1,o.col],[o.row,o.col-1],[o.row,o.col+1]].forEach(([r,c])=>{if(r<0||c<0||r>=pcState.farmRows||c>=pcState.farmCols)return;const a=pcState.farm[r]&&pcState.farm[r][c];if(a&&a!==o&&(a.kind==="multiplier"||a.kind==="shield"))count++;});return count;}
 function pcShield(o){const seen=new Set();pcFootprint(o).forEach(([r,c])=>{[[r-1,c],[r+1,c],[r,c-1],[r,c+1]].forEach(([y,x])=>{if(y<0||x<0||y>=pcState.farmRows||x>=pcState.farmCols)return;const a=pcState.farm[y]&&pcState.farm[y][x];if(a&&(a.kind==="multiplier"||a.kind==="shield"))seen.add(a);});});let strength=0;seen.forEach(a=>{strength+=Math.pow(1.6,pcMultiplierAdjacencyCount(a));});return 1+.28*strength;}
 function pcVaultNext(o){return pcVaultsForGenerator(o).length>0;}
-function pcGeneratorRate(o){const w=pcState.workers,deb=(1+w.debuffer*.08)*pcCandyMult("workers"),global=(1+w.ghost*.05*deb)*(1+w.speeder*.1*deb)*(1+w.wizard*.18*deb)*(1+w.rusher*.035*deb);return (PC_GENS[o.tier].rate+(w.monster*.1+w.brute*.55)*deb)*pcShield(o)*(pcVaultNext(o)?1.15:1)*(o.ultra?3:o.mega?1.5:1)*global*pcCandyMult("production")*(1+pcState.prestige*.5);}
+function pcGeneratorRate(o){const w=pcState.workers,deb=(1+w.debuffer*.08)*pcCandyMult("workers"),global=(1+w.ghost*.05*deb)*(1+w.speeder*.1*deb)*(1+w.wizard*.18*deb)*(1+w.rusher*.035*deb);return (PC_GENS[o.tier].rate+(w.monster*.1+w.brute*.55)*deb)*pcShield(o)*(pcVaultNext(o)?1.15:1)*(o.hyper?5:o.ultra?3:o.mega?1.5:1)*global*pcCandyMult("production")*(1+pcState.prestige*.5);}
 function pcRate(){let total=0;pcUnique(o=>{if(o.kind==="generator")total+=pcGeneratorRate(o);});return total;}
 function pcTick(){
  const now=millis(),dt=Math.max(0,Math.min(.25,(now-pcLast)/1000));pcLast=now;const activeAuto=pcState.autoSell&&pcUserIsActive();
@@ -230,14 +231,14 @@ function pcGrid(L){
   const o=pcState.farm[r][c];
   if(!o){if(pcSelected){noStroke();fill("#8aa96a");textAlign(CENTER,CENTER);textSize(Math.max(9,t*.25));text("+",x+t/2,y+t/2);}pcTarget(x,y,t,t,()=>pcTile(r,c),false,pcFarmHoverInfo(null,r,c));continue;}
   if(o.kind==="generator"){
-   if(!o.mega&&!o.ultra){pcDrawGrowGenerator(o.tier,x+t/2,y+t/2,t*.78,false,false,!!o.clogged);fill(PC_WHITE);noStroke();textAlign(CENTER,BOTTOM);textSize(Math.max(7,t*.17));text(pcFmt(PC_GENS[o.tier].rate)+"/s",x+t/2,y+t-1);}
+   if(pcGeneratorSize(o)===1){pcDrawGrowGenerator(o.tier,x+t/2,y+t/2,t*.78,false,false,!!o.clogged);fill(PC_WHITE);noStroke();textAlign(CENTER,BOTTOM);textSize(Math.max(7,t*.17));text(pcFmt(PC_GENS[o.tier].rate)+"/s",x+t/2,y+t-1);}
   }else if(o.kind==="multiplier"||o.kind==="shield"){const si=pcImgs.multiplier;if(si&&si.width)pcSheet(si,x+t/2,y+t/2,t*.92,3,Math.floor(frameCount/7)%3);else pcDrawShieldFallback(x+t/2,y+t/2,t);}
   else if(o.kind==="vine"){const vi=pcImgs.vinesIcon;if(vi&&vi.width)pcSheet(vi,x+t/2,y+t*.41,t*.70,1);else{noStroke();fill("#5c8b36");textAlign(CENTER,CENTER);textSize(t*.45);text("V",x+t/2,y+t*.41);}fill(PC_ORANGE);noStroke();textAlign(CENTER,BOTTOM);textSize(Math.max(6,t*.14));text("$"+pcFmt(pcVineClearCost()),x+t/2,y+t-1);}
   else if(o.kind==="vault"){const pumpkin=pcImgs.objective||pcImgs.regular;if(pumpkin&&pumpkin.width)pcSheet(pumpkin,x+t/2,y+t*.41,t*.65,1);else pcGen(1,x+t/2,y+t*.41,t*.65);if(o.level>0){fill(PC_ORANGE);noStroke();textAlign(CENTER,TOP);textSize(Math.max(7,t*.14));text("L"+(o.level+1),x+t/2,y+1);}const cap=pcVaultCap(o),stored=Number(o.stored)||0,ratio=constrain(stored/Math.max(1,cap),0,1),bw=t*.86,bh=Math.max(3,t*.09),bx=x+t*.07,by=y+t-bh-2;noStroke();fill("#091006");rect(bx,by,bw,bh);fill(ratio>=1?"#ffa500":"#78b84a");rect(bx,by,bw*ratio,bh);fill(PC_WHITE);textAlign(CENTER,BOTTOM);textSize(Math.max(6,Math.min(8,t*.13)));text(pcFmt(stored)+"/"+pcFmt(cap),x+t/2,by-1);}
   pcTarget(x,y,t,t,()=>pcTile(r,c),false,pcFarmHoverInfo(o,r,c));
  }
  // Draw multi-tile generators after all cell backgrounds so their sprites stay visible.
- const largeGenerators=new Set();for(let r=0;r<pcState.farmRows;r++)for(let c=0;c<pcState.farmCols;c++){const o=pcState.farm[r]&&pcState.farm[r][c];if(!o||o.kind!=="generator"||(!o.mega&&!o.ultra)||o.row!==r||o.col!==c||largeGenerators.has(o))continue;largeGenerators.add(o);const x=L.gridX+c*(t+g),y=clipY+r*(t+g)-pcGridScroll,size=o.ultra?3:2,foot=size*t+(size-1)*g;if(y+foot<clipY||y>clipY+L.view)continue;pcDrawGrowGenerator(o.tier,x+foot/2,y+foot/2,t*(size-.1),false,false,!!o.clogged);noFill();stroke(PC_ORANGE);strokeWeight(2);rect(x,y,foot,foot);noStroke();fill(PC_BLACK);rect(x+t*.08,y+t*.08,t*(o.ultra?1.05:.65),t*.3);fill(PC_ORANGE);textAlign(CENTER,CENTER);textSize(Math.max(8,t*(o.ultra?.17:.2)));text(o.ultra?"ULTRA":"MEGA",x+t*(o.ultra?.55:.4),y+t*.23);}
+ const largeGenerators=new Set();for(let r=0;r<pcState.farmRows;r++)for(let c=0;c<pcState.farmCols;c++){const o=pcState.farm[r]&&pcState.farm[r][c];if(!o||o.kind!=="generator"||(pcGeneratorSize(o)===1)||o.row!==r||o.col!==c||largeGenerators.has(o))continue;largeGenerators.add(o);const x=L.gridX+c*(t+g),y=clipY+r*(t+g)-pcGridScroll,size=pcGeneratorSize(o),foot=size*t+(size-1)*g;if(y+foot<clipY||y>clipY+L.view)continue;pcDrawGrowGenerator(o.tier,x+foot/2,y+foot/2,t*(size-.1),false,false,!!o.clogged);noFill();stroke(PC_ORANGE);strokeWeight(2);rect(x,y,foot,foot);noStroke();fill(PC_BLACK);rect(x+t*.08,y+t*.08,t*(o.hyper?1.7:o.ultra?1.05:.65),t*.3);fill(PC_ORANGE);textAlign(CENTER,CENTER);textSize(Math.max(8,t*(o.hyper?.14:o.ultra?.17:.2)));text(o.hyper?"HYPER":o.ultra?"ULTRA":"MEGA",x+t*(o.hyper?.93:o.ultra?.55:.4),y+t*.23);}
  pcDrawGridEffectPreview(L);
  // Draw affordability on the tile edge after all preview fills, replacing (not insetting) the base border.
  const hoverCell=pcGridCellAt(L);
@@ -251,7 +252,7 @@ function pcGrid(L){
    if(selectedBuild&&selectedBuild.kind!=="upgrade"){cost=pcBuildCost(selectedBuild);checkAffordability=true;}
   }else if(!pcSelected&&o&&o.kind==="vault"){
    cost=pcVaultUpgradeCost(Math.max(0,o.level||0));checkAffordability=true;
-  }else if(!pcSelected&&o&&o.kind==="generator"&&!o.mega&&!o.ultra&&o.tier<PC_GENS.length-1){
+  }else if(!pcSelected&&o&&o.kind==="generator"&&pcGeneratorSize(o)===1&&o.tier<PC_GENS.length-1){
    cost=pcGeneratorCost(o.tier+1);checkAffordability=true;
   }
   if(checkAffordability){
@@ -294,7 +295,7 @@ function pcExportGrid(){
    pg.fill((r+c)%2?"#1b3b13":"#214318");pg.stroke("#65813a");pg.strokeWeight(1);pg.rect(x,y,t,t);
    if(!o)continue;
    if(o.kind==="generator"){
-    if(!o.mega&&!o.ultra){pcExportGrowGenerator(pg,o.tier,x+t/2,y+t/2,t*.78,false,!!o.clogged);pg.fill(PC_WHITE);pg.noStroke();pg.textAlign(CENTER,BOTTOM);pg.textSize(Math.max(7,t*.17));pg.text(pcFmt(PC_GENS[o.tier].rate)+"/s",x+t/2,y+t-1);}
+    if(pcGeneratorSize(o)===1){pcExportGrowGenerator(pg,o.tier,x+t/2,y+t/2,t*.78,false,!!o.clogged);pg.fill(PC_WHITE);pg.noStroke();pg.textAlign(CENTER,BOTTOM);pg.textSize(Math.max(7,t*.17));pg.text(pcFmt(PC_GENS[o.tier].rate)+"/s",x+t/2,y+t-1);}
    }else if(o.kind==="multiplier"||o.kind==="shield"){
     const img=pcImgs.multiplier;
     if(img&&img.width)pcExportSheet(pg,img,x+t/2,y+t/2,t*.92,3,Math.floor(frameCount/7)%3);
@@ -313,16 +314,16 @@ function pcExportGrid(){
     pg.noStroke();pg.fill("#091006");pg.rect(bx,by,bw,bh);pg.fill(ratio>=1?"#ffa500":"#78b84a");pg.rect(bx,by,bw*ratio,bh);pg.fill(PC_WHITE);pg.textAlign(CENTER,BOTTOM);pg.textSize(Math.max(6,Math.min(8,t*.13)));pg.text(pcFmt(stored)+"/"+pcFmt(cap),x+t/2,by-1);
    }
   }
-  // Draw Mega and Ultra generators after tile sprites so their footprints remain intact.
+  // Draw Mega, Ultra and Hyper generators after tile sprites so their footprints remain intact.
   const largeGenerators=new Set();
   for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
    const o=pcState.farm[r]&&pcState.farm[r][c];
-   if(!o||o.kind!=="generator"||(!o.mega&&!o.ultra)||o.row!==r||o.col!==c||largeGenerators.has(o))continue;
-   largeGenerators.add(o);const x=c*(t+g),y=r*(t+g),size=o.ultra?3:2,foot=size*t+(size-1)*g;
+   if(!o||o.kind!=="generator"||(pcGeneratorSize(o)===1)||o.row!==r||o.col!==c||largeGenerators.has(o))continue;
+   largeGenerators.add(o);const x=c*(t+g),y=r*(t+g),size=pcGeneratorSize(o),foot=size*t+(size-1)*g;
    pcExportGrowGenerator(pg,o.tier,x+foot/2,y+foot/2,t*(size-.1),false,!!o.clogged);
    pg.noFill();pg.stroke(PC_ORANGE);pg.strokeWeight(2);pg.rect(x,y,foot,foot);
-   pg.noStroke();pg.fill(PC_BLACK);pg.rect(x+t*.08,y+t*.08,t*(o.ultra?1.05:.65),t*.3);
-   pg.fill(PC_ORANGE);pg.textAlign(CENTER,CENTER);pg.textSize(Math.max(8,t*(o.ultra?.17:.2)));pg.text(o.ultra?"ULTRA":"MEGA",x+t*(o.ultra?.55:.4),y+t*.23);
+   pg.noStroke();pg.fill(PC_BLACK);pg.rect(x+t*.08,y+t*.08,t*(o.hyper?1.7:o.ultra?1.05:.65),t*.3);
+   pg.fill(PC_ORANGE);pg.textAlign(CENTER,CENTER);pg.textSize(Math.max(8,t*(o.hyper?.14:o.ultra?.17:.2)));pg.text(o.hyper?"HYPER":o.ultra?"ULTRA":"MEGA",x+t*(o.hyper?.93:o.ultra?.55:.4),y+t*.23);
   }
   const canvas=pg.elt||pg.canvas||(pg._renderer&&pg._renderer.elt);
   if(!canvas||typeof canvas.toDataURL!=="function")throw new Error("Off-screen canvas export is unavailable");
@@ -378,7 +379,7 @@ function pcDrawShieldFallback(x,y,s){noStroke();fill("#9ed8f0");stroke("#e6f5ff"
 function pcSprite(id,x,y,s,frames=8,fps=12){const img=pcImgs[id];if(img?.width){push();if(id==="brute")tint(255,145,145);pcSheet(img,x,y,s,frames,Math.floor(frameCount/(60/fps))%frames);pop();}else{noStroke();fill(id==="ghost"?"#b6cce0":id==="brute"?"#9d5b45":id==="wizard"?"#6a65bd":PC_ORANGE);ellipse(x,y,s*.65,s*.75);}}
 function pcVineClearCost(){return Math.ceil(50*Math.pow(10,Math.max(0,Math.floor(Number(pcState.vinesCleared)||0))));}
 function pcPlacedCount(kind){const seen=new Set();(pcState.farm||[]).forEach(row=>(row||[]).forEach(o=>{if(o&&o.kind===kind)seen.add(o);}));return seen.size;}
-function pcGeneratorOwnedCount(tier){const seen=new Set();let count=0;(pcState.farm||[]).forEach(row=>(row||[]).forEach(o=>{if(!o||o.kind!=="generator"||o.tier<tier||seen.has(o))return;seen.add(o);count+=o.ultra?9:o.mega?4:1;}));return count;}
+function pcGeneratorOwnedCount(tier){const seen=new Set();let count=0;(pcState.farm||[]).forEach(row=>(row||[]).forEach(o=>{if(!o||o.kind!=="generator"||o.tier<tier||seen.has(o))return;seen.add(o);count+=pcGeneratorSize(o)**2;}));return count;}
 function pcGeneratorCost(tier){const g=PC_GENS[tier];if(!g)return Infinity;const scaledBase=Math.ceil(g.cost*Math.pow(g.growth,pcGeneratorOwnedCount(tier)));if(tier<=0)return scaledBase;const previous=pcGeneratorCost(tier-1);return Math.max(scaledBase,previous+scaledBase);}
 function pcBuildCost(d){if(!d)return Infinity;const kind=d.kind==="shield"?"multiplier":d.kind;if(kind==="generator")return pcGeneratorCost(d.tier);if(kind==="multiplier")return Math.ceil(d.cost*Math.pow(1.35,pcPlacedCount(kind)));if(kind==="vault")return Math.ceil(d.cost*Math.pow(1.15,pcPlacedCount(kind)));return d.cost;}
 function pcTile(r,c){
@@ -389,9 +390,9 @@ function pcTile(r,c){
  if(!pcSelected){
   if(o&&o.kind==="vault"){let bought=0,lastCost=0;const limit=pcPurchaseLimit();while(bought<limit){const cost=pcVaultUpgradeCost(Math.max(0,o.level||0));if(pcState.cash<cost){lastCost=cost;break;}pcState.cash-=cost;o.level=(o.level||0)+1;bought++;}if(!bought){pcSay("Vault upgrade costs $"+pcFmt(lastCost||pcVaultUpgradeCost(Math.max(0,o.level||0))));return;}pcSay("Vault upgraded "+bought+" level"+(bought===1?"":"s")+": "+pcFmt(pcVaultCap(o))+" capacity");pcSave();return;}
   if(o&&o.kind==="generator"){
-   if(o.mega||o.ultra){const pieces=pcFragmentGenerator(o);pcSay((o.ultra?"Ultra":"Mega")+" generator fragmented into "+pieces+" generators");pcSave();return;}
+   if(pcGeneratorSize(o)>1){const pieces=pcFragmentGenerator(o);pcSay((o.hyper?"Hyper":o.ultra?"Ultra":"Mega")+" generator fragmented into "+pieces+" generators");pcSave();return;}
    let bought=0,lastCost=0;const limit=pcPurchaseLimit();
-   while(bought<limit){o=pcState.farm[r]&&pcState.farm[r][c];if(!o||o.kind!=="generator"||o.mega||o.ultra||o.tier>=3)break;const cost=Math.max(0,pcGeneratorCost(o.tier+1)-pcGeneratorCost(o.tier));if(pcState.cash<cost){lastCost=cost;break;}pcState.cash-=cost;pcState.farm[r][c]={kind:"generator",tier:o.tier+1,row:r,col:c,mega:false,ultra:false,progress:0,clogged:false};pcMerge();bought++;}
+   while(bought<limit){o=pcState.farm[r]&&pcState.farm[r][c];if(!o||o.kind!=="generator"||pcGeneratorSize(o)>1||o.tier>=3)break;const cost=Math.max(0,pcGeneratorCost(o.tier+1)-pcGeneratorCost(o.tier));if(pcState.cash<cost){lastCost=cost;break;}pcState.cash-=cost;pcState.farm[r][c]={kind:"generator",tier:o.tier+1,row:r,col:c,mega:false,ultra:false,progress:0,clogged:false};pcMerge();bought++;}
    if(!bought){pcSay(o&&o.tier>=3?"Diamond pumpkins are max tier":(o&&(o.mega||o.ultra))?"Fragment the large generator before upgrading":"Generator upgrade costs $"+pcFmt(lastCost||(o&&o.tier<3?pcGeneratorCost(o.tier+1):0)));return;}
    pcSay("Generator upgraded "+bought+" tier"+(bought===1?"":"s"));pcSave();
   }else pcSay(o&&o.kind==="vault"?"Vaults increase storage":"Choose a building from BUILD first");
@@ -404,28 +405,45 @@ function pcTile(r,c){
  if(b.kind==="upgrade"){pcToggleAuto();return;}
  const bulk=pcBulkPlaceRemaining>0||pcPurchaseLimit()>1;if(bulk&&pcBulkPlaceRemaining===0)pcBulkPlaceRemaining=pcPurchaseLimit();
  pcState.cash-=buildCost;
- const obj=b.kind==="generator"?{kind:"generator",tier:b.tier,row:r,col:c,mega:false,progress:0,clogged:false}:b.kind==="vault"?{kind:"vault",row:r,col:c,level:0,stored:0}:{kind:b.kind,row:r,col:c};
+ const obj=b.kind==="generator"?{kind:"generator",tier:b.tier,row:r,col:c,mega:false,ultra:false,hyper:false,progress:0,clogged:false}:b.kind==="vault"?{kind:"vault",row:r,col:c,level:0,stored:0}:{kind:b.kind,row:r,col:c};
  pcState.farm[r][c]=obj;
  if(obj.kind==="generator")pcMerge();
  if(bulk){pcBulkPlaceRemaining=Math.max(0,pcBulkPlaceRemaining-1);const nextCost=pcBuildCost(b);if(pcBulkPlaceRemaining>0&&pcState.cash>=nextCost){pcSelected=b.id;pcSay(b.name+" placed — "+pcBulkPlaceRemaining+" bulk placements remaining");}else{pcSelected=null;const reason=pcBulkPlaceRemaining>0&&pcState.cash<nextCost?"Next costs $"+pcFmt(nextCost)+"; bulk placement stopped":"Bulk placement complete";pcBulkPlaceRemaining=0;pcSay(b.name+" placed. "+reason);}}else{pcSelected=null;pcBulkPlaceRemaining=0;pcSay(b.name+" placed");}
  pcSave();
 }
-function pcTileValue(o){if(!o)return 0;if(o.kind==="generator")return PC_GENS[o.tier].cost*(o.ultra?9:o.mega?4:1);if(o.kind==="multiplier"||o.kind==="shield")return 180;if(o.kind==="vault"){let value=100;for(let i=0;i<Math.max(0,o.level||0);i++)value+=pcVaultUpgradeCost(i);return value;}return 0;}
-function pcRemoveTile(r,c,o){if(o&&o.kind==="generator"&&(o.mega||o.ultra)){const pieces=pcFragmentGenerator(o);pcSay((o.ultra?"Ultra":"Mega")+" fragmented into "+pieces+" individual generators");pcSave();return;}const value=pcTileValue(o),refund=Math.floor(value*.25),vaultStored=o.kind==="vault"?(Number(o.stored)||0):0,size=o.kind==="generator"?(o.ultra?3:o.mega?2:1):1,coords=[];for(let dy=0;dy<size;dy++)for(let dx=0;dx<size;dx++)coords.push([o.kind==="generator"?o.row+dy:r,o.kind==="generator"?o.col+dx:c]);const oldCells=coords.map(([y,x])=>({y,x,value:pcState.farm[y]&&pcState.farm[y][x]}));coords.forEach(([y,x])=>{if(pcState.farm[y])pcState.farm[y][x]=null;});pcSyncPumpkins();if(vaultStored>0){if(pcAvailableStorage()<vaultStored){oldCells.forEach(q=>{if(pcState.farm[q.y])pcState.farm[q.y][q.x]=q.value;});pcSyncPumpkins();pcSay("Sell the vault contents or free storage before deleting it");return;}pcDepositGeneral(vaultStored);}pcState.cash+=refund;pcSelected="__sell";pcSay("Tile removed • refunded $"+pcFmt(refund));pcSave();}
-function pcFragmentGenerator(o){const size=o&&o.ultra?3:o&&o.mega?2:1;if(size===1)return 1;for(let dy=0;dy<size;dy++)for(let dx=0;dx<size;dx++){const r=o.row+dy,c=o.col+dx;if(pcState.farm[r])pcState.farm[r][c]={kind:"generator",tier:o.tier,row:r,col:c,mega:false,ultra:false,progress:0,clogged:false};}return size*size;}
+function pcTileValue(o){if(!o)return 0;if(o.kind==="generator")return PC_GENS[o.tier].cost*pcGeneratorSize(o)**2;if(o.kind==="multiplier"||o.kind==="shield")return 180;if(o.kind==="vault"){let value=100;for(let i=0;i<Math.max(0,o.level||0);i++)value+=pcVaultUpgradeCost(i);return value;}return 0;}
+function pcRemoveTile(r,c,o){if(o&&o.kind==="generator"&&pcGeneratorSize(o)>1){const pieces=pcFragmentGenerator(o);pcSay((o.hyper?"Hyper":o.ultra?"Ultra":"Mega")+" fragmented into "+pieces+" individual generators");pcSave();return;}const value=pcTileValue(o),refund=Math.floor(value*.25),vaultStored=o.kind==="vault"?(Number(o.stored)||0):0,size=o.kind==="generator"?(o.ultra?3:o.mega?2:1):1,coords=[];for(let dy=0;dy<size;dy++)for(let dx=0;dx<size;dx++)coords.push([o.kind==="generator"?o.row+dy:r,o.kind==="generator"?o.col+dx:c]);const oldCells=coords.map(([y,x])=>({y,x,value:pcState.farm[y]&&pcState.farm[y][x]}));coords.forEach(([y,x])=>{if(pcState.farm[y])pcState.farm[y][x]=null;});pcSyncPumpkins();if(vaultStored>0){if(pcAvailableStorage()<vaultStored){oldCells.forEach(q=>{if(pcState.farm[q.y])pcState.farm[q.y][q.x]=q.value;});pcSyncPumpkins();pcSay("Sell the vault contents or free storage before deleting it");return;}pcDepositGeneral(vaultStored);}pcState.cash+=refund;pcSelected="__sell";pcSay("Tile removed • refunded $"+pcFmt(refund));pcSave();}
+function pcFragmentGenerator(o){const size=pcGeneratorSize(o);if(size===1)return 1;for(let dy=0;dy<size;dy++)for(let dx=0;dx<size;dx++){const r=o.row+dy,c=o.col+dx;if(pcState.farm[r])pcState.farm[r][c]={kind:"generator",tier:o.tier,row:r,col:c,mega:false,ultra:false,hyper:false,progress:0,clogged:false};}return size*size;}
 function pcMerge(){
+ // Hyper merges first, allowing complete Mega/Ultra footprints within a matching 5×5 area.
+ for(let r=0;r<=pcState.farmRows-5;r++)for(let c=0;c<=pcState.farmCols-5;c++){
+  const a=pcState.farm[r][c];if(!a||a.kind!=="generator"||a.hyper)continue;
+  let valid=true;
+  for(let dy=0;dy<5&&valid;dy++)for(let dx=0;dx<5;dx++){
+   const v=pcState.farm[r+dy][c+dx];
+   if(!v||v.kind!=="generator"||v.hyper||v.tier!==a.tier){valid=false;break;}
+   if(v.mega||v.ultra){
+    const size=pcGeneratorSize(v);
+    if(!Number.isInteger(v.row)||!Number.isInteger(v.col)||v.row<r||v.col<c||v.row+size>r+5||v.col+size>c+5){valid=false;break;}
+   }
+  }
+  if(!valid)continue;
+  const h={kind:"generator",tier:a.tier,row:r,col:c,mega:false,ultra:false,hyper:true};
+  for(let dy=0;dy<5;dy++)for(let dx=0;dx<5;dx++)pcState.farm[r+dy][c+dx]=h;
+  pcSay("Twenty-five pumpkins became a HYPER generator!");
+ }
  // A full matching 3×3 takes priority, even if its first four tiles already formed a Mega.
  for(let r=0;r<=pcState.farmRows-3;r++)for(let c=0;c<=pcState.farmCols-3;c++){
-  const a=pcState.farm[r][c];if(!a||a.kind!=="generator"||a.ultra)continue;
+  const a=pcState.farm[r][c];if(!a||a.kind!=="generator"||a.hyper||a.ultra)continue;
   const cells=[];for(let dy=0;dy<3;dy++)for(let dx=0;dx<3;dx++)cells.push(pcState.farm[r+dy][c+dx]);
-  if(cells.some(v=>!v||v.kind!=="generator"||v.ultra||v.tier!==a.tier))continue;
-  const u={kind:"generator",tier:a.tier,row:r,col:c,mega:false,ultra:true};for(let dy=0;dy<3;dy++)for(let dx=0;dx<3;dx++)pcState.farm[r+dy][c+dx]=u;pcSay("Nine pumpkins became an ULTRA generator!");
+  if(cells.some(v=>!v||v.kind!=="generator"||v.hyper||v.ultra||v.tier!==a.tier))continue;
+  const u={kind:"generator",tier:a.tier,row:r,col:c,mega:false,ultra:true,hyper:false};for(let dy=0;dy<3;dy++)for(let dx=0;dx<3;dx++)pcState.farm[r+dy][c+dx]=u;pcSay("Nine pumpkins became an ULTRA generator!");
  }
  for(let r=0;r<pcState.farmRows-1;r++)for(let c=0;c<pcState.farmCols-1;c++){
   const a=pcState.farm[r][c],b=pcState.farm[r][c+1],d=pcState.farm[r+1][c],e=pcState.farm[r+1][c+1];
-  if(!a||a.kind!=="generator"||a.mega||a.ultra||!b||!d||!e)continue;
-  if([b,d,e].some(v=>!v||v.kind!=="generator"||v.mega||v.ultra||v.tier!==a.tier))continue;
-  const m={kind:"generator",tier:a.tier,row:r,col:c,mega:true,ultra:false};pcState.farm[r][c]=m;pcState.farm[r][c+1]=m;pcState.farm[r+1][c]=m;pcState.farm[r+1][c+1]=m;pcSay("Four pumpkins became a MEGA generator!");
+  if(!a||a.kind!=="generator"||a.hyper||a.mega||a.ultra||!b||!d||!e)continue;
+  if([b,d,e].some(v=>!v||v.kind!=="generator"||v.hyper||v.mega||v.ultra||v.tier!==a.tier))continue;
+  const m={kind:"generator",tier:a.tier,row:r,col:c,mega:true,ultra:false,hyper:false};pcState.farm[r][c]=m;pcState.farm[r][c+1]=m;pcState.farm[r+1][c]=m;pcState.farm[r+1][c+1]=m;pcSay("Four pumpkins became a MEGA generator!");
  }
 }
 function pcWorkerCost(id){const w=PC_WORKERS.find(v=>v.id===id);if(!w)return Infinity;return Math.ceil(w.cost*Math.pow(1.4,Math.max(0,pcState.workers[id]||0)));}
@@ -522,7 +540,7 @@ function pcItemHoverInfo(it){
   return {id:"worker:"+d.id,title:d.name,kind:"worker",summary:d.desc,rules:["Next hire: $"+pcFmt(pcWorkerCost(d.id))+". Owned: "+count+".","Each additional worker of this type costs 40% more than the previous price.","Uses the global ×1, ×10 or MAX purchase mode; Shift-click forces ×10. Hiring stops when you cannot afford the next worker.",...(rules[d.id]||[]),"Workers never occupy farm tiles and have no recurring wages."]};
  }
  if(it.type==="build"||it.type==="autosell"){
-  if(d.kind==="generator")return {id:"build:"+d.id,title:d.name,kind:"build",summary:"Produces "+d.desc+".",rules:["Next cost: $"+pcFmt(pcBuildCost(d))+". Each owned "+d.name+" or higher-tier generator increases this tier’s base-price component by "+PC_GENS[d.tier].growth.toFixed(2)+"×. Removing a generator lowers relevant prices. Choose this, then click an empty farm tile.","Click an existing generator to upgrade it for the difference between this tier’s price and the current tier’s price.","Four matching generators in a 2×2 square form a Mega; nine matching generators in a 3×3 square form an Ultra."]};
+  if(d.kind==="generator")return {id:"build:"+d.id,title:d.name,kind:"build",summary:"Produces "+d.desc+".",rules:["Next cost: $"+pcFmt(pcBuildCost(d))+". Each owned "+d.name+" or higher-tier generator increases this tier’s base-price component by "+PC_GENS[d.tier].growth.toFixed(2)+"×. Removing a generator lowers relevant prices. Choose this, then click an empty farm tile.","Click an existing generator to upgrade it for the difference between this tier’s price and the current tier’s price.","Four matching generators in a 2×2 square form a Mega; nine matching generators in a 3×3 square form an Ultra; twenty-five matching generators in a 5×5 square form a Hyper."]};
   if(d.kind==="multiplier")return {id:"build:"+d.id,title:"Multiplier",kind:"build",summary:"Boosts adjacent generators; neighboring multipliers amplify one another.",rules:["Next cost: $"+pcFmt(pcBuildCost(d))+". Each multiplier costs 35% more per multiplier currently placed, and removing one lowers the next price.","Only the four orthogonally adjacent tiles count; diagonals do not.","Each neighboring multiplier boosts the other multiplier’s strength by 1.6×."]};
   if(d.kind==="vault")return {id:"build:"+d.id,title:"Vault",kind:"build",summary:"Dedicated storage grows nonlinearly with each level.",rules:["Next cost: $"+pcFmt(pcBuildCost(d))+". Each vault costs 15% more per vault currently placed, and removing one lowers the next price.","Its storage zone is a 3×3 area centered on the vault.","Generators in overlapping vault zones fill vaults top-to-bottom, then left-to-right, and finally base storage.","Click a placed vault to upgrade it; capacity grows by 1.5× per level; upgrade prices rise with each level.","Monster and Brute workers increase the base storage capacity, which starts at 50."]};
   return {id:"build:"+d.id,title:d.name,kind:"build",summary:"Automatically sells generated pumpkins for cash.",rules:["One-time purchase: $650.","After purchase, click the Auto-Sell card in Misc to switch it on or off without paying again.","Auto-Sell empties stored pumpkins every 60 seconds of active play. Its on/off setting is saved, but prestige resets the purchase. While inactive, production accumulates as pumpkins instead of cash."]};
@@ -539,8 +557,8 @@ function pcFarmHoverInfo(o,r,c){
  }
  if(o.kind==="vine"){const cost=pcVineClearCost();return {id:"tile-vine:"+r+":"+c,title:"Vines • Blocked Tile",kind:"tile",summary:"Pay $"+pcFmt(cost)+" to clear this tile.",rules:["Vines block building placement.","Click this tile and pay $"+pcFmt(cost)+" to remove it.","Each vine removed permanently increases the next removal cost by 10×.","Delete / Sell also removes vines at the same current price, without a refund."]};}
  if(o.kind==="generator"){
-  const g=PC_GENS[o.tier],rate=pcGeneratorRate(o),vaults=pcGeneratorDestinations(o),dest=vaults.map(v=>"Vault ("+(v.row+1)+","+(v.col+1)+")").concat(["Base storage"]),size=o.ultra?3:o.mega?2:1;
-  return {id:"tile-object:"+o.row+":"+o.col,title:(o.ultra?"Ultra ":o.mega?"Mega ":"")+g.name,kind:"tile",summary:"Output: "+pcFmt(rate)+" pumpkins/sec."+(o.clogged?" STALLED — storage is full.":""),rules:[size>1?"Occupies a "+size+"×"+size+" area and can be fragmented back into individual generators.":"Occupies one tile and grows a pumpkin on its generator pot.","Storage priority: "+dest.join(" → ")+".","Vault zones are 3×3; overlapping vaults are ordered top-to-bottom, then left-to-right.","When every assigned vault and base storage are full, this generator stalls at full growth.","Four matching generators in a 2×2 square form a Mega; nine matching generators in a 3×3 square form an Ultra."]};
+  const g=PC_GENS[o.tier],rate=pcGeneratorRate(o),vaults=pcGeneratorDestinations(o),dest=vaults.map(v=>"Vault ("+(v.row+1)+","+(v.col+1)+")").concat(["Base storage"]),size=pcGeneratorSize(o);
+  return {id:"tile-object:"+o.row+":"+o.col,title:(o.hyper?"Hyper ":o.ultra?"Ultra ":o.mega?"Mega ":"")+g.name,kind:"tile",summary:"Output: "+pcFmt(rate)+" pumpkins/sec."+(o.clogged?" STALLED — storage is full.":""),rules:[size>1?"Occupies a "+size+"×"+size+" area and can be fragmented back into individual generators.":"Occupies one tile and grows a pumpkin on its generator pot.","Storage priority: "+dest.join(" → ")+".","Vault zones are 3×3; overlapping vaults are ordered top-to-bottom, then left-to-right.","When every assigned vault and base storage are full, this generator stalls at full growth.","Four matching generators in a 2×2 square form a Mega; nine matching generators in a 3×3 square form an Ultra; twenty-five matching generators in a 5×5 square form a Hyper."]};
  }
  if(o.kind==="multiplier"||o.kind==="shield")return {id:"tile-object:"+o.row+":"+o.col,title:"Multiplier",kind:"tile",summary:"Boosts directly adjacent pumpkin generators.",rules:["Only up, down, left and right adjacent tiles are affected.","Diagonal generators receive no bonus.","Adjacent multipliers stack with diminishing returns."]};
  if(o.kind==="vault"){const level=Math.max(0,o.level||0),cost=pcVaultUpgradeCost(level),stored=Number(o.stored)||0,cap=pcVaultCap(o);return {id:"tile-object:"+o.row+":"+o.col,title:"Vault • Level "+(level+1),kind:"tile",summary:pcFmt(stored)+" / "+pcFmt(cap)+" pumpkins stored.",rules:["Click the vault to upgrade it for $"+pcFmt(cost)+".","Capacity follows the storage curve: 50, 125, 250, 500, 1,000, 3,500, then 7.5M through 500M at higher levels.","Its zone is a 3×3 area centered on this vault.","Generators in multiple zones fill vaults in row-major order, then base storage.","Base storage capacity (50 by default) is increased by Monster and Brute workers."]};}
