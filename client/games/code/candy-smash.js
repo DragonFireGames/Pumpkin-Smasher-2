@@ -31,8 +31,8 @@ const CS_CANDY_TYPES = [
   { id: "corn", name: "Candy Corn", path: "/assets/candies/candy-corn.png", weight: 1 },
   { id: "chocolate", name: "Chocolate", path: "/assets/candies/chocolate.png", weight: 1 },
   { id: "ghost", name: "Ghost Chew", path: "/assets/candies/ghost-chew.png", weight: 1 },
-  { id: "hot_tamale", name: "Hot Tamale", path: "/assets/candies/hot-tamale.png", weight: 0.24, special: "bomb" },
-  { id: "smarties", name: "Smarties", path: "/assets/candies/smarties.png", weight: 0.62, special: "time" }
+  { id: "hot_tamale", name: "Hot Tamale", path: "/assets/candies/hot-tamale.png", weight: 0.10, special: "bomb" },
+  { id: "smarties", name: "Smarties", path: "/assets/candies/smarties.png", weight: 0.72, special: "time" }
 ];
 
 const CS_MODES = [
@@ -84,6 +84,7 @@ let csLastInvalidSwap = null;
 let csLastInvalidAt = 0;
 let csResultSummary = "";
 let csShuffleCount = 0;
+let csVisualSwap = null;
 
 function preload() {
   for (let i = 0; i < CS_CANDY_TYPES.length; i++) {
@@ -201,6 +202,7 @@ function csStartGame(modeIndex) {
   csEndWon = false;
   csResultSummary = "";
   csLastInvalidSwap = null;
+  csVisualSwap = null;
   csShuffleCount = 0;
   csBoard = csCreateInitialBoard();
   csState = "playing";
@@ -420,6 +422,12 @@ function csTrySwap(from, to) {
     return false;
   }
 
+  csVisualSwap = {
+    from: { row: from.row, col: from.col },
+    to: { row: to.row, col: to.col },
+    startedAt: millis(),
+    duration: 130
+  };
   csMovesLeft = csMode.moves === null ? csMovesLeft : csMovesLeft - 1;
   csKeyboardFocus = { row: to.row, col: to.col };
   csBeginClear(matches, false);
@@ -427,6 +435,23 @@ function csTrySwap(from, to) {
 }
 
 function csBeginClear(cells, fromBomb) {
+  // A Hot Tamale matched by a cascade still behaves like a bomb.
+  if (!fromBomb) {
+    let foundTamale = false;
+    for (let i = 0; i < cells.length; i++) {
+      const cell = cells[i];
+      const candy = csBoard[cell.row] && csBoard[cell.row][cell.col];
+      if (candy && candy.type === "hot_tamale") foundTamale = true;
+    }
+    if (foundTamale) {
+      const blast = [];
+      for (let row = 0; row < CS_ROWS; row++) {
+        for (let col = 0; col < CS_COLS; col++) blast.push({ row, col });
+      }
+      csBeginClear(blast, true);
+      return;
+    }
+  }
   const unique = new Map();
   for (let i = 0; i < cells.length; i++) {
     const cell = cells[i];
@@ -657,7 +682,10 @@ function csDrawBoard() {
       strokeWeight(1);
       rect(x, y, CS_CELL, CS_CELL);
 
-      if (candy) {
+      const isSwapCell = csVisualSwap && millis() - csVisualSwap.startedAt < csVisualSwap.duration &&
+        ((csVisualSwap.from.row === row && csVisualSwap.from.col === col) ||
+         (csVisualSwap.to.row === row && csVisualSwap.to.col === col));
+      if (candy && !isSwapCell) {
         const centerX = x + CS_CELL / 2;
         let centerY = y + CS_CELL / 2;
         if (candy.fall) {
@@ -685,6 +713,27 @@ function csDrawBoard() {
       }
     }
   }
+  csDrawVisualSwap();
+}
+
+function csDrawVisualSwap() {
+  if (!csVisualSwap) return;
+  const swap = csVisualSwap;
+  const t = Math.min(1, Math.max(0, (millis() - swap.startedAt) / swap.duration));
+  if (t >= 1) {
+    csVisualSwap = null;
+    return;
+  }
+  const eased = 1 - Math.pow(1 - t, 3);
+  const ax = CS_BOARD_X + swap.from.col * CS_CELL + CS_CELL / 2;
+  const ay = CS_BOARD_Y + swap.from.row * CS_CELL + CS_CELL / 2;
+  const bx = CS_BOARD_X + swap.to.col * CS_CELL + CS_CELL / 2;
+  const by = CS_BOARD_Y + swap.to.row * CS_CELL + CS_CELL / 2;
+  // Board values have already swapped; animate each new value from its old location.
+  const candyAtFrom = csBoard[swap.from.row][swap.from.col];
+  const candyAtTo = csBoard[swap.to.row][swap.to.col];
+  if (candyAtFrom) csDrawCandy(candyAtFrom, lerp(bx, ax, eased), lerp(by, ay, eased), CS_CELL);
+  if (candyAtTo) csDrawCandy(candyAtTo, lerp(ax, bx, eased), lerp(ay, by, eased), CS_CELL);
 }
 
 function csDrawCandy(candy, x, y, cellSize) {
