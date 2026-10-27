@@ -128,87 +128,77 @@ function draw() {
 function csDrawTitle() {
   noStroke();
   fill(CS_BLACK);
-  rect(0, 0, width, 96);
+  rect(0, 0, width, height);
   stroke(CS_ORANGE);
   strokeWeight(2);
-  line(0, 95, width, 95);
+  line(0, 91, width, 91);
 
   noStroke();
   fill(CS_ORANGE);
   textAlign(CENTER, CENTER);
   textStyle(BOLD);
-  textSize(27);
-  text("CANDY SMASH", width / 2, 35);
+  textSize(28);
+  text("CANDY SMASH", width / 2, 34);
   fill(CS_WHITE);
   textStyle(NORMAL);
   textSize(9);
-  text("PICK YOUR FLAVOR OF MATCH-THREE", width / 2, 73);
+  text("CHOOSE A MODE", width / 2, 68);
 
   const mode = CS_MODES[csSelectedMode];
-  fill(CS_ORANGE);
-  textStyle(BOLD);
-  textSize(15);
-  text(mode.name, width / 2, 118);
-  fill(CS_WHITE);
-  textStyle(NORMAL);
-  textSize(8);
-  text(mode.description, width / 2, 140);
-
   const previous = CS_MODES[(csSelectedMode + CS_MODES.length - 1) % CS_MODES.length];
   const next = CS_MODES[(csSelectedMode + 1) % CS_MODES.length];
-  csDrawModeCandyBubble(previous.candyId, 76, 224, 34, false);
-  csDrawModeCandyBubble(next.candyId, 324, 224, 34, false);
-  csDrawModeCandyBubble(mode.candyId, 200, 224, 65, true);
+
+  // One carousel row: candy, name, and neighbors. No second row of circles.
+  csDrawModeCandyBubble(previous.candyId, 62, 187, 25, false);
+  csDrawModeCandyBubble(next.candyId, 338, 187, 25, false);
+  csDrawModeCandyBubble(mode.candyId, 200, 184, 48, true);
 
   noStroke();
   fill(CS_WHITE);
   textStyle(BOLD);
   textSize(24);
-  text("‹", 31, 224);
-  text("›", 369, 224);
+  text("‹", 23, 187);
+  text("›", 377, 187);
 
-  fill(CS_WHITE);
+  fill(CS_ORANGE);
   textStyle(BOLD);
-  textSize(10);
-  text("CLICK THE BIG CANDY TO PLAY", width / 2, 303);
+  textSize(15);
+  text(mode.name, width / 2, 249);
+  fill(CS_WHITE);
   textStyle(NORMAL);
-  fill("#b9d4ad");
   textSize(8);
-  text("LEFT / RIGHT TO BROWSE", width / 2, 319);
+  text(mode.description, width / 2, 270);
 
-  const positions = [105, 200, 295];
-  for (let i = 0; i < CS_MODES.length; i++) {
-    const selected = i === csSelectedMode;
-    csDrawModeCandyBubble(CS_MODES[i].candyId, positions[i], 354, selected ? 23 : 19, selected);
-    fill(selected ? CS_ORANGE : CS_WHITE);
-    textStyle(selected ? BOLD : NORMAL);
-    textSize(7);
-    text(CS_MODES[i].id === "fast" ? "FAST" : CS_MODES[i].name, positions[i], 385);
-  }
+  // A single, clear Play button sits below the carousel.
+  const hoveringPlay = mouseX >= 112 && mouseX <= 288 && mouseY >= 302 && mouseY <= 348;
+  fill(hoveringPlay ? "#f5a54b" : CS_ORANGE);
+  noStroke();
+  rect(112, 302, 176, 46, 9);
+  fill(CS_BLACK);
+  textStyle(BOLD);
+  textSize(15);
+  text("PLAY", width / 2, 325);
+
+  fill("#b9d4ad");
+  textStyle(NORMAL);
+  textSize(8);
+  text("USE ← / → OR CLICK THE SIDES TO BROWSE", width / 2, 377);
   textStyle(NORMAL);
 }
 
 function csDrawModeCandyBubble(candyId, x, y, radius, selected) {
+  // A single simple circle behind the candy; effects can be layered in later.
   noStroke();
   fill(CS_BLACK);
-  ellipse(x, y + 2, radius * 2 + 6, radius * 2 + 6);
+  ellipse(x, y + 2, radius * 2 + 4, radius * 2 + 4);
   fill(selected ? "#355d20" : "#1d4314");
   stroke(selected ? CS_ORANGE : "#68875a");
   strokeWeight(selected ? 3 : 1.5);
   ellipse(x, y, radius * 2, radius * 2);
 
-  if (candyId === "hot_tamale") {
-    csDrawStarburst(x, y, radius * 1.7, "#e13d36");
-  } else if (candyId === "peppermint") {
-    noFill();
-    stroke("#57e5a2");
-    strokeWeight(Math.max(1.5, radius * 0.07));
-    ellipse(x, y, radius * 1.7, radius * 1.7);
-  }
-
   const sprite = csImages[candyId];
   if (sprite && sprite.width > 0 && sprite.height > 0) {
-    const displaySize = radius * 1.42;
+    const displaySize = radius * 1.45;
     const displayHeight = displaySize;
     const displayWidth = displayHeight * sprite.width / sprite.height;
     image(sprite, x, y, Math.min(displayWidth, radius * 1.65), Math.min(displayHeight, radius * 1.65));
@@ -910,24 +900,22 @@ function csDrawGameOver() {
 
 function mousePressed(event) {
   if (csState === "title") {
-    if (Math.hypot(mouseX - 200, mouseY - 224) <= 67) {
+    if (mouseX >= 112 && mouseX <= 288 && mouseY >= 302 && mouseY <= 348) {
       csStartGame(csSelectedMode);
       return false;
     }
-    if (mouseY >= 170 && mouseY <= 280 && mouseX < 130) {
+    if (mouseY >= 135 && mouseY <= 226 && mouseX < 120) {
       csSelectedMode = (csSelectedMode + CS_MODES.length - 1) % CS_MODES.length;
       return false;
     }
-    if (mouseY >= 170 && mouseY <= 280 && mouseX > 270) {
+    if (mouseY >= 135 && mouseY <= 226 && mouseX > 280) {
       csSelectedMode = (csSelectedMode + 1) % CS_MODES.length;
       return false;
     }
-    const positions = [105, 200, 295];
-    for (let i = 0; i < positions.length; i++) {
-      if (Math.hypot(mouseX - positions[i], mouseY - 354) <= 25) {
-        csSelectedMode = i;
-        return false;
-      }
+    // The central candy also selects Play for convenience.
+    if (Math.hypot(mouseX - 200, mouseY - 184) <= 50) {
+      csStartGame(csSelectedMode);
+      return false;
     }
     return false;
   }
