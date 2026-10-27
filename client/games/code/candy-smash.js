@@ -473,7 +473,17 @@ function csFindBasicHint() {
           if (matchInfo && !matchInfo.special &&
               types.every(type => type === types[0]) && includesSwap) {
             hint = {
-              cells: matches.map(cell => ({ row: cell.row, col: cell.col })),
+              // Highlight the three matching candy pieces where they currently sit,
+              // before the suggested swap moves one into the completed line.
+              cells: matches.map(cell => {
+                if (cell.row === from.row && cell.col === from.col) {
+                  return { row: to.row, col: to.col };
+                }
+                if (cell.row === to.row && cell.col === to.col) {
+                  return { row: from.row, col: from.col };
+                }
+                return { row: cell.row, col: cell.col };
+              }),
               from: { row: from.row, col: from.col },
               to: { row: to.row, col: to.col }
             };
