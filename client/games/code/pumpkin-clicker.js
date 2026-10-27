@@ -789,6 +789,10 @@ function hasVaultBonus(building) {
   return vaultsForGenerator(building).length > 0;
 }
 
+function cashMultiplier() {
+  return 1 + game.prestige * 0.5;
+}
+
 function generatorRate(building) {
   const staff = game.workers;
   const workerBonus = (1 + staff.debuffer * 0.08) * candyMultiplier("workers");
@@ -859,7 +863,7 @@ function updateGame() {
       getVaults().forEach(vault => vault.stored = 0);
       game.pumpkins = 0;
 
-      const earned = sold * candyMultiplier("sell");
+      const earned = sold * candyMultiplier("sell") * cashMultiplier();
       game.cash += earned;
       game.totalSold += sold;
       showToast("AUTO-SOLD " + formatNumber(sold) + " pumpkins for $" + formatNumber(earned));
@@ -2436,16 +2440,16 @@ function clickPumpkin(){
     return;
     }game.totalClicks++;
   game.totalHarvested++;
-  if(game.autoSell){const earned=1+clickCashBonus();
+  if(game.autoSell){const earned=(1+clickCashBonus())*cashMultiplier();
     game.cash+=earned;
     showToast("+$"+earned);
     }else{const n=clickPumpkinYield();
     const added=depositInStorage(n);
     showToast("+"+added+" pumpkins");
     const cashBonus=clickCashBonus();
-    if(cashBonus>0){game.cash+=cashBonus;
+    if(cashBonus>0){game.cash+=cashBonus*cashMultiplier();
       showToast("+$"+cashBonus+" click bonus");
-      }}if(hasCandy("chocolate")){game.cash+=5;
+      }}if(hasCandy("chocolate")){game.cash+=5*cashMultiplier();
     showToast("+$5 candy bonus");
     }if(lucky)openCandy("drop",randomCandy());
   saveGame();
@@ -2458,7 +2462,7 @@ function sellPumpkins(){
     }game.baseStored=0;
   getVaults().forEach(v=>v.stored=0);
   game.pumpkins=0;
-  const earned=n*candyMultiplier("sell");
+  const earned=n*candyMultiplier("sell")*cashMultiplier();
   game.cash+=earned;
   game.totalSold+=n;
   showToast("Sold "+formatNumber(n)+" pumpkins for $"+formatNumber(earned));
@@ -2488,7 +2492,7 @@ function claimDailyCandy(){
     return;
     }dailyClaimed=true;
   try{localStorage.setItem(dailyKey,todayKey());
-    }catch(e){}const reward=50+Math.min(100,game.prestige*10);
+    }catch(e){}const reward=(50+Math.min(100,game.prestige*10))*cashMultiplier();
   game.cash+=reward;
   depositInStorage(10);
   openCandy("daily");
