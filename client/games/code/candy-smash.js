@@ -22,7 +22,7 @@ const CS_ORANGE = "#ffa500";
 const CS_WHITE = "#f6f2dd";
 const CS_CLEAR_DELAY = 170;
 const CS_FALL_DELAY = 390;
-const CS_PEPPERMINT_TIME_BONUS = 5;
+const CS_PEPPERMINT_TIME_BONUS = 1;
 
 const CS_CANDY_TYPES = [
   { id: "blue", name: "Blue Candy", path: "/assets/candies/blue-candy.png", weight: 1 },
