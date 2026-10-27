@@ -493,7 +493,10 @@ function seedVines() {
 }
 
 function saveGame(){if(!game)return;game.lastSavedAt=Date.now();try{localStorage.setItem(saveKey,JSON.stringify(game));}catch(e){}}
-function todayKey(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function todayKey(){
+  const d=new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  }
 function markActivity(){if(typeof document!=="undefined"&&document.visibilityState!=="hidden")lastActivity=Date.now();}
 function userIsActive(){return typeof document!=="undefined"&&document.visibilityState==="visible"&&document.hasFocus();}
 function applyOfflineProgress(){
@@ -1475,36 +1478,158 @@ function drawMainPanel(L) {
 
   drawFarmGrid(L);
 }
-function clickPumpkinYield(){const u=game.clickUpgrades||{power:0,bonus:0,cash:0},power=Math.max(0,Math.floor(Number(u.power)||0)),bonus=Math.max(0,Math.floor(Number(u.bonus)||0));return Math.max(1,Math.ceil((1+Math.pow(power,1.35))*Math.pow(1.08,bonus)*candyMultiplier("click")));}
-function clickCashBonus(){const level=Math.max(0,Math.floor(Number((game.clickUpgrades||{}).cash)||0));return Math.max(0,Math.floor(Math.pow(level,1.25)));}
-function clickUpgradeCost(id){const u=game.clickUpgrades||{power:0,bonus:0,cash:0},level=u[id]||0;return Math.ceil(({power:20,bonus:60,cash:30}[id]||30)*Math.pow(({power:1.10,bonus:1.12,cash:1.10}[id]||1.10),level));}
-function buyClickUpgrade(id,quantity=1){const data={power:{name:"Click Power"},bonus:{name:"Click Boost"},cash:{name:"Click Cash"}}[id];if(!data)return;let level=Math.max(0,Math.floor(Number(game.clickUpgrades[id])||0)),bought=0,lastCost=0;const limit=quantity==="MAX"||quantity===Infinity?Infinity:Math.max(1,Math.floor(Number(quantity)||1));while(bought<limit){const cost=clickUpgradeCost(id);if(!Number.isFinite(cost)||game.cash<cost){lastCost=cost;break;}game.cash-=cost;level++;bought++;game.clickUpgrades[id]=level;}if(!bought){showToast(data.name+" costs $"+formatNumber(Number.isFinite(lastCost)?lastCost:clickUpgradeCost(id)));return;}showToast(bought>1?data.name+" bought "+bought+" levels (Lv. "+level+")":data.name+" upgraded to Lv. "+level);saveGame();}
+function clickPumpkinYield(){
+  const u=game.clickUpgrades||{power:0,bonus:0,cash:0},power=Math.max(0,Math.floor(Number(u.power)||0)),bonus=Math.max(0,Math.floor(Number(u.bonus)||0));
+  return Math.max(1,Math.ceil((1+Math.pow(power,1.35))*Math.pow(1.08,bonus)*candyMultiplier("click")));
+  }
+function clickCashBonus(){
+  const level=Math.max(0,Math.floor(Number((game.clickUpgrades||{}).cash)||0));
+  return Math.max(0,Math.floor(Math.pow(level,1.25)));
+  }
+function clickUpgradeCost(id){
+  const u=game.clickUpgrades||{power:0,bonus:0,cash:0},level=u[id]||0;
+  return Math.ceil(({power:20,bonus:60,cash:30}[id]||30)*Math.pow(({power:1.10,bonus:1.12,cash:1.10}[id]||1.10),level));
+  }
+function buyClickUpgrade(id,quantity=1){
+  const data={power:{name:"Click Power"},bonus:{name:"Click Boost"},cash:{name:"Click Cash"}}[id];
+  if(!data)return;
+  let level=Math.max(0,Math.floor(Number(game.clickUpgrades[id])||0)),bought=0,lastCost=0;
+  const limit=quantity==="MAX"||quantity===Infinity?Infinity:Math.max(1,Math.floor(Number(quantity)||1));
+  while(bought<limit){const cost=clickUpgradeCost(id);
+    if(!Number.isFinite(cost)||game.cash<cost){lastCost=cost;
+      break;
+      }game.cash-=cost;
+    level++;
+    bought++;
+    game.clickUpgrades[id]=level;
+    }if(!bought){showToast(data.name+" costs $"+formatNumber(Number.isFinite(lastCost)?lastCost:clickUpgradeCost(id)));
+    return;
+    }showToast(bought>1?data.name+" bought "+bought+" levels (Lv. "+level+")":data.name+" upgraded to Lv. "+level);
+  saveGame();
+  }
 function drawClickUpgrades(L,panelX,panelW){
  const bw=Math.min(108,Math.max(58,panelW*.30)),x=panelX+panelW-bw-6,top=L.top+25,gap=6,avail=L.gridStart-top-8,bh=Math.max(25,Math.min(38,(avail-gap*2)/3));
  const effectiveClickBuyMode=isShiftClick()?10:clickBuyMode,modeLabel=effectiveClickBuyMode==="MAX"?"BUY MAX":"BUY ×"+effectiveClickBuyMode,modeY=L.top+8,modeH=15;
  drawButton(x,modeY,bw,modeH,modeLabel,orange,black);
- addTarget(x,modeY,bw,modeH,()=>{const modes=[1,10,"MAX"],at=modes.indexOf(clickBuyMode);clickBuyMode=modes[(at+1)%modes.length];bulkPlaceRemaining=0;showToast("Global purchase mode: "+(clickBuyMode==="MAX"?"MAX":"×"+clickBuyMode));},false,{id:"click-upgrade-buy-mode",title:"Global purchase mode",kind:"setting",summary:"Choose the quantity for purchases and bulk farm placements across the menu.",rules:["Click to cycle through ×1, ×10 and MAX.","This global mode applies to click upgrades, workers, candy purchases, generator/vault upgrades, and bulk farm placements.","Shift-click forces ×10 for that action. Purchases stop when you cannot afford the next item."]});
+ addTarget(x,modeY,bw,modeH,()=>{const modes=[1,10,"MAX"],at=modes.indexOf(clickBuyMode);
+   clickBuyMode=modes[(at+1)%modes.length];
+   bulkPlaceRemaining=0;
+   showToast("Global purchase mode: "+(clickBuyMode==="MAX"?"MAX":"×"+clickBuyMode));
+   },false,{id:"click-upgrade-buy-mode",title:"Global purchase mode",kind:"setting",summary:"Choose the quantity for purchases and bulk farm placements across the menu.",rules:["Click to cycle through ×1, ×10 and MAX.","This global mode applies to click upgrades, workers, candy purchases, generator/vault upgrades, and bulk farm placements.","Shift-click forces ×10 for that action. Purchases stop when you cannot afford the next item."]});
  const positions=["power","bonus","cash"].map((id,i)=>({id,x,y:top+i*(bh+gap)}));
  const names={power:"CLICK +1",bonus:"CLICK BOOST",cash:"CLICK CASH"};
- positions.forEach(p=>{const level=Math.max(0,Math.floor(Number(game.clickUpgrades[p.id])||0)),cost=clickUpgradeCost(p.id),hover=mouseX>=p.x&&mouseX<=p.x+bw&&mouseY>=p.y&&mouseY<=p.y+bh;fill(hover&&game.cash<cost?"#451b16":hover?"#3d3518":"#172414");stroke(hover&&game.cash<cost?"#ff3030":orange);strokeWeight(hover?2:1);rect(p.x,p.y,bw,bh);noStroke();fill(white);textAlign(CENTER,CENTER);textSize(Math.max(7,Math.min(9,bw*.105)));text(names[p.id],p.x+bw/2,p.y+bh*.32);fill(orange);textSize(Math.max(7,Math.min(9,bw*.105)));text("Lv."+level+"  $"+formatNumber(cost),p.x+bw/2,p.y+bh*.72);const rules={power:["Click yield scales as 1 + level^1.35; growth is slower than before.","Each level increases the pumpkins harvested per manual click."],bonus:["Each level multiplies click yield by another 1.08×.","Stacks with Click Power and active click candies. No level cap."],cash:["Cash bonus per click scales as level^1.25.","Applies to manual clicks both with normal harvesting and while Auto-Sell is active. No level cap."]};addTarget(p.x,p.y,bw,bh,()=>buyClickUpgrade(p.id,purchaseLimit()),false,{id:"click-upgrade:"+p.id,title:names[p.id],kind:"upgrade",summary:"Next upgrade costs $"+formatNumber(cost)+".",rules:[...rules[p.id],"Purchase mode: "+(clickBuyMode==="MAX"?"MAX":"×"+clickBuyMode)+".","Shift-click forces a ×10 purchase, regardless of the global mode."]});});
+ positions.forEach(p=>{const level=Math.max(0,Math.floor(Number(game.clickUpgrades[p.id])||0)),cost=clickUpgradeCost(p.id),hover=mouseX>=p.x&&mouseX<=p.x+bw&&mouseY>=p.y&&mouseY<=p.y+bh;
+   fill(hover&&game.cash<cost?"#451b16":hover?"#3d3518":"#172414");
+   stroke(hover&&game.cash<cost?"#ff3030":orange);
+   strokeWeight(hover?2:1);
+   rect(p.x,p.y,bw,bh);
+   noStroke();
+   fill(white);
+   textAlign(CENTER,CENTER);
+   textSize(Math.max(7,Math.min(9,bw*.105)));
+   text(names[p.id],p.x+bw/2,p.y+bh*.32);
+   fill(orange);
+   textSize(Math.max(7,Math.min(9,bw*.105)));
+   text("Lv."+level+"  $"+formatNumber(cost),p.x+bw/2,p.y+bh*.72);
+   const rules={power:["Click yield scales as 1 + level^1.35; growth is slower than before.","Each level increases the pumpkins harvested per manual click."],bonus:["Each level multiplies click yield by another 1.08×.","Stacks with Click Power and active click candies. No level cap."],cash:["Cash bonus per click scales as level^1.25.","Applies to manual clicks both with normal harvesting and while Auto-Sell is active. No level cap."]};
+   addTarget(p.x,p.y,bw,bh,()=>buyClickUpgrade(p.id,purchaseLimit()),false,{id:"click-upgrade:"+p.id,title:names[p.id],kind:"upgrade",summary:"Next upgrade costs $"+formatNumber(cost)+".",rules:[...rules[p.id],"Purchase mode: "+(clickBuyMode==="MAX"?"MAX":"×"+clickBuyMode)+".","Shift-click forces a ×10 purchase, regardless of the global mode."]});
+   });
 }
-function drawButton(x,y,w,h,label,col,tc,border=orange){fill(col);stroke(border);strokeWeight(1);rect(x,y,w,h);noStroke();fill(tc);textAlign(CENTER,CENTER);textSize(Math.max(8,Math.min(11,h*.48)));text(label,x+w/2,y+h/2);}
+function drawButton(x,y,w,h,label,col,tc,border=orange){
+  fill(col);
+  stroke(border);
+  strokeWeight(1);
+  rect(x,y,w,h);
+  noStroke();
+  fill(tc);
+  textAlign(CENTER,CENTER);
+  textSize(Math.max(8,Math.min(11,h*.48)));
+  text(label,x+w/2,y+h/2);
+  }
 function drawFarmGrid(L){
- const t=L.tile,g=L.gap,clipY=L.gridTop;drawingContext.save();drawingContext.beginPath();drawingContext.rect(L.mainX+4,clipY,L.mainW-8,L.view);drawingContext.clip();
+ const t=L.tile,g=L.gap,clipY=L.gridTop;
+   drawingContext.save();
+   drawingContext.beginPath();
+   drawingContext.rect(L.mainX+4,clipY,L.mainW-8,L.view);
+   drawingContext.clip();
  for(let r=0;r<game.farmRows;r++)for(let c=0;c<game.farmCols;c++){
   const x=L.gridX+c*(t+g),y=clipY+r*(t+g)-gridScroll;if(y+t<clipY||y>clipY+L.view)continue;
   fill((r+c)%2?"#1b3b13":"#214318");stroke("#65813a");strokeWeight(1);rect(x,y,t,t);
   const o=game.farm[r][c];
-  if(!o){if(selectedBuild){noStroke();fill("#8aa96a");textAlign(CENTER,CENTER);textSize(Math.max(9,t*.25));text("+",x+t/2,y+t/2);}addTarget(x,y,t,t,()=>handleTileClick(r,c),false,getFarmHoverInfo(null,r,c));continue;}
+  if(!o){if(selectedBuild){noStroke();
+      fill("#8aa96a");
+      textAlign(CENTER,CENTER);
+      textSize(Math.max(9,t*.25));
+      text("+",x+t/2,y+t/2);
+      }addTarget(x,y,t,t,()=>handleTileClick(r,c),false,getFarmHoverInfo(null,r,c));
+    continue;
+    }
   if(o.kind==="generator"){
-   if(generatorSize(o)===1){drawGrowingGenerator(o.tier,x+t/2,y+t/2,t*.78,false,false,!!o.clogged);fill(white);noStroke();textAlign(CENTER,BOTTOM);textSize(Math.max(7,t*.17));text(formatNumber(generators[o.tier].rate)+"/s",x+t/2,y+t-1);}
-  }else if(o.kind==="multiplier"||o.kind==="shield"){const si=images.multiplier;if(si&&si.width)drawSpriteSheet(si,x+t/2,y+t/2,t*.92,3,Math.floor(frameCount/7)%3);else drawShieldFallback(x+t/2,y+t/2,t);}
-  else if(o.kind==="vine"){const vi=images.vinesIcon;if(vi&&vi.width)drawSpriteSheet(vi,x+t/2,y+t*.41,t*.70,1);else{noStroke();fill("#5c8b36");textAlign(CENTER,CENTER);textSize(t*.45);text("V",x+t/2,y+t*.41);}fill(orange);noStroke();textAlign(CENTER,BOTTOM);textSize(Math.max(6,t*.14));text("$"+formatNumber(vineClearCost()),x+t/2,y+t-1);}
-  else if(o.kind==="vault"){const pumpkin=images.objective||images.regular;if(pumpkin&&pumpkin.width)drawSpriteSheet(pumpkin,x+t/2,y+t*.41,t*.65,1);else drawGeneratorSprite(1,x+t/2,y+t*.41,t*.65);if(o.level>0){fill(orange);noStroke();textAlign(CENTER,TOP);textSize(Math.max(7,t*.14));text("L"+(o.level+1),x+t/2,y+1);}const cap=vaultCapacity(o),stored=Number(o.stored)||0,ratio=constrain(stored/Math.max(1,cap),0,1),bw=t*.86,bh=Math.max(3,t*.09),bx=x+t*.07,by=y+t-bh-2;noStroke();fill("#091006");rect(bx,by,bw,bh);fill(ratio>=1?"#ffa500":"#78b84a");rect(bx,by,bw*ratio,bh);fill(white);textAlign(CENTER,BOTTOM);textSize(Math.max(6,Math.min(8,t*.13)));text(formatNumber(stored)+"/"+formatNumber(cap),x+t/2,by-1);}
+   if(generatorSize(o)===1){drawGrowingGenerator(o.tier,x+t/2,y+t/2,t*.78,false,false,!!o.clogged);
+     fill(white);
+     noStroke();
+     textAlign(CENTER,BOTTOM);
+     textSize(Math.max(7,t*.17));
+     text(formatNumber(generators[o.tier].rate)+"/s",x+t/2,y+t-1);
+     }
+  }else if(o.kind==="multiplier"||o.kind==="shield"){const si=images.multiplier;
+    if(si&&si.width)drawSpriteSheet(si,x+t/2,y+t/2,t*.92,3,Math.floor(frameCount/7)%3);
+    else drawShieldFallback(x+t/2,y+t/2,t);
+    }
+  else if(o.kind==="vine"){const vi=images.vinesIcon;
+    if(vi&&vi.width)drawSpriteSheet(vi,x+t/2,y+t*.41,t*.70,1);
+    else{noStroke();
+      fill("#5c8b36");
+      textAlign(CENTER,CENTER);
+      textSize(t*.45);
+      text("V",x+t/2,y+t*.41);
+      }fill(orange);
+    noStroke();
+    textAlign(CENTER,BOTTOM);
+    textSize(Math.max(6,t*.14));
+    text("$"+formatNumber(vineClearCost()),x+t/2,y+t-1);
+    }
+  else if(o.kind==="vault"){const pumpkin=images.objective||images.regular;
+    if(pumpkin&&pumpkin.width)drawSpriteSheet(pumpkin,x+t/2,y+t*.41,t*.65,1);
+    else drawGeneratorSprite(1,x+t/2,y+t*.41,t*.65);
+    if(o.level>0){fill(orange);
+      noStroke();
+      textAlign(CENTER,TOP);
+      textSize(Math.max(7,t*.14));
+      text("L"+(o.level+1),x+t/2,y+1);
+      }const cap=vaultCapacity(o),stored=Number(o.stored)||0,ratio=constrain(stored/Math.max(1,cap),0,1),bw=t*.86,bh=Math.max(3,t*.09),bx=x+t*.07,by=y+t-bh-2;
+    noStroke();
+    fill("#091006");
+    rect(bx,by,bw,bh);
+    fill(ratio>=1?"#ffa500":"#78b84a");
+    rect(bx,by,bw*ratio,bh);
+    fill(white);
+    textAlign(CENTER,BOTTOM);
+    textSize(Math.max(6,Math.min(8,t*.13)));
+    text(formatNumber(stored)+"/"+formatNumber(cap),x+t/2,by-1);
+    }
   addTarget(x,y,t,t,()=>handleTileClick(r,c),false,getFarmHoverInfo(o,r,c));
  }
  // Draw multi-tile generators after all cell backgrounds so their sprites stay visible.
- const largeGenerators=new Set();for(let r=0;r<game.farmRows;r++)for(let c=0;c<game.farmCols;c++){const o=game.farm[r]&&game.farm[r][c];if(!o||o.kind!=="generator"||(generatorSize(o)===1)||o.row!==r||o.col!==c||largeGenerators.has(o))continue;largeGenerators.add(o);const x=L.gridX+c*(t+g),y=clipY+r*(t+g)-gridScroll,size=generatorSize(o),foot=size*t+(size-1)*g;if(y+foot<clipY||y>clipY+L.view)continue;drawGrowingGenerator(o.tier,x+foot/2,y+foot/2,t*(size-.1),false,false,!!o.clogged);noFill();stroke(orange);strokeWeight(2);rect(x,y,foot,foot);noStroke();fill(black);rect(x+t*.08,y+t*.08,t*(o.hyper?1.7:o.ultra?1.05:.65),t*.3);fill(orange);textAlign(CENTER,CENTER);textSize(Math.max(8,t*(o.hyper?.14:o.ultra?.17:.2)));text(o.hyper?"HYPER":o.ultra?"ULTRA":"MEGA",x+t*(o.hyper?.93:o.ultra?.55:.4),y+t*.23);}
+ const largeGenerators=new Set();
+   for(let r=0;r<game.farmRows;r++)for(let c=0;c<game.farmCols;c++){const o=game.farm[r]&&game.farm[r][c];
+   if(!o||o.kind!=="generator"||(generatorSize(o)===1)||o.row!==r||o.col!==c||largeGenerators.has(o))continue;
+   largeGenerators.add(o);
+   const x=L.gridX+c*(t+g),y=clipY+r*(t+g)-gridScroll,size=generatorSize(o),foot=size*t+(size-1)*g;
+   if(y+foot<clipY||y>clipY+L.view)continue;
+   drawGrowingGenerator(o.tier,x+foot/2,y+foot/2,t*(size-.1),false,false,!!o.clogged);
+   noFill();
+   stroke(orange);
+   strokeWeight(2);
+   rect(x,y,foot,foot);
+   noStroke();
+   fill(black);
+   rect(x+t*.08,y+t*.08,t*(o.hyper?1.7:o.ultra?1.05:.65),t*.3);
+   fill(orange);
+   textAlign(CENTER,CENTER);
+   textSize(Math.max(8,t*(o.hyper?.14:o.ultra?.17:.2)));
+   text(o.hyper?"HYPER":o.ultra?"ULTRA":"MEGA",x+t*(o.hyper?.93:o.ultra?.55:.4),y+t*.23);
+   }
  drawGridEffectPreview(L);
  // Draw affordability on the tile edge after all preview fills, replacing (not insetting) the base border.
  const hoverCell=getGridCell(L);
@@ -1514,8 +1639,8 @@ function drawFarmGrid(L){
   if(o&&o.kind==="vine"){
    cost=vineClearCost();checkAffordability=true;
   }else if(!o&&selectedBuild&&selectedBuild!=="__sell"){
-   const selectedBuild=buildings.find(v=>v.id===selectedBuild);
-   if(selectedBuild&&selectedBuild.kind!=="upgrade"){cost=buildCost(selectedBuild);checkAffordability=true;}
+   const selectedItem=buildings.find(v=>v.id===selectedBuild);
+   if(selectedItem&&selectedItem.kind!=="upgrade"){cost=buildCost(selectedItem);checkAffordability=true;}
   }else if(!selectedBuild&&o&&o.kind==="vault"){
    cost=vaultUpgradeCost(Math.max(0,o.level||0));checkAffordability=true;
   }else if(!selectedBuild&&o&&o.kind==="generator"&&generatorSize(o)===1&&o.tier<generators.length-1){
@@ -1530,7 +1655,12 @@ function drawFarmGrid(L){
 
 
   drawingContext.restore();
- if(L.content>L.view){fill("#35492c");noStroke();rect(L.mainX+L.mainW-5,clipY,2,L.view);fill(orange);rect(L.mainX+L.mainW-5,clipY+gridScroll/Math.max(1,L.content)*L.view,2,Math.max(8,L.view*L.view/L.content));}
+ if(L.content>L.view){fill("#35492c");
+   noStroke();
+   rect(L.mainX+L.mainW-5,clipY,2,L.view);
+   fill(orange);
+   rect(L.mainX+L.mainW-5,clipY+gridScroll/Math.max(1,L.content)*L.view,2,Math.max(8,L.view*L.view/L.content));
+   }
 }
 // Render the complete farm into an off-screen graphics buffer and download it as a PNG.
 // The live canvas only draws the visible, clipped rows for scrolling; it is not a full-grid buffer.
@@ -1545,39 +1675,77 @@ function drawExportGrowingGenerator(pg,t,x,y,s,fullyGrown=false,clogged=false){
  if(pot&&pot.width&&pot.height)pg.image(pot,x,y+s*.10,pot.width*(s*1.18/pot.height),s*1.18);
  else{pg.noStroke();pg.fill("#79502c");pg.stroke("#b87a35");pg.rect(x-s*.36,y,s*.72,s*.46);}
  const img=phase<.84?images.green:fruit;
- if(img&&img.width&&img.height){const fy=y+s*.10-(s*.10*phase),h=s*.46*growth;drawExportSheet(pg,img,x,fy,h,img.width>img.height*1.4?8:1,Math.floor(frameCount/8)%8);}
+ if(img&&img.width&&img.height){const fy=y+s*.10-(s*.10*phase),h=s*.46*growth;
+   drawExportSheet(pg,img,x,fy,h,img.width>img.height*1.4?8:1,Math.floor(frameCount/8)%8);
+   }
 }
 function exportGrid(){
  if(!game||!Array.isArray(game.farm)){showToast("Farm grid is not ready to export");return;}
  const L=getLayout(),t=L.tile,g=L.gap,cols=game.farmCols,rows=game.farmRows;
  const exportW=cols*t+(cols-1)*g,exportH=rows*t+(rows-1)*g;
- if(exportW<1||exportH<1||exportW>16384||exportH>16384||exportW*exportH>64000000){showToast("Farm grid is too large to export at native tile size");return;}
+ if(exportW<1||exportH<1||exportW>16384||exportH>16384||exportW*exportH>64000000){showToast("Farm grid is too large to export at native tile size");
+   return;
+   }
  let pg=null;
  try{
-  pg=createGraphics(exportW,exportH);pg.pixelDensity(1);pg.imageMode(CENTER);pg.rectMode(CORNER);pg.textFont("Arial");pg.background(backgroundColor);
+  pg=createGraphics(exportW,exportH);
+    pg.pixelDensity(1);
+    pg.imageMode(CENTER);
+    pg.rectMode(CORNER);
+    pg.textFont("Arial");
+    pg.background(backgroundColor);
   // Draw every tile, including rows outside the current scroll viewport.
   for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
    const x=c*(t+g),y=r*(t+g),o=game.farm[r]&&game.farm[r][c];
    pg.fill((r+c)%2?"#1b3b13":"#214318");pg.stroke("#65813a");pg.strokeWeight(1);pg.rect(x,y,t,t);
    if(!o)continue;
    if(o.kind==="generator"){
-    if(generatorSize(o)===1){drawExportGrowingGenerator(pg,o.tier,x+t/2,y+t/2,t*.78,false,!!o.clogged);pg.fill(white);pg.noStroke();pg.textAlign(CENTER,BOTTOM);pg.textSize(Math.max(7,t*.17));pg.text(formatNumber(generators[o.tier].rate)+"/s",x+t/2,y+t-1);}
+    if(generatorSize(o)===1){drawExportGrowingGenerator(pg,o.tier,x+t/2,y+t/2,t*.78,false,!!o.clogged);
+      pg.fill(white);
+      pg.noStroke();
+      pg.textAlign(CENTER,BOTTOM);
+      pg.textSize(Math.max(7,t*.17));
+      pg.text(formatNumber(generators[o.tier].rate)+"/s",x+t/2,y+t-1);
+      }
    }else if(o.kind==="multiplier"||o.kind==="shield"){
     const img=images.multiplier;
     if(img&&img.width)drawExportSheet(pg,img,x+t/2,y+t/2,t*.92,3,Math.floor(frameCount/7)%3);
-    else{pg.noStroke();pg.fill("#9ed8f0");pg.stroke("#e6f5ff");pg.beginShape();pg.vertex(x+t/2,y+t*.1);pg.vertex(x+t*.82,y+t*.3);pg.vertex(x+t*.75,y+t*.73);pg.vertex(x+t/2,y+t*.9);pg.vertex(x+t*.25,y+t*.73);pg.vertex(x+t*.18,y+t*.3);pg.endShape(CLOSE);}
+    else{pg.noStroke();
+      pg.fill("#9ed8f0");
+      pg.stroke("#e6f5ff");
+      pg.beginShape();
+      pg.vertex(x+t/2,y+t*.1);
+      pg.vertex(x+t*.82,y+t*.3);
+      pg.vertex(x+t*.75,y+t*.73);
+      pg.vertex(x+t/2,y+t*.9);
+      pg.vertex(x+t*.25,y+t*.73);
+      pg.vertex(x+t*.18,y+t*.3);
+      pg.endShape(CLOSE);
+      }
    }else if(o.kind==="vine"){
     const img=images.vinesIcon;
     if(img&&img.width)drawExportSheet(pg,img,x+t/2,y+t*.41,t*.70,1);
     else{pg.noStroke();pg.fill("#5c8b36");pg.textAlign(CENTER,CENTER);pg.textSize(t*.45);pg.text("V",x+t/2,y+t*.41);}
-    pg.fill(orange);pg.noStroke();pg.textAlign(CENTER,BOTTOM);pg.textSize(Math.max(6,t*.14));pg.text("$"+formatNumber(vineClearCost()),x+t/2,y+t-1);
+    pg.fill(orange);
+      pg.noStroke();
+      pg.textAlign(CENTER,BOTTOM);
+      pg.textSize(Math.max(6,t*.14));
+      pg.text("$"+formatNumber(vineClearCost()),x+t/2,y+t-1);
    }else if(o.kind==="vault"){
     const pumpkin=images.objective||images.regular;
     if(pumpkin&&pumpkin.width)drawExportSheet(pg,pumpkin,x+t/2,y+t*.41,t*.65,1);
     else{pg.noStroke();pg.fill("#ed8d20");pg.ellipse(x+t/2,y+t*.41,t*.48,t*.42);}
     if(o.level>0){pg.fill(orange);pg.noStroke();pg.textAlign(CENTER,TOP);pg.textSize(Math.max(7,t*.14));pg.text("L"+(o.level+1),x+t/2,y+1);}
     const cap=vaultCapacity(o),stored=Number(o.stored)||0,ratio=constrain(stored/Math.max(1,cap),0,1),bw=t*.86,bh=Math.max(3,t*.09),bx=x+t*.07,by=y+t-bh-2;
-    pg.noStroke();pg.fill("#091006");pg.rect(bx,by,bw,bh);pg.fill(ratio>=1?"#ffa500":"#78b84a");pg.rect(bx,by,bw*ratio,bh);pg.fill(white);pg.textAlign(CENTER,BOTTOM);pg.textSize(Math.max(6,Math.min(8,t*.13)));pg.text(formatNumber(stored)+"/"+formatNumber(cap),x+t/2,by-1);
+    pg.noStroke();
+      pg.fill("#091006");
+      pg.rect(bx,by,bw,bh);
+      pg.fill(ratio>=1?"#ffa500":"#78b84a");
+      pg.rect(bx,by,bw*ratio,bh);
+      pg.fill(white);
+      pg.textAlign(CENTER,BOTTOM);
+      pg.textSize(Math.max(6,Math.min(8,t*.13)));
+      pg.text(formatNumber(stored)+"/"+formatNumber(cap),x+t/2,by-1);
    }
   }
   // Draw Mega, Ultra and Hyper generators after tile sprites so their footprints remain intact.
@@ -1589,7 +1757,10 @@ function exportGrid(){
    drawExportGrowingGenerator(pg,o.tier,x+foot/2,y+foot/2,t*(size-.1),false,!!o.clogged);
    pg.noFill();pg.stroke(orange);pg.strokeWeight(2);pg.rect(x,y,foot,foot);
    pg.noStroke();pg.fill(black);pg.rect(x+t*.08,y+t*.08,t*(o.hyper?1.7:o.ultra?1.05:.65),t*.3);
-   pg.fill(orange);pg.textAlign(CENTER,CENTER);pg.textSize(Math.max(8,t*(o.hyper?.14:o.ultra?.17:.2)));pg.text(o.hyper?"HYPER":o.ultra?"ULTRA":"MEGA",x+t*(o.hyper?.93:o.ultra?.55:.4),y+t*.23);
+   pg.fill(orange);
+     pg.textAlign(CENTER,CENTER);
+     pg.textSize(Math.max(8,t*(o.hyper?.14:o.ultra?.17:.2)));
+     pg.text(o.hyper?"HYPER":o.ultra?"ULTRA":"MEGA",x+t*(o.hyper?.93:o.ultra?.55:.4),y+t*.23);
   }
   const canvas=pg.elt||pg.canvas||(pg._renderer&&pg._renderer.elt);
   if(!canvas||typeof canvas.toDataURL!=="function")throw new Error("Off-screen canvas export is unavailable");
@@ -1613,41 +1784,163 @@ function getGridCell(L){
 }
 function multiplierBlobEdgeCells(startRow,startCol){
  const key=(r,c)=>r+","+c,isMult=o=>!!o&&(o.kind==="multiplier"||o.kind==="shield"),queue=[[startRow,startCol]],cluster=new Set(),edge=new Map(),dirs=[[-1,0],[1,0],[0,-1],[0,1]];
- while(queue.length){const [r,c]=queue.pop(),k=key(r,c);if(cluster.has(k)||r<0||c<0||r>=game.farmRows||c>=game.farmCols||!isMult(game.farm[r]&&game.farm[r][c]))continue;cluster.add(k);dirs.forEach(([dr,dc])=>{const nr=r+dr,nc=c+dc;if(nr>=0&&nc>=0&&nr<game.farmRows&&nc<game.farmCols&&isMult(game.farm[nr]&&game.farm[nr][nc])&&!cluster.has(key(nr,nc)))queue.push([nr,nc]);});}
- cluster.forEach(k=>{const [r,c]=k.split(",").map(Number);dirs.forEach(([dr,dc])=>{const nr=r+dr,nc=c+dc;if(nr<0||nc<0||nr>=game.farmRows||nc>=game.farmCols)return;if(isMult(game.farm[nr]&&game.farm[nr][nc]))return;edge.set(key(nr,nc),{r:nr,c:nc,center:false});});});
+ while(queue.length){const [r,c]=queue.pop(),k=key(r,c);
+   if(cluster.has(k)||r<0||c<0||r>=game.farmRows||c>=game.farmCols||!isMult(game.farm[r]&&game.farm[r][c]))continue;
+   cluster.add(k);
+   dirs.forEach(([dr,dc])=>{const nr=r+dr,nc=c+dc;
+     if(nr>=0&&nc>=0&&nr<game.farmRows&&nc<game.farmCols&&isMult(game.farm[nr]&&game.farm[nr][nc])&&!cluster.has(key(nr,nc)))queue.push([nr,nc]);
+     });
+   }
+ cluster.forEach(k=>{const [r,c]=k.split(",").map(Number);
+   dirs.forEach(([dr,dc])=>{const nr=r+dr,nc=c+dc;
+     if(nr<0||nc<0||nr>=game.farmRows||nc>=game.farmCols)return;
+     if(isMult(game.farm[nr]&&game.farm[nr][nc]))return;
+     edge.set(key(nr,nc),{r:nr,c:nc,center:false});
+     });
+   });
  return [...edge.values()];
 }
 function drawGridEffectPreview(L){
  const cell=getGridCell(L);if(!cell)return;
  const hovered=game.farm[cell.r]&&game.farm[cell.r][cell.c],hoveredMultiplier=!!hovered&&(hovered.kind==="multiplier"||hovered.kind==="shield"),selected=selectedBuild&&buildings.find(v=>v.id===selectedBuild);
  let kind=null,ar=cell.r,ac=cell.c;
- if(hoveredMultiplier){kind="multiplier";ar=Number.isFinite(hovered.row)?hovered.row:cell.r;ac=Number.isFinite(hovered.col)?hovered.col:cell.c;}
+ if(hoveredMultiplier){kind="multiplier";
+   ar=Number.isFinite(hovered.row)?hovered.row:cell.r;
+   ac=Number.isFinite(hovered.col)?hovered.col:cell.c;
+   }
  else if(selected&&(selected.kind==="multiplier"||selected.kind==="vault"))kind=selected.kind;
- else if(hovered&&hovered.kind==="vault"){kind="vault";ar=Number.isFinite(hovered.row)?hovered.row:cell.r;ac=Number.isFinite(hovered.col)?hovered.col:cell.c;}
+ else if(hovered&&hovered.kind==="vault"){kind="vault";
+   ar=Number.isFinite(hovered.row)?hovered.row:cell.r;
+   ac=Number.isFinite(hovered.col)?hovered.col:cell.c;
+   }
  if(!kind)return;
  const isMultiplier=kind==="multiplier"||kind==="shield",border=isMultiplier?"#c58aff":"#54e8cf",cells=[];
- if(isMultiplier){if(hoveredMultiplier)cells.push(...multiplierBlobEdgeCells(ar,ac));else [[-1,0],[1,0],[0,-1],[0,1]].forEach(([dr,dc])=>{const r=ar+dr,c=ac+dc;if(r>=0&&r<game.farmRows&&c>=0&&c<game.farmCols){const o=game.farm[r]&&game.farm[r][c];if(!o||(o.kind!=="multiplier"&&o.kind!=="shield"))cells.push({r,c,center:false});}});}
+ if(isMultiplier){if(hoveredMultiplier)cells.push(...multiplierBlobEdgeCells(ar,ac));
+   else [[-1,0],[1,0],[0,-1],[0,1]].forEach(([dr,dc])=>{const r=ar+dr,c=ac+dc;
+     if(r>=0&&r<game.farmRows&&c>=0&&c<game.farmCols){const o=game.farm[r]&&game.farm[r][c];
+       if(!o||(o.kind!=="multiplier"&&o.kind!=="shield"))cells.push({r,c,center:false});
+       }});
+   }
  else for(let r=Math.max(0,ar-1);r<=Math.min(game.farmRows-1,ar+1);r++)for(let c=Math.max(0,ac-1);c<=Math.min(game.farmCols-1,ac+1);c++)cells.push({r,c,center:r===ar&&c===ac});
- noStroke();cells.forEach(({r,c,center})=>{const x=L.gridX+c*(L.tile+L.gap),y=L.gridTop+r*(L.tile+L.gap)-gridScroll;if(y+L.tile<L.gridTop||y>L.gridTop+L.view)return;if(isMultiplier)fill(174,90,255,76);else if(center)fill(35,220,190,35);else fill(35,220,190,78);rect(x,y,L.tile,L.tile);noFill();stroke(border);strokeWeight(center?2:1);rect(x+1,y+1,L.tile-2,L.tile-2);noStroke();});
+ noStroke();
+   cells.forEach(({r,c,center})=>{const x=L.gridX+c*(L.tile+L.gap),y=L.gridTop+r*(L.tile+L.gap)-gridScroll;
+   if(y+L.tile<L.gridTop||y>L.gridTop+L.view)return;
+   if(isMultiplier)fill(174,90,255,76);
+   else if(center)fill(35,220,190,35);
+   else fill(35,220,190,78);
+   rect(x,y,L.tile,L.tile);
+   noFill();
+   stroke(border);
+   strokeWeight(center?2:1);
+   rect(x+1,y+1,L.tile-2,L.tile-2);
+   noStroke();
+   });
 }
-function drawSpriteSheet(img,x,y,size,frames,frame=0){if(!img||!img.width||!img.height)return;const horizontal=img.width>img.height*1.4,fw=horizontal?img.width/frames:img.width,fi=horizontal?((frame%frames)+frames)%frames:0;image(img,x,y,fw*size/img.height,size,fi*fw,0,fw,img.height);}
-function drawGeneratorSprite(t,x,y,s){const img=images[generators[t].id];if(img?.width)drawSpriteSheet(img,x,y,s,1);else{noStroke();fill(t===0?"#85b54a":t===2?"#e9c33e":t===3?"#74e4e8":"#ed8d20");ellipse(x,y,s*.82,s*.68);fill("#4d7b20");rect(x-s*.04,y-s*.42,s*.08,s*.2);}}
+function drawSpriteSheet(img,x,y,size,frames,frame=0){
+  if(!img||!img.width||!img.height)return;
+  const horizontal=img.width>img.height*1.4,fw=horizontal?img.width/frames:img.width,fi=horizontal?((frame%frames)+frames)%frames:0;
+  image(img,x,y,fw*size/img.height,size,fi*fw,0,fw,img.height);
+  }
+function drawGeneratorSprite(t,x,y,s){
+  const img=images[generators[t].id];
+  if(img?.width)drawSpriteSheet(img,x,y,s,1);
+  else{noStroke();
+    fill(t===0?"#85b54a":t===2?"#e9c33e":t===3?"#74e4e8":"#ed8d20");
+    ellipse(x,y,s*.82,s*.68);
+    fill("#4d7b20");
+    rect(x-s*.04,y-s*.42,s*.08,s*.2);
+    }}
 function drawGrowingGenerator(t,x,y,s,isVault=false,fullyGrown=false,clogged=false){
  const pot=images.generatorPot,fruit=images[fullyGrown&&t===0?"green":t>=3?"diamond":t>=2?"gold":"regular"],rate=generators[t].rate,cycle=Math.max(1300,1000/Math.max(.01,rate));
  const phase=(fullyGrown||clogged)?1:((Date.now()+Math.round(x*13+y*7))%cycle)/cycle,growth=(fullyGrown||clogged)?1:(phase<.84?Math.max(.12,phase/.84):1);
- if(pot&&pot.width&&pot.height)image(pot,x,y+s*.10,pot.width*(s*1.18/pot.height),s*1.18);else{noStroke();fill("#79502c");stroke("#b87a35");rect(x-s*.36,y,s*.72,s*.46);}
+ if(pot&&pot.width&&pot.height)image(pot,x,y+s*.10,pot.width*(s*1.18/pot.height),s*1.18);
+   else{noStroke();
+   fill("#79502c");
+   stroke("#b87a35");
+   rect(x-s*.36,y,s*.72,s*.46);
+   }
  const img=phase<.84?images.green:fruit;
- if(img&&img.width&&img.height){const fw=img.width>img.height*1.4?img.width/8:img.width,fy=y+s*.10-(s*.10*phase),h=(isVault?s*.40:s*.46)*growth;drawSpriteSheet(img,x,fy,h,img.width>img.height*1.4?8:1,Math.floor(frameCount/8)%8);}
+ if(img&&img.width&&img.height){const fw=img.width>img.height*1.4?img.width/8:img.width,fy=y+s*.10-(s*.10*phase),h=(isVault?s*.40:s*.46)*growth;
+   drawSpriteSheet(img,x,fy,h,img.width>img.height*1.4?8:1,Math.floor(frameCount/8)%8);
+   }
  
 }
-function drawTrashIcon(x,y,s){push();translate(x,y);const sw=Math.max(1,s*.055);stroke(orange);strokeWeight(sw);strokeJoin(MITER);noFill();line(-s*.34,-s*.27,s*.34,-s*.27);line(-s*.14,-s*.38,s*.14,-s*.38);line(-s*.07,-s*.45,s*.07,-s*.45);beginShape();vertex(-s*.25,-s*.18);vertex(-s*.21,s*.34);vertex(s*.21,s*.34);vertex(s*.25,-s*.18);endShape();line(-s*.08,-s*.12,-s*.06,s*.24);line(s*.08,-s*.12,s*.06,s*.24);pop();}
-function drawShieldFallback(x,y,s){noStroke();fill("#9ed8f0");stroke("#e6f5ff");beginShape();vertex(x,y-s*.4);vertex(x+s*.32,y-s*.2);vertex(x+s*.25,y+s*.23);vertex(x,y+s*.4);vertex(x-s*.25,y+s*.23);vertex(x-s*.32,y-s*.2);endShape(CLOSE);}
-function drawSprite(id,x,y,s,frames=8,fps=12){const img=images[id];if(img?.width){push();if(id==="brute")tint(255,145,145);drawSpriteSheet(img,x,y,s,frames,Math.floor(frameCount/(60/fps))%frames);pop();}else{noStroke();fill(id==="ghost"?"#b6cce0":id==="brute"?"#9d5b45":id==="wizard"?"#6a65bd":orange);ellipse(x,y,s*.65,s*.75);}}
+function drawTrashIcon(x,y,s){
+  push();
+  translate(x,y);
+  const sw=Math.max(1,s*.055);
+  stroke(orange);
+  strokeWeight(sw);
+  strokeJoin(MITER);
+  noFill();
+  line(-s*.34,-s*.27,s*.34,-s*.27);
+  line(-s*.14,-s*.38,s*.14,-s*.38);
+  line(-s*.07,-s*.45,s*.07,-s*.45);
+  beginShape();
+  vertex(-s*.25,-s*.18);
+  vertex(-s*.21,s*.34);
+  vertex(s*.21,s*.34);
+  vertex(s*.25,-s*.18);
+  endShape();
+  line(-s*.08,-s*.12,-s*.06,s*.24);
+  line(s*.08,-s*.12,s*.06,s*.24);
+  pop();
+  }
+function drawShieldFallback(x,y,s){
+  noStroke();
+  fill("#9ed8f0");
+  stroke("#e6f5ff");
+  beginShape();
+  vertex(x,y-s*.4);
+  vertex(x+s*.32,y-s*.2);
+  vertex(x+s*.25,y+s*.23);
+  vertex(x,y+s*.4);
+  vertex(x-s*.25,y+s*.23);
+  vertex(x-s*.32,y-s*.2);
+  endShape(CLOSE);
+  }
+function drawSprite(id,x,y,s,frames=8,fps=12){
+  const img=images[id];
+  if(img?.width){push();
+    if(id==="brute")tint(255,145,145);
+    drawSpriteSheet(img,x,y,s,frames,Math.floor(frameCount/(60/fps))%frames);
+    pop();
+    }else{noStroke();
+    fill(id==="ghost"?"#b6cce0":id==="brute"?"#9d5b45":id==="wizard"?"#6a65bd":orange);
+    ellipse(x,y,s*.65,s*.75);
+    }}
 function vineClearCost(){return Math.ceil(50*Math.pow(10,Math.max(0,Math.floor(Number(game.vinesCleared)||0))));}
-function placedCount(kind){const seen=new Set();(game.farm||[]).forEach(row=>(row||[]).forEach(o=>{if(o&&o.kind===kind)seen.add(o);}));return seen.size;}
-function ownedGeneratorCount(tier){const seen=new Set();let count=0;(game.farm||[]).forEach(row=>(row||[]).forEach(o=>{if(!o||o.kind!=="generator"||o.tier<tier||seen.has(o))return;seen.add(o);count+=generatorSize(o)**2;}));return count;}
-function generatorCost(tier){const g=generators[tier];if(!g)return Infinity;const scaledBase=Math.ceil(g.cost*Math.pow(g.growth,ownedGeneratorCount(tier)));if(tier<=0)return scaledBase;const previous=generatorCost(tier-1);return Math.max(scaledBase,previous+scaledBase);}
-function buildCost(d){if(!d)return Infinity;const kind=d.kind==="shield"?"multiplier":d.kind;if(kind==="generator")return generatorCost(d.tier);if(kind==="multiplier")return Math.ceil(d.cost*Math.pow(1.35,placedCount(kind)));if(kind==="vault")return Math.ceil(d.cost*Math.pow(1.15,placedCount(kind)));return d.cost;}
+function placedCount(kind){
+  const seen=new Set();
+  (game.farm||[]).forEach(row=>(row||[]).forEach(o=>{if(o&&o.kind===kind)seen.add(o);
+    }));
+  return seen.size;
+  }
+function ownedGeneratorCount(tier){
+  const seen=new Set();
+  let count=0;
+  (game.farm||[]).forEach(row=>(row||[]).forEach(o=>{if(!o||o.kind!=="generator"||o.tier<tier||seen.has(o))return;
+    seen.add(o);
+    count+=generatorSize(o)**2;
+    }));
+  return count;
+  }
+function generatorCost(tier){
+  const g=generators[tier];
+  if(!g)return Infinity;
+  const scaledBase=Math.ceil(g.cost*Math.pow(g.growth,ownedGeneratorCount(tier)));
+  if(tier<=0)return scaledBase;
+  const previous=generatorCost(tier-1);
+  return Math.max(scaledBase,previous+scaledBase);
+  }
+function buildCost(d){
+  if(!d)return Infinity;
+  const kind=d.kind==="shield"?"multiplier":d.kind;
+  if(kind==="generator")return generatorCost(d.tier);
+  if(kind==="multiplier")return Math.ceil(d.cost*Math.pow(1.35,placedCount(kind)));
+  if(kind==="vault")return Math.ceil(d.cost*Math.pow(1.15,placedCount(kind)));
+  return d.cost;
+  }
 function handleTileClick(row, col) {
   let building = game.farm[row] && game.farm[row][col];
 
@@ -1851,7 +2144,15 @@ function handleTileClick(row, col) {
   saveGame();
 }
 
-function tileValue(o){if(!o)return 0;if(o.kind==="generator")return generators[o.tier].cost*generatorSize(o)**2;if(o.kind==="multiplier"||o.kind==="shield")return 180;if(o.kind==="vault"){let value=100;for(let i=0;i<Math.max(0,o.level||0);i++)value+=vaultUpgradeCost(i);return value;}return 0;}
+function tileValue(o){
+  if(!o)return 0;
+  if(o.kind==="generator")return generators[o.tier].cost*generatorSize(o)**2;
+  if(o.kind==="multiplier"||o.kind==="shield")return 180;
+  if(o.kind==="vault"){let value=100;
+    for(let i=0;i<Math.max(0,o.level||0);i++)value+=vaultUpgradeCost(i);
+    return value;
+    }return 0;
+  }
 function removeTile(row, col, building) {
   if (building && building.kind === "generator" && generatorSize(building) > 1) {
     const pieces = fragmentGenerator(building);
@@ -2065,24 +2366,138 @@ function mergeGenerators() {
   }
 }
 
-function workerCost(id){const w=workers.find(v=>v.id===id);if(!w)return Infinity;return Math.ceil(w.cost*Math.pow(1.4,Math.max(0,game.workers[id]||0)));}
-function buyWorker(id,quantity=1){const w=workers.find(v=>v.id===id);if(!w)return;let bought=0,total=0,lastCost=0;const limit=quantity===Infinity?Infinity:Math.max(1,Math.floor(Number(quantity)||1));while(bought<limit){const cost=workerCost(id);if(game.cash<cost){lastCost=cost;break;}game.cash-=cost;game.workers[id]=(game.workers[id]||0)+1;game.totalWorkers++;bought++;total+=cost;}if(!bought){showToast(w.name+" costs $"+formatNumber(lastCost||workerCost(id)));return;}showToast(w.name+" hired "+bought+" for $"+formatNumber(total));saveGame();}
-function toggleAutoSell(){if(!game.autoSellPurchased){if(game.cash<650){showToast("Auto-Sell costs $650");return;}game.cash-=650;game.autoSellPurchased=true;game.autoSell=true;game.autoSellProgressMs=0;selectedBuild=null;showToast("Auto-Sell purchased and enabled — sells every minute of active play");saveGame();return;}game.autoSell=!game.autoSell;game.autoSellProgressMs=0;showToast(game.autoSell?"Auto-Sell activated":"Auto-Sell paused");saveGame();}
-function clickPumpkin(){pumpkinPressedAt=millis();const lucky=Math.random()<.001;syncStoredPumpkins();if(!game.autoSell&&availableStorage()<=0){if(lucky)openCandy("drop",randomCandy());else showToast("Storage full — sell pumpkins or add a vault");saveGame();return;}game.totalClicks++;game.totalHarvested++;if(game.autoSell){const earned=1+clickCashBonus();game.cash+=earned;showToast("+$"+earned);}else{const n=clickPumpkinYield();const added=depositInStorage(n);showToast("+"+added+" pumpkins");const cashBonus=clickCashBonus();if(cashBonus>0){game.cash+=cashBonus;showToast("+$"+cashBonus+" click bonus");}}if(hasCandy("chocolate")){game.cash+=5;showToast("+$5 candy bonus");}if(lucky)openCandy("drop",randomCandy());saveGame();}
-function sellPumpkins(){syncStoredPumpkins();const n=Math.floor(game.pumpkins);if(n<=0){showToast("No pumpkins to sell");return;}game.baseStored=0;getVaults().forEach(v=>v.stored=0);game.pumpkins=0;const earned=n*candyMultiplier("sell");game.cash+=earned;game.totalSold+=n;showToast("Sold "+formatNumber(n)+" pumpkins for $"+formatNumber(earned));saveGame();}
+function workerCost(id){
+  const w=workers.find(v=>v.id===id);
+  if(!w)return Infinity;
+  return Math.ceil(w.cost*Math.pow(1.4,Math.max(0,game.workers[id]||0)));
+  }
+function buyWorker(id,quantity=1){
+  const w=workers.find(v=>v.id===id);
+  if(!w)return;
+  let bought=0,total=0,lastCost=0;
+  const limit=quantity===Infinity?Infinity:Math.max(1,Math.floor(Number(quantity)||1));
+  while(bought<limit){const cost=workerCost(id);
+    if(game.cash<cost){lastCost=cost;
+      break;
+      }game.cash-=cost;
+    game.workers[id]=(game.workers[id]||0)+1;
+    game.totalWorkers++;
+    bought++;
+    total+=cost;
+    }if(!bought){showToast(w.name+" costs $"+formatNumber(lastCost||workerCost(id)));
+    return;
+    }showToast(w.name+" hired "+bought+" for $"+formatNumber(total));
+  saveGame();
+  }
+function toggleAutoSell(){
+  if(!game.autoSellPurchased){if(game.cash<650){showToast("Auto-Sell costs $650");
+      return;
+      }game.cash-=650;
+    game.autoSellPurchased=true;
+    game.autoSell=true;
+    game.autoSellProgressMs=0;
+    selectedBuild=null;
+    showToast("Auto-Sell purchased and enabled — sells every minute of active play");
+    saveGame();
+    return;
+    }game.autoSell=!game.autoSell;
+  game.autoSellProgressMs=0;
+  showToast(game.autoSell?"Auto-Sell activated":"Auto-Sell paused");
+  saveGame();
+  }
+function clickPumpkin(){
+  pumpkinPressedAt=millis();
+  const lucky=Math.random()<.001;
+  syncStoredPumpkins();
+  if(!game.autoSell&&availableStorage()<=0){if(lucky)openCandy("drop",randomCandy());
+    else showToast("Storage full — sell pumpkins or add a vault");
+    saveGame();
+    return;
+    }game.totalClicks++;
+  game.totalHarvested++;
+  if(game.autoSell){const earned=1+clickCashBonus();
+    game.cash+=earned;
+    showToast("+$"+earned);
+    }else{const n=clickPumpkinYield();
+    const added=depositInStorage(n);
+    showToast("+"+added+" pumpkins");
+    const cashBonus=clickCashBonus();
+    if(cashBonus>0){game.cash+=cashBonus;
+      showToast("+$"+cashBonus+" click bonus");
+      }}if(hasCandy("chocolate")){game.cash+=5;
+    showToast("+$5 candy bonus");
+    }if(lucky)openCandy("drop",randomCandy());
+  saveGame();
+  }
+function sellPumpkins(){
+  syncStoredPumpkins();
+  const n=Math.floor(game.pumpkins);
+  if(n<=0){showToast("No pumpkins to sell");
+    return;
+    }game.baseStored=0;
+  getVaults().forEach(v=>v.stored=0);
+  game.pumpkins=0;
+  const earned=n*candyMultiplier("sell");
+  game.cash+=earned;
+  game.totalSold+=n;
+  showToast("Sold "+formatNumber(n)+" pumpkins for $"+formatNumber(earned));
+  saveGame();
+  }
 function candyPurchaseTier(){return (game.activeCandies||[]).filter(v=>v&&v.expiresAt>Date.now()).length;}
 function candyPrice(tier=candyPurchaseTier()){tier=Math.max(0,Math.floor(Number(tier)||0));return Math.pow(10,3*Math.pow(2,tier));}
-function candyPriceLabel(){const tier=candyPurchaseTier(),price=candyPrice(tier),exponent=3*Math.pow(2,tier);return exponent<=12?formatNumber(price):"1e"+exponent;}
+function candyPriceLabel(){
+  const tier=candyPurchaseTier(),price=candyPrice(tier),exponent=3*Math.pow(2,tier);
+  return exponent<=12?formatNumber(price):"1e"+exponent;
+  }
 function randomCandy(){return candies[Math.floor(Math.random()*candies.length)];}
 function openCandy(source,candy){candyOpening={source,candy:candy||randomCandy(),started:millis(),activated:false};toastMessage="";}
-function claimDailyCandy(){if(candyOpening)return;if(dailyClaimed){showToast("Daily candy already claimed");return;}dailyClaimed=true;try{localStorage.setItem(dailyKey,todayKey());}catch(e){}const reward=50+Math.min(100,game.prestige*10);game.cash+=reward;depositInStorage(10);openCandy("daily");saveGame();}
-function buyCandy(quantity=1){if(candyOpening)return;const limit=quantity===Infinity?Infinity:Math.max(1,Math.floor(Number(quantity)||1)),queue=[],projectedActive=new Set((game.activeCandies||[]).filter(v=>v&&v.expiresAt>Date.now()).map(v=>v.id));let bought=0,total=0;while(bought<limit){const price=candyPrice(projectedActive.size);if(!Number.isFinite(price)||game.cash<price)break;const candy=randomCandy();game.cash-=price;game.candyPurchases=Math.max(0,Math.floor(Number(game.candyPurchases)||0))+1;queue.push(candy);projectedActive.add(candy.id);bought++;total+=price;}if(!bought){showToast("Random candy costs $"+candyPriceLabel());return;}candyQueue=queue.slice(1);openCandy("shop",queue[0]);showToast("Bought "+bought+" "+(bought===1?"candy":"candies")+" for $"+formatNumber(total)+(bought===limit?"":"; stopped at the affordability limit"));saveGame();}
-function activateCandy(candy){const expiry=Date.now()+60*60*1000,existing=game.activeCandies.find(v=>v.id===candy.id);if(existing)existing.expiresAt=expiry;else game.activeCandies.push({id:candy.id,expiresAt:expiry});saveGame();}
+function claimDailyCandy(){
+  if(candyOpening)return;
+  if(dailyClaimed){showToast("Daily candy already claimed");
+    return;
+    }dailyClaimed=true;
+  try{localStorage.setItem(dailyKey,todayKey());
+    }catch(e){}const reward=50+Math.min(100,game.prestige*10);
+  game.cash+=reward;
+  depositInStorage(10);
+  openCandy("daily");
+  saveGame();
+  }
+function buyCandy(quantity=1){
+  if(candyOpening)return;
+  const limit=quantity===Infinity?Infinity:Math.max(1,Math.floor(Number(quantity)||1)),queue=[],projectedActive=new Set((game.activeCandies||[]).filter(v=>v&&v.expiresAt>Date.now()).map(v=>v.id));
+  let bought=0,total=0;
+  while(bought<limit){const price=candyPrice(projectedActive.size);
+    if(!Number.isFinite(price)||game.cash<price)break;
+    const candy=randomCandy();
+    game.cash-=price;
+    game.candyPurchases=Math.max(0,Math.floor(Number(game.candyPurchases)||0))+1;
+    queue.push(candy);
+    projectedActive.add(candy.id);
+    bought++;
+    total+=price;
+    }if(!bought){showToast("Random candy costs $"+candyPriceLabel());
+    return;
+    }candyQueue=queue.slice(1);
+  openCandy("shop",queue[0]);
+  showToast("Bought "+bought+" "+(bought===1?"candy":"candies")+" for $"+formatNumber(total)+(bought===limit?"":"; stopped at the affordability limit"));
+  saveGame();
+  }
+function activateCandy(candy){
+  const expiry=Date.now()+60*60*1000,existing=game.activeCandies.find(v=>v.id===candy.id);
+  if(existing)existing.expiresAt=expiry;
+  else game.activeCandies.push({id:candy.id,expiresAt:expiry});
+  saveGame();
+  }
 function drawWrappedCentered(value,cx,cy,maxWidth,lineHeight,maxLines=3){
  const words=String(value||"").split(/\s+/).filter(Boolean),lines=[];let line="";
  for(const word of words){const test=line?line+" "+word:word;if(line&&textWidth(test)>maxWidth){lines.push(line);line=word;}else line=test;}
  if(line)lines.push(line);
- if(lines.length>maxLines){lines.length=maxLines;let last=lines[maxLines-1];while(last.length&&textWidth(last+"…")>maxWidth)last=last.slice(0,-1);lines[maxLines-1]=last.replace(/\s+$/,"")+"…";}
+ if(lines.length>maxLines){lines.length=maxLines;
+   let last=lines[maxLines-1];
+   while(last.length&&textWidth(last+"…")>maxWidth)last=last.slice(0,-1);
+   lines[maxLines-1]=last.replace(/\s+$/,"")+"…";
+   }
  const startY=cy-((lines.length-1)*lineHeight)/2;lines.forEach((s,i)=>text(s,cx,startY+i*lineHeight));
 }
 function spawnCandyConfetti(cx,cy){
@@ -2137,11 +2552,30 @@ function drawCandyReveal(){
  fill(white);textSize(Math.max(11,Math.min(15,w*.042)));drawWrappedCentered(d.desc,cx,y+h*.71,w-30,Math.max(12,Math.min(15,w*.042)),3);
  fill("#9fb58a");textSize(11);text("ACTIVE FOR 1 HOUR",cx,y+h*.83);
  drawButton(x+w*.25,y+h*.88,w*.5,28,"CONTINUE",orange,black);
- addTarget(x+w*.25,y+h*.88,w*.5,28,()=>{if(candyQueue.length){openCandy("shop",candyQueue.shift());}else candyOpening=null;saveGame();},true);
+ addTarget(x+w*.25,y+h*.88,w*.5,28,()=>{if(candyQueue.length){openCandy("shop",candyQueue.shift());
+     }else candyOpening=null;
+   saveGame();
+   },true);
  drawCandyConfetti();
 }
 function prestigeCost(){return Math.floor(10000000000*Math.pow(4,game.prestige));}
-function performPrestige(){const cost=prestigeCost();if(game.cash<cost){showToast("Need $"+formatNumber(cost)+" to prestige");return;}const p=game.prestige+1,buffs=game.activeCandies.filter(v=>v.expiresAt>Date.now());game=newGameState(p);game.activeCandies=buffs;game.farmCols=6+p;game.farmRows=4+p;game.farm=Array.from({length:game.farmRows},()=>Array(game.farmCols).fill(null));seedVines();gridScroll=0;shopScroll=0;selectedBuild=null;showToast("Prestige "+p+"! Farm expanded; permanent production increased.");saveGame();}
+function performPrestige(){
+  const cost=prestigeCost();
+  if(game.cash<cost){showToast("Need $"+formatNumber(cost)+" to prestige");
+    return;
+    }const p=game.prestige+1,buffs=game.activeCandies.filter(v=>v.expiresAt>Date.now());
+  game=newGameState(p);
+  game.activeCandies=buffs;
+  game.farmCols=6+p;
+  game.farmRows=4+p;
+  game.farm=Array.from({length:game.farmRows},()=>Array(game.farmCols).fill(null));
+  seedVines();
+  gridScroll=0;
+  shopScroll=0;
+  selectedBuild=null;
+  showToast("Prestige "+p+"! Farm expanded; permanent production increased.");
+  saveGame();
+  }
 
 function getItemHoverInfo(it){
  const d=it.d;
@@ -2174,13 +2608,17 @@ function getFarmHoverInfo(o,r,c){
   const selected=selectedBuild&&buildings.find(v=>v.id===selectedBuild);
   return {id:"tile:"+r+":"+c,title:"Empty farm tile",kind:"tile",summary:selected?"Ready to place "+selected.name+".":"Nothing planted here yet.",rules:selected?["Placement cost: $"+formatNumber(buildCost(selected))+".","Click this tile to place the selected building.","Press Escape or reselect the item to cancel."]:["Choose a building from the Build tab to place it.","Farm size expands with each prestige.","The farm grid scrolls vertically when it outgrows the screen."]};
  }
- if(o.kind==="vine"){const cost=vineClearCost();return {id:"tile-vine:"+r+":"+c,title:"Vines • Blocked Tile",kind:"tile",summary:"Pay $"+formatNumber(cost)+" to clear this tile.",rules:["Vines block building placement.","Click this tile and pay $"+formatNumber(cost)+" to remove it.","Each vine removed permanently increases the next removal cost by 10×.","Delete / Sell also removes vines at the same current price, without a refund."]};}
+ if(o.kind==="vine"){const cost=vineClearCost();
+   return {id:"tile-vine:"+r+":"+c,title:"Vines • Blocked Tile",kind:"tile",summary:"Pay $"+formatNumber(cost)+" to clear this tile.",rules:["Vines block building placement.","Click this tile and pay $"+formatNumber(cost)+" to remove it.","Each vine removed permanently increases the next removal cost by 10×.","Delete / Sell also removes vines at the same current price, without a refund."]};
+   }
  if(o.kind==="generator"){
   const g=generators[o.tier],rate=generatorRate(o),vaults=generatorDestinations(o),dest=vaults.map(v=>"Vault ("+(v.row+1)+","+(v.col+1)+")").concat(["Base storage"]),size=generatorSize(o);
   return {id:"tile-object:"+o.row+":"+o.col,title:(o.hyper?"Hyper ":o.ultra?"Ultra ":o.mega?"Mega ":"")+g.name,kind:"tile",summary:"Output: "+formatNumber(rate)+" pumpkins/sec."+(o.clogged?" STALLED — storage is full.":""),rules:[size>1?"Occupies a "+size+"×"+size+" area and can be fragmented back into individual generators.":"Occupies one tile and grows a pumpkin on its generator pot.","Storage priority: "+dest.join(" → ")+".","Vault zones are 3×3; overlapping vaults are ordered top-to-bottom, then left-to-right.","When every assigned vault and base storage are full, this generator stalls at full growth.","Four matching generators in a 2×2 square form a Mega; nine matching generators in a 3×3 square form an Ultra; twenty-five matching generators in a 5×5 square form a Hyper."]};
  }
  if(o.kind==="multiplier"||o.kind==="shield")return {id:"tile-object:"+o.row+":"+o.col,title:"Multiplier",kind:"tile",summary:"Boosts directly adjacent pumpkin generators.",rules:["Only up, down, left and right adjacent tiles are affected.","Diagonal generators receive no bonus.","Adjacent multipliers stack with diminishing returns."]};
- if(o.kind==="vault"){const level=Math.max(0,o.level||0),cost=vaultUpgradeCost(level),stored=Number(o.stored)||0,cap=vaultCapacity(o);return {id:"tile-object:"+o.row+":"+o.col,title:"Vault • Level "+(level+1),kind:"tile",summary:formatNumber(stored)+" / "+formatNumber(cap)+" pumpkins stored.",rules:["Click the vault to upgrade it for $"+formatNumber(cost)+".","Capacity follows the storage curve: 50, 125, 250, 500, 1,000, 3,500, then 7.5M through 500M at higher levels.","Its zone is a 3×3 area centered on this vault.","Generators in multiple zones fill vaults in row-major order, then base storage.","Base storage capacity (50 by default) is increased by Monster and Brute workers."]};}
+ if(o.kind==="vault"){const level=Math.max(0,o.level||0),cost=vaultUpgradeCost(level),stored=Number(o.stored)||0,cap=vaultCapacity(o);
+   return {id:"tile-object:"+o.row+":"+o.col,title:"Vault • Level "+(level+1),kind:"tile",summary:formatNumber(stored)+" / "+formatNumber(cap)+" pumpkins stored.",rules:["Click the vault to upgrade it for $"+formatNumber(cost)+".","Capacity follows the storage curve: 50, 125, 250, 500, 1,000, 3,500, then 7.5M through 500M at higher levels.","Its zone is a 3×3 area centered on this vault.","Generators in multiple zones fill vaults in row-major order, then base storage.","Base storage capacity (50 by default) is increased by Monster and Brute workers."]};
+   }
  return {id:"tile:"+r+":"+c,title:"Farm tile",kind:"tile",summary:"A farm building.",rules:["Click for its interaction.","Place new buildings only on empty tiles."]};
 }
 function finishHover(){
@@ -2191,7 +2629,15 @@ function finishHover(){
  if(!found||!found.hover){hoverId="";hoverTarget=null;return;}
  if(hoverId!==found.id){hoverId=found.id;hoverSince=millis();}
  hoverTarget=found;
- const isShopItem=found.x<width*.45&&found.hover.kind!=="tile";if(found.hover.id!=="main-pumpkin"&&!isShopItem){noStroke();fill(255,165,0,22);rect(found.x,found.y,found.w,found.h);if(found.hover.kind==="tile"){stroke(orange);strokeWeight(2);noFill();rect(found.x,found.y,found.w,found.h);}}
+ const isShopItem=found.x<width*.45&&found.hover.kind!=="tile";
+   if(found.hover.id!=="main-pumpkin"&&!isShopItem){noStroke();
+   fill(255,165,0,22);
+   rect(found.x,found.y,found.w,found.h);
+   if(found.hover.kind==="tile"){stroke(orange);
+     strokeWeight(2);
+     noFill();
+     rect(found.x,found.y,found.w,found.h);
+     }}
  if(millis()-hoverSince>=480)drawHoverPanel(found.hover);
 }
 function drawHoverPanel(info){
@@ -2206,13 +2652,19 @@ function drawHoverPanel(info){
  const titleLines=wrap(info.title||"Details",13);
  const summaryLines=wrap(info.summary||"",10);
  let ruleLines=[];
- (info.rules||[]).forEach(rule=>{const wrapped=wrap(rule,9,Math.max(1,innerW-textWidth("• ")));wrapped.forEach((line,i)=>ruleLines.push((i===0?"• ":"  ")+line));});
+ (info.rules||[]).forEach(rule=>{const wrapped=wrap(rule,9,Math.max(1,innerW-textWidth("• ")));
+   wrapped.forEach((line,i)=>ruleLines.push((i===0?"• ":"  ")+line));
+   });
  const titleLineH=16,summaryLineH=13,ruleLineH=12;
  const fixedH=8+titleLines.length*titleLineH+4+summaryLines.length*summaryLineH+7+8;
  const maxRuleLines=Math.max(0,Math.floor((maxH-fixedH)/ruleLineH));
  if(ruleLines.length>maxRuleLines){
   ruleLines=ruleLines.slice(0,maxRuleLines);
-  if(ruleLines.length){let last=ruleLines[ruleLines.length-1].replace(/…+$/,"");textSize(9);while(last.length&&textWidth(last+"…")>innerW)last=last.slice(0,-1);ruleLines[ruleLines.length-1]=last+"…";}
+  if(ruleLines.length){let last=ruleLines[ruleLines.length-1].replace(/…+$/,"");
+    textSize(9);
+    while(last.length&&textWidth(last+"…")>innerW)last=last.slice(0,-1);
+    ruleLines[ruleLines.length-1]=last+"…";
+    }
  }
  const panelH=Math.min(maxH,fixedH+ruleLines.length*ruleLineH);
  let x=mouseX+20,y=mouseY+18;if(x+panelW>width-6)x=mouseX-panelW-18;if(x<6)x=6;
@@ -2227,9 +2679,51 @@ function drawHoverPanel(info){
 }
 
 function showToast(s){toastMessage=s;toastEnd=millis()+2500;}
-function drawToast(L){const y=L.H-23,w=Math.min(L.W-20,Math.max(150,toastMessage.length*6.5+26)),x=(L.W-w)/2;fill(black);stroke(orange);strokeWeight(1.5);rect(x,y,w,19);noStroke();fill(white);textAlign(CENTER,CENTER);textSize(10);text(toastMessage,x+w/2,y+9.5);}
+function drawToast(L){
+  const y=L.H-23,w=Math.min(L.W-20,Math.max(150,toastMessage.length*6.5+26)),x=(L.W-w)/2;
+  fill(black);
+  stroke(orange);
+  strokeWeight(1.5);
+  rect(x,y,w,19);
+  noStroke();
+  fill(white);
+  textAlign(CENTER,CENTER);
+  textSize(10);
+  text(toastMessage,x+w/2,y+9.5);
+  }
 function isShiftClick(){return shiftHeld||keyIsDown(16);}
 function purchaseLimit(){return isShiftClick()?10:clickBuyMode==="MAX"?Infinity:Math.max(1,Math.floor(Number(clickBuyMode)||1));}
-function mousePressed(event){shiftHeld=!!(event&&event.shiftKey)||keyIsDown(16);for(let i=targets.length-1;i>=0;i--){const t=targets[i];if(candyOpening&&!t.modal)continue;if(mouseX>=t.x&&mouseX<=t.x+t.w&&mouseY>=t.y&&mouseY<=t.y+t.h){t.fn();return false;}}return false;}
-function mouseWheel(e){if(!game||!Array.isArray(game.farm))return false;const L=getLayout();if(mouseX<L.side&&mouseY>L.top)shopScroll+=e.delta;else if(mouseX>=L.mainX&&mouseY>=L.gridTop)gridScroll+=e.delta;return false;}
-function keyPressed(event){const pressedKey=String(event&&event.key||key||"").toLowerCase();if((event&&(event.ctrlKey||event.metaKey)||keyIsDown(17)||keyIsDown(91)||keyIsDown(93))&&pressedKey==="e"){if(!event||!event.repeat)exportGrid();return false;}if(key==="Escape"){selectedBuild=null;bulkPlaceRemaining=0;showToast("Build selection cleared");return false;}if(key==="1"){shopTab="workers";shopScroll=0;return false;}if(key==="2"){shopTab="build";shopScroll=0;return false;}if(key==="3"){shopTab="candy";shopScroll=0;return false;}return true;}
+function mousePressed(event){
+  shiftHeld=!!(event&&event.shiftKey)||keyIsDown(16);
+  for(let i=targets.length-1;i>=0;i--){const t=targets[i];
+    if(candyOpening&&!t.modal)continue;
+    if(mouseX>=t.x&&mouseX<=t.x+t.w&&mouseY>=t.y&&mouseY<=t.y+t.h){t.fn();
+      return false;
+      }}return false;
+  }
+function mouseWheel(e){
+  if(!game||!Array.isArray(game.farm))return false;
+  const L=getLayout();
+  if(mouseX<L.side&&mouseY>L.top)shopScroll+=e.delta;
+  else if(mouseX>=L.mainX&&mouseY>=L.gridTop)gridScroll+=e.delta;
+  return false;
+  }
+function keyPressed(event){
+  const pressedKey=String(event&&event.key||key||"").toLowerCase();
+  if((event&&(event.ctrlKey||event.metaKey)||keyIsDown(17)||keyIsDown(91)||keyIsDown(93))&&pressedKey==="e"){if(!event||!event.repeat)exportGrid();
+    return false;
+    }if(key==="Escape"){selectedBuild=null;
+    bulkPlaceRemaining=0;
+    showToast("Build selection cleared");
+    return false;
+    }if(key==="1"){shopTab="workers";
+    shopScroll=0;
+    return false;
+    }if(key==="2"){shopTab="build";
+    shopScroll=0;
+    return false;
+    }if(key==="3"){shopTab="candy";
+    shopScroll=0;
+    return false;
+    }return true;
+  }
