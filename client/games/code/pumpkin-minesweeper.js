@@ -9,6 +9,7 @@ const revealedBorder = "#1b4b10";
 const mineColor = "#451b16";
 const explosionFrameCount = 24;
 const explosionFrameDuration = 40;
+const resultRevealDuration = 1000;
 const targetFrameRate = 10;
 const difficulties = [
   { id: "small", label: "SMALL", cols: 9, rows: 9, mines: 10 },
@@ -30,6 +31,7 @@ let gameStartedAt = 0;
 let gameEndedAt = null;
 let explodedCell = null;
 let explosionStartedAt = 0;
+let resultRevealStartedAt = 0;
 let boardLayout = { x: 0, y: 0, cellSize: 0 };
 
 function preload() {
@@ -67,9 +69,9 @@ function draw() {
     drawTitleScreen();
     return;
   }
-  if (gameState === "exploding" && millis() - explosionStartedAt >= explosionFrameCount * explosionFrameDuration) {
-    finishGameOver();
-  }
+  if (gameState === "exploding" && millis() - explosionStartedAt >= explosionFrameCount * explosionFrameDuration) finishGameOver();
+  if (gameState === "victoryPending" && millis() - resultRevealStartedAt >= resultRevealDuration) gameState = "victory";
+  if (gameState === "gameoverPending" && millis() - resultRevealStartedAt >= resultRevealDuration) gameState = "gameover";
   drawBoard();
   drawHUD();
   if (gameState === "exploding") drawExplosionAnimation(millis() - explosionStartedAt);
@@ -141,6 +143,7 @@ function startGame(difficultyIndex) {
   gameEndedAt = null;
   explodedCell = null;
   explosionStartedAt = 0;
+  resultRevealStartedAt = 0;
   board = [];
   for (let row = 0; row < boardRows; row++) {
     const cells = [];
@@ -354,6 +357,7 @@ function revealCell(row, col) {
   if (cell.mine) {
     explodedCell = cell;
     explosionStartedAt = millis();
+    revealAllMines();
     gameState = "exploding";
     return;
   }
@@ -400,14 +404,15 @@ function revealAllMines() {
 
 function finishGameOver() {
   gameEndedAt = millis();
-  revealAllMines();
-  gameState = "gameover";
+  resultRevealStartedAt = millis();
+  gameState = "gameoverPending";
 }
 
 function finishVictory() {
   gameEndedAt = millis();
   revealAllMines();
-  gameState = "victory";
+  resultRevealStartedAt = millis();
+  gameState = "victoryPending";
 }
 
 function drawExplosionAnimation(elapsed) {
