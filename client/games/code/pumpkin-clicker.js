@@ -265,6 +265,78 @@ function pcGrid(L){
   drawingContext.restore();
  if(L.content>L.view){fill("#35492c");noStroke();rect(L.mainX+L.mainW-3,clipY,2,L.view);fill(PC_ORANGE);rect(L.mainX+L.mainW-3,clipY+pcGridScroll/Math.max(1,L.content)*L.view,2,Math.max(8,L.view*L.view/L.content));}
 }
+// Render the complete farm into an off-screen graphics buffer and download it as a PNG.
+// The live canvas only draws the visible, clipped rows for scrolling; it is not a full-grid buffer.
+function pcExportSheet(pg,img,x,y,size,frames=1,frame=0){
+ if(!img||!img.width||!img.height)return;
+ const horizontal=img.width>img.height*1.4,fw=horizontal?img.width/frames:img.width,fi=horizontal?((frame%frames)+frames)%frames:0;
+ pg.image(img,x,y,fw*size/img.height,size,fi*fw,0,fw,img.height);
+}
+function pcExportGrowGenerator(pg,t,x,y,s,fullyGrown=false,clogged=false){
+ const pot=pcImgs.generatorPot,fruit=pcImgs[fullyGrown&&t===0?"green":t>=3?"diamond":t>=2?"gold":"regular"],rate=PC_GENS[t].rate,cycle=Math.max(1300,1000/Math.max(.01,rate));
+ const phase=(fullyGrown||clogged)?1:((Date.now()+Math.round(x*13+y*7))%cycle)/cycle,growth=(fullyGrown||clogged)?1:(phase<.84?Math.max(.12,phase/.84):1);
+ if(pot&&pot.width&&pot.height)pg.image(pot,x,y+s*.10,pot.width*(s*1.18/pot.height),s*1.18);
+ else{pg.noStroke();pg.fill("#79502c");pg.stroke("#b87a35");pg.rect(x-s*.36,y,s*.72,s*.46);}
+ const img=phase<.84?pcImgs.green:fruit;
+ if(img&&img.width&&img.height){const fy=y+s*.10-(s*.10*phase),h=s*.46*growth;pcExportSheet(pg,img,x,fy,h,img.width>img.height*1.4?8:1,Math.floor(frameCount/8)%8);}
+}
+function pcExportGrid(){
+ if(!pcState||!Array.isArray(pcState.farm)){pcSay("Farm grid is not ready to export");return;}
+ const L=pcLayout(),t=L.tile,g=L.gap,cols=pcState.farmCols,rows=pcState.farmRows;
+ const exportW=cols*t+(cols-1)*g,exportH=rows*t+(rows-1)*g;
+ if(exportW<1||exportH<1||exportW>16384||exportH>16384||exportW*exportH>64000000){pcSay("Farm grid is too large to export at native tile size");return;}
+ let pg=null;
+ try{
+  pg=createGraphics(exportW,exportH);pg.pixelDensity(1);pg.imageMode(CENTER);pg.rectMode(CORNER);pg.textFont("Arial");pg.background(PC_BG);
+  // Draw every tile, including rows outside the current scroll viewport.
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+   const x=c*(t+g),y=r*(t+g),o=pcState.farm[r]&&pcState.farm[r][c];
+   pg.fill((r+c)%2?"#1b3b13":"#214318");pg.stroke("#65813a");pg.strokeWeight(1);pg.rect(x,y,t,t);
+   if(!o)continue;
+   if(o.kind==="generator"){
+    if(!o.mega&&!o.ultra){pcExportGrowGenerator(pg,o.tier,x+t/2,y+t/2,t*.78,false,!!o.clogged);pg.fill(PC_WHITE);pg.noStroke();pg.textAlign(CENTER,BOTTOM);pg.textSize(Math.max(7,t*.17));pg.text(pcFmt(PC_GENS[o.tier].rate)+"/s",x+t/2,y+t-1);}
+   }else if(o.kind==="multiplier"||o.kind==="shield"){
+    const img=pcImgs.multiplier;
+    if(img&&img.width)pcExportSheet(pg,img,x+t/2,y+t/2,t*.92,3,Math.floor(frameCount/7)%3);
+    else{pg.noStroke();pg.fill("#9ed8f0");pg.stroke("#e6f5ff");pg.beginShape();pg.vertex(x+t/2,y+t*.1);pg.vertex(x+t*.82,y+t*.3);pg.vertex(x+t*.75,y+t*.73);pg.vertex(x+t/2,y+t*.9);pg.vertex(x+t*.25,y+t*.73);pg.vertex(x+t*.18,y+t*.3);pg.endShape(CLOSE);}
+   }else if(o.kind==="vine"){
+    const img=pcImgs.vinesIcon;
+    if(img&&img.width)pcExportSheet(pg,img,x+t/2,y+t*.41,t*.70,1);
+    else{pg.noStroke();pg.fill("#5c8b36");pg.textAlign(CENTER,CENTER);pg.textSize(t*.45);pg.text("V",x+t/2,y+t*.41);}
+    pg.fill(PC_ORANGE);pg.noStroke();pg.textAlign(CENTER,BOTTOM);pg.textSize(Math.max(6,t*.14));pg.text("$"+pcFmt(pcVineClearCost()),x+t/2,y+t-1);
+   }else if(o.kind==="vault"){
+    const pumpkin=pcImgs.objective||pcImgs.regular;
+    if(pumpkin&&pumpkin.width)pcExportSheet(pg,pumpkin,x+t/2,y+t*.41,t*.65,1);
+    else{pg.noStroke();pg.fill("#ed8d20");pg.ellipse(x+t/2,y+t*.41,t*.48,t*.42);}
+    if(o.level>0){pg.fill(PC_ORANGE);pg.noStroke();pg.textAlign(CENTER,TOP);pg.textSize(Math.max(7,t*.14));pg.text("L"+(o.level+1),x+t/2,y+1);}
+    const cap=pcVaultCap(o),stored=Number(o.stored)||0,ratio=constrain(stored/Math.max(1,cap),0,1),bw=t*.86,bh=Math.max(3,t*.09),bx=x+t*.07,by=y+t-bh-2;
+    pg.noStroke();pg.fill("#091006");pg.rect(bx,by,bw,bh);pg.fill(ratio>=1?"#ffa500":"#78b84a");pg.rect(bx,by,bw*ratio,bh);pg.fill(PC_WHITE);pg.textAlign(CENTER,BOTTOM);pg.textSize(Math.max(6,Math.min(8,t*.13)));pg.text(pcFmt(stored)+"/"+pcFmt(cap),x+t/2,by-1);
+   }
+  }
+  // Draw Mega and Ultra generators after tile sprites so their footprints remain intact.
+  const largeGenerators=new Set();
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+   const o=pcState.farm[r]&&pcState.farm[r][c];
+   if(!o||o.kind!=="generator"||(!o.mega&&!o.ultra)||o.row!==r||o.col!==c||largeGenerators.has(o))continue;
+   largeGenerators.add(o);const x=c*(t+g),y=r*(t+g),size=o.ultra?3:2,foot=size*t+(size-1)*g;
+   pcExportGrowGenerator(pg,o.tier,x+foot/2,y+foot/2,t*(size-.1),false,!!o.clogged);
+   pg.noFill();pg.stroke(PC_ORANGE);pg.strokeWeight(2);pg.rect(x,y,foot,foot);
+   pg.noStroke();pg.fill(PC_BLACK);pg.rect(x+t*.08,y+t*.08,t*(o.ultra?1.05:.65),t*.3);
+   pg.fill(PC_ORANGE);pg.textAlign(CENTER,CENTER);pg.textSize(Math.max(8,t*(o.ultra?.17:.2)));pg.text(o.ultra?"ULTRA":"MEGA",x+t*(o.ultra?.55:.4),y+t*.23);
+  }
+  const canvas=pg.elt||pg.canvas||(pg._renderer&&pg._renderer.elt);
+  if(!canvas||typeof canvas.toDataURL!=="function")throw new Error("Off-screen canvas export is unavailable");
+  const link=document.createElement("a");
+  link.href=canvas.toDataURL("image/png");
+  link.download="pumpkin-clicker-farm-grid"+(pcState.prestige?"-prestige-"+pcState.prestige:"")+".png";
+  link.style.display="none";document.body.appendChild(link);link.click();link.remove();
+  pg.remove();pg=null;pcSay("Exported full farm grid as PNG");
+ }catch(err){
+  if(pg)pg.remove();
+  console.error("Could not export Pumpkin Clicker farm grid",err);
+  pcSay("Could not export grid — see console for details");
+ }
+}
 function pcGridCellAt(L){
  if(mouseX<L.gridX||mouseX>=L.gridX+pcState.farmCols*(L.tile+L.gap)-L.gap||mouseY<L.gridTop||mouseY>=L.gridTop+L.view)return null;
  const ux=mouseX-L.gridX,uy=mouseY-L.gridTop+pcGridScroll;
@@ -451,4 +523,4 @@ function pcIsShiftClick(){return pcShiftHeld||keyIsDown(16);}
 function pcPurchaseLimit(){return pcIsShiftClick()?10:pcClickBuyMode==="MAX"?Infinity:Math.max(1,Math.floor(Number(pcClickBuyMode)||1));}
 function mousePressed(event){pcShiftHeld=!!(event&&event.shiftKey)||keyIsDown(16);for(let i=pcTargets.length-1;i>=0;i--){const t=pcTargets[i];if(pcCandyOpening&&!t.modal)continue;if(mouseX>=t.x&&mouseX<=t.x+t.w&&mouseY>=t.y&&mouseY<=t.y+t.h){t.fn();return false;}}return false;}
 function mouseWheel(e){const L=pcLayout();if(mouseX<L.side&&mouseY>L.top)pcSideScroll+=e.delta;else if(mouseX>=L.mainX&&mouseY>=L.gridTop)pcGridScroll+=e.delta;return false;}
-function keyPressed(){if(key==="Escape"){pcSelected=null;pcBulkPlaceRemaining=0;pcSay("Build selection cleared");return false;}if(key==="1"){pcTab="workers";pcSideScroll=0;return false;}if(key==="2"){pcTab="build";pcSideScroll=0;return false;}if(key==="3"){pcTab="candy";pcSideScroll=0;return false;}return true;}
+function keyPressed(event){const pressedKey=String(event&&event.key||key||"").toLowerCase();if((event&&(event.ctrlKey||event.metaKey)||keyIsDown(17)||keyIsDown(91)||keyIsDown(93))&&pressedKey==="e"){if(!event||!event.repeat)pcExportGrid();return false;}if(key==="Escape"){pcSelected=null;pcBulkPlaceRemaining=0;pcSay("Build selection cleared");return false;}if(key==="1"){pcTab="workers";pcSideScroll=0;return false;}if(key==="2"){pcTab="build";pcSideScroll=0;return false;}if(key==="3"){pcTab="candy";pcSideScroll=0;return false;}return true;}
