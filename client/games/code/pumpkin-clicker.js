@@ -81,7 +81,7 @@ function pcSeedVines(){const cells=[];for(let r=0;r<pcState.farmRows;r++)for(let
 function pcSave(){if(!pcState)return;pcState.lastSavedAt=Date.now();try{localStorage.setItem(PC_SAVE,JSON.stringify(pcState));}catch(e){}}
 function pcToday(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 function pcMarkActivity(){if(typeof document!=="undefined"&&document.visibilityState!=="hidden")pcLastActivity=Date.now();}
-function pcUserIsActive(){return typeof document!=="undefined"&&document.visibilityState==="visible"&&document.hasFocus()&&(Date.now()-pcLastActivity)<30000;}
+function pcUserIsActive(){return typeof document!=="undefined"&&document.visibilityState==="visible"&&document.hasFocus();}
 function pcOffline(){
  const secs=Math.max(0,Math.min(2592000,(Date.now()-(pcState.lastSavedAt||Date.now()))/1000));if(secs<1)return;
  pcUnique(o=>{if(o.kind==="generator")pcAdvanceGenerator(o,pcGeneratorRate(o)*secs);});
@@ -174,7 +174,7 @@ function pcItem(it,x,y,w,h){
  const tx=x+sz+12,tw=Math.max(26,w-sz-22-w*.28);noStroke();fill(PC_WHITE);textAlign(LEFT,TOP);textSize(Math.max(8,Math.min(11,w*.082)));text(d.name,tx,y+4,tw,h*.40);
  fill("#bdc9a9");textSize(Math.max(7,Math.min(9,w*.073)));
  const sub=it.type==="worker"?d.desc:isB&&d.kind==="upgrade"?(pcState.autoSellPurchased?(pcState.autoSell?(pcUserIsActive()?"SELL IN "+Math.ceil((60000-(Number(pcState.autoSellProgressMs)||0))/1000)+"s":"AUTO-SELL PAUSED"):"OWNED • OFF"):"BUY AUTO-SELL"):it.type==="delete"&&sel?"SELECT A TILE":isB&&sel?"SELECTED":it.type==="daily"?(pcClaimed?"CLAIMED TODAY":"READY TO OPEN"):it.type==="buyCandy"?"ONE-HOUR RANDOM BONUS":d.desc;
- text(sub,tx,y+h*.43,tw,h*.29);if(it.type==="worker"){fill("#8fa27a");textSize(Math.max(6,Math.min(8,w*.065)));text("OWNED "+(pcState.workers[d.id]||0),tx,y+h*.77);}
+ text(sub,tx,y+h*.43,tw,h*.29);if(it.type==="autosell"&&pcState.autoSellPurchased&&pcState.autoSell){const progress=constrain((Number(pcState.autoSellProgressMs)||0)/60000,0,1),barX=x+4,barY=y+h-5,barW=w-8;noStroke();fill("#263b1b");rect(barX,barY,barW,2);fill(PC_ORANGE);rect(barX,barY,barW*progress,2);}if(it.type==="worker"){fill("#8fa27a");textSize(Math.max(6,Math.min(8,w*.065)));text("OWNED "+(pcState.workers[d.id]||0),tx,y+h*.77);}
  textAlign(RIGHT,CENTER);fill(PC_ORANGE);textSize(Math.max(8,Math.min(11,w*.09)));
  if(it.type==="worker")text("$"+pcFmt(pcWorkerCost(d.id)),x+w-5,y+h*.5);
  else if(isB)text(d.kind==="upgrade"?(pcState.autoSellPurchased?(pcState.autoSell?"ON":"OFF"):"$"+pcFmt(d.cost)):"$"+pcFmt(pcBuildCost(d)),x+w-5,y+h*.5);
