@@ -9,6 +9,7 @@ const revealedBorder = "#1b4b10";
 const mineColor = "#451b16";
 const explosionFrameCount = 24;
 const explosionFrameDuration = 40;
+const targetFrameRate = 10;
 const spinDuration = 520;
 const difficulties = [
   { id: "small", label: "SMALL", cols: 9, rows: 9, mines: 10 },
@@ -238,7 +239,7 @@ function drawTargetMarker(x, y, size) {
   const scaleFactor = Math.min(size * 0.92 / frameWidth, size * 0.92 / sheet.height);
   const displayWidth = frameWidth * scaleFactor;
   const displayHeight = sheet.height * scaleFactor;
-  const frame = Math.floor(millis() / (1000 / 12)) % frameCount;
+  const frame = Math.floor(millis() * targetFrameRate / 1000) % frameCount;
   image(sheet, x + size / 2, y + size / 2, displayWidth, displayHeight, frame * frameWidth, 0, frameWidth, sheet.height);
 }
 
