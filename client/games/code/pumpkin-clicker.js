@@ -110,25 +110,120 @@ const workers = [
 ];
 
 const buildings = [
-  { id: "g0", name: "Green Pumpkin", cost: 10, desc: "0.20 pumpkins/sec", kind: "generator", tier: 0 },
-  { id: "g1", name: "Pumpkin", cost: 60, desc: "1 pumpkin/sec", kind: "generator", tier: 1 },
-  { id: "g2", name: "Gold Pumpkin", cost: 500, desc: "5 pumpkins/sec", kind: "generator", tier: 2 },
-  { id: "g3", name: "Diamond Pumpkin", cost: 2200, desc: "24 pumpkins/sec", kind: "generator", tier: 3 },
-  { id: "shield", name: "Multiplier", cost: 180, desc: "Boosts directly adjacent generators", kind: "multiplier" },
-  { id: "vault", name: "Vault", cost: 60, desc: "50 base storage; scales per level", kind: "vault" }
+  {
+    id: "g0",
+    name: "Green Pumpkin",
+    cost: 10,
+    desc: "0.20 pumpkins/sec",
+    kind: "generator",
+    tier: 0
+  },
+  {
+    id: "g1",
+    name: "Pumpkin",
+    cost: 60,
+    desc: "1 pumpkin/sec",
+    kind: "generator",
+    tier: 1
+  },
+  {
+    id: "g2",
+    name: "Gold Pumpkin",
+    cost: 500,
+    desc: "5 pumpkins/sec",
+    kind: "generator",
+    tier: 2
+  },
+  {
+    id: "g3",
+    name: "Diamond Pumpkin",
+    cost: 2200,
+    desc: "24 pumpkins/sec",
+    kind: "generator",
+    tier: 3
+  },
+  {
+    id: "shield",
+    name: "Multiplier",
+    cost: 180,
+    desc: "Boosts directly adjacent generators",
+    kind: "multiplier"
+  },
+  {
+    id: "vault",
+    name: "Vault",
+    cost: 60,
+    desc: "50 base storage; scales per level",
+    kind: "vault"
+  }
 ];
 
 const candies = [
-  { id: "candy_corn", name: "Candy Corn", path: "/assets/candies/candy-corn.png", desc: "3× generator production", production: 3 },
-  { id: "smarties", name: "Smarties", path: "/assets/candies/smarties.png", desc: "Clicks harvest 3 pumpkins", click: 3 },
-  { id: "peppermint", name: "Peppermint", path: "/assets/candies/peppermint.png", desc: "Sell pumpkins for 2× cash", sell: 2 },
-  { id: "lolipop", name: "Lollipop", path: "/assets/candies/lolipop.png", desc: "+50% total production", production: 1.5 },
-  { id: "hot_tamale", name: "Hot Tamale", path: "/assets/candies/hot-tamale.png", desc: "2× generator production", production: 2 },
-  { id: "ghost_chew", name: "Ghost Chew", path: "/assets/candies/ghost-chew.png", desc: "+50% pumpkin storage", capacity: 1.5 },
-  { id: "chocolate", name: "Chocolate", path: "/assets/candies/chocolate.png", desc: "+$5 per manual click", clickCash: 5 },
-  { id: "candied_apple", name: "Candied Apple", path: "/assets/candies/candied-apple.png", desc: "+25% generator production", production: 1.25 },
-  { id: "blue_candy", name: "Blue Candy", path: "/assets/candies/blue-candy.png", desc: "Doubles additive worker bonuses", workers: 2 }
+  {
+    id: "candy_corn",
+    name: "Candy Corn",
+    path: "/assets/candies/candy-corn.png",
+    desc: "3× generator production",
+    production: 3
+  },
+  {
+    id: "smarties",
+    name: "Smarties",
+    path: "/assets/candies/smarties.png",
+    desc: "Clicks harvest 3 pumpkins",
+    click: 3
+  },
+  {
+    id: "peppermint",
+    name: "Peppermint",
+    path: "/assets/candies/peppermint.png",
+    desc: "Sell pumpkins for 2× cash",
+    sell: 2
+  },
+  {
+    id: "lolipop",
+    name: "Lollipop",
+    path: "/assets/candies/lolipop.png",
+    desc: "+50% total production",
+    production: 1.5
+  },
+  {
+    id: "hot_tamale",
+    name: "Hot Tamale",
+    path: "/assets/candies/hot-tamale.png",
+    desc: "2× generator production",
+    production: 2
+  },
+  {
+    id: "ghost_chew",
+    name: "Ghost Chew",
+    path: "/assets/candies/ghost-chew.png",
+    desc: "+50% pumpkin storage",
+    capacity: 1.5
+  },
+  {
+    id: "chocolate",
+    name: "Chocolate",
+    path: "/assets/candies/chocolate.png",
+    desc: "+$5 per manual click",
+    clickCash: 5
+  },
+  {
+    id: "candied_apple",
+    name: "Candied Apple",
+    path: "/assets/candies/candied-apple.png",
+    desc: "+25% generator production",
+    production: 1.25
+  },
+  {
+    id: "blue_candy",
+    name: "Blue Candy",
+    path: "/assets/candies/blue-candy.png",
+    desc: "Doubles additive worker bonuses",
+    workers: 2
+  }
 ];
+
 
 let images = {};
 let game;
@@ -339,7 +434,7 @@ function loadGame() {
   });
   game.autoSellProgressMs = Math.max(0, Math.min(59999, Number(game.autoSellProgressMs) || 0));
 
-  if (savedGame.storageVersion !== 2 || !Number.isFinite(Number(savedGame.baseStored))) {
+  if (!savedGame || savedGame.storageVersion !== 2 || !Number.isFinite(Number(savedGame.baseStored))) {
     let remaining = Math.max(0, Number(game.pumpkins) || 0);
     game.baseStored = 0;
 
