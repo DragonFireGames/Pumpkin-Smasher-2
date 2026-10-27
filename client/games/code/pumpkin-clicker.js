@@ -505,17 +505,17 @@ function pcFinishHover(){
 }
 function pcDrawHoverPanel(info){
  const panelW=Math.min(270,width-20),pad=9,innerW=panelW-pad*2,maxH=Math.max(40,height-20);
- const wrap=value=>{
+ const wrap=(value,size,maxWidth=innerW)=>{
   const words=String(value||"").split(/\\s+/).filter(Boolean),out=[];let line="";
-  textSize(10);
-  for(const word of words){const next=line?line+" "+word:word;if(line&&textWidth(next)>innerW){out.push(line);line=word;}else line=next;}
+  textSize(size);
+  for(const word of words){const next=line?line+" "+word:word;if(line&&textWidth(next)>maxWidth){out.push(line);line=word;}else line=next;}
   if(line)out.push(line);
   return out;
  };
- textSize(13);const titleLines=wrap(info.title||"Details");
- textSize(10);const summaryLines=wrap(info.summary||"");
- textSize(9);let ruleLines=[];
- (info.rules||[]).forEach(rule=>{const wrapped=wrap(rule);wrapped.forEach((line,i)=>ruleLines.push((i===0?"• ":"  ")+line));});
+ const titleLines=wrap(info.title||"Details",13);
+ const summaryLines=wrap(info.summary||"",10);
+ let ruleLines=[];
+ (info.rules||[]).forEach(rule=>{const wrapped=wrap(rule,9,Math.max(1,innerW-textWidth("• ")));wrapped.forEach((line,i)=>ruleLines.push((i===0?"• ":"  ")+line));});
  const titleLineH=16,summaryLineH=13,ruleLineH=12;
  const fixedH=8+titleLines.length*titleLineH+4+summaryLines.length*summaryLineH+7+8;
  const maxRuleLines=Math.max(0,Math.floor((maxH-fixedH)/ruleLineH));
