@@ -206,8 +206,54 @@ function pcGrid(L){
   else if(o.kind==="vault"){const pumpkin=pcImgs.objective||pcImgs.regular;if(pumpkin&&pumpkin.width)pcSheet(pumpkin,x+t/2,y+t/2,t*.96,1);else pcGen(1,x+t/2,y+t/2,t*.96);}
   pcTarget(x,y,t,t,()=>pcTile(r,c),false,pcFarmHoverInfo(o,r,c));
  }
+ pcDrawGridEffectPreview(L);
  drawingContext.restore();
  if(L.content>L.view){fill("#35492c");noStroke();rect(L.mainX+L.mainW-3,clipY,2,L.view);fill(PC_ORANGE);rect(L.mainX+L.mainW-3,clipY+pcGridScroll/Math.max(1,L.content)*L.view,2,Math.max(8,L.view*L.view/L.content));}
+}
+function pcGridCellAt(L){
+ if(mouseX<L.gridX||mouseX>=L.gridX+pcState.farmCols*(L.tile+L.gap)-L.gap||mouseY<L.gridTop||mouseY>=L.gridTop+L.view)return null;
+ const ux=mouseX-L.gridX,uy=mouseY-L.gridTop+pcGridScroll;
+ const step=L.tile+L.gap,c=Math.floor(ux/step),r=Math.floor(uy/step);
+ if(c<0||c>=pcState.farmCols||r<0||r>=pcState.farmRows||ux%step>=L.tile||uy%step>=L.tile)return null;
+ return {r,c};
+}
+function pcDrawGridEffectPreview(L){
+ const cell=pcGridCellAt(L);if(!cell)return;
+ const selected=pcSelected&&PC_BUILDS.find(v=>v.id===pcSelected);
+ let kind=null,ar=cell.r,ac=cell.c;
+ if(selected&&(selected.kind==="multiplier"||selected.kind==="vault"))kind=selected.kind;
+ else{
+  const hovered=pcState.farm[cell.r]&&pcState.farm[cell.r][cell.c];
+  if(hovered&&(hovered.kind==="multiplier"||hovered.kind==="shield"||hovered.kind==="vault")){
+   kind=hovered.kind==="shield"?"multiplier":hovered.kind;
+   ar=Number.isFinite(hovered.row)?hovered.row:cell.r;
+   ac=Number.isFinite(hovered.col)?hovered.col:cell.c;
+  }
+ }
+ if(!kind)return;
+ const isMultiplier=kind==="multiplier"||kind==="shield";
+ const border=isMultiplier?"#c58aff":"#54e8cf";
+ const cells=[];
+ if(isMultiplier){
+  for(let r=Math.max(0,ar-1);r<=Math.min(pcState.farmRows-1,ar+1);r++)
+   for(let c=Math.max(0,ac-1);c<=Math.min(pcState.farmCols-1,ac+1);c++)cells.push({r,c,center:r===ar&&c===ac});
+ }else{
+  cells.push({r:ar,c:ac,center:true});
+  [[-1,0],[1,0],[0,-1],[0,1]].forEach(([dr,dc])=>{
+   const r=ar+dr,c=ac+dc;
+   if(r>=0&&r<pcState.farmRows&&c>=0&&c<pcState.farmCols)cells.push({r,c,center:false});
+  });
+ }
+ noStroke();
+ cells.forEach(({r,c,center})=>{
+  const x=L.gridX+c*(L.tile+L.gap),y=L.gridTop+r*(L.tile+L.gap)-pcGridScroll;
+  if(y+L.tile<L.gridTop||y>L.gridTop+L.view)return;
+  if(isMultiplier)fill(174,90,255,76);
+  else if(center)fill(35,220,190,35);
+  else fill(35,220,190,78);
+  rect(x,y,L.tile,L.tile);
+  noFill();stroke(border);strokeWeight(center?2:1);rect(x+1,y+1,L.tile-2,L.tile-2);noStroke();
+ });
 }
 function pcSheet(img,x,y,size,frames,frame=0){if(!img||!img.width||!img.height)return;const horizontal=img.width>img.height*1.4,fw=horizontal?img.width/frames:img.width,fi=horizontal?((frame%frames)+frames)%frames:0;image(img,x,y,fw*size/img.height,size,fi*fw,0,fw,img.height);}
 function pcGen(t,x,y,s){const img=pcImgs[PC_GENS[t].id];if(img?.width)pcSheet(img,x,y,s,1);else{noStroke();fill(t===0?"#85b54a":t===2?"#e9c33e":t===3?"#74e4e8":"#ed8d20");ellipse(x,y,s*.82,s*.68);fill("#4d7b20");rect(x-s*.04,y-s*.42,s*.08,s*.2);}}
