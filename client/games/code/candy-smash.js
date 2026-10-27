@@ -30,6 +30,7 @@ const CS_CANDY_TYPES = [
   { id: "corn", name: "Candy Corn", path: "/assets/candies/candy-corn.png", weight: 1 },
   { id: "chocolate", name: "Chocolate", path: "/assets/candies/chocolate.png", weight: 1 },
   { id: "ghost", name: "Ghost Chew", path: "/assets/candies/ghost-chew.png", weight: 1 },
+  { id: "smarties", name: "Smarties", path: "/assets/candies/smarties.png", weight: 1 },
   { id: "hot_tamale", name: "Hot Tamale", path: "/assets/candies/hot-tamale.png", weight: 0.10, special: "bomb" },
   { id: "peppermint", name: "Peppermint", path: "/assets/candies/peppermint.png", weight: 1.0, special: "wildcard" }
 ];
