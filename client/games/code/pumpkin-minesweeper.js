@@ -9,7 +9,7 @@ const revealedBorder = "#1b4b10";
 const mineColor = "#451b16";
 const explosionFrameCount = 24;
 const explosionFrameDuration = 50;
-const resultRevealDuration = 2000;
+const resultRevealDuration = 3000;
 const targetFrameRate = 10;
 const difficulties = [
   { id: "small", label: "SMALL", cols: 9, rows: 9, mines: 10 },
