@@ -407,6 +407,43 @@ function csFindMatches(board) {
   }
   return Array.from(matches.values());
 }
+function csFindFiveInLine(cells) {
+  const matched = new Set(cells.map(cell => cell.row + "," + cell.col));
+  const directions = [{ row: 0, col: 1 }, { row: 1, col: 0 }];
+
+  for (let d = 0; d < directions.length; d++) {
+    const direction = directions[d];
+    for (let row = 0; row < CS_ROWS; row++) {
+      for (let col = 0; col < CS_COLS; col++) {
+        const candy = csBoard[row][col];
+        if (!candy) continue;
+
+        const previousRow = row - direction.row;
+        const previousCol = col - direction.col;
+        if (previousRow >= 0 && previousCol >= 0 && previousRow < CS_ROWS && previousCol < CS_COLS &&
+            csBoard[previousRow][previousCol] && csBoard[previousRow][previousCol].type === candy.type) {
+          continue;
+        }
+
+        const run = [];
+        let nextRow = row;
+        let nextCol = col;
+        while (nextRow < CS_ROWS && nextCol < CS_COLS &&
+               csBoard[nextRow][nextCol] && csBoard[nextRow][nextCol].type === candy.type) {
+          run.push({ row: nextRow, col: nextCol });
+          nextRow += direction.row;
+          nextCol += direction.col;
+        }
+
+        if (run.length >= 5 && run.every(cell => matched.has(cell.row + "," + cell.col))) {
+          return run;
+        }
+      }
+    }
+  }
+  return null;
+}
+
 function csSwapBoardCandies(board, a, b) {
   const temp = board[a.row][a.col];
   board[a.row][a.col] = board[b.row][b.col];
@@ -563,11 +600,11 @@ function csTrySwap(from, to) {
   };
   csMovesLeft = csMode.moves === null ? csMovesLeft : csMovesLeft - 1;
   csKeyboardFocus = { row: to.row, col: to.col };
-  csBeginClear(matches, false);
+  csBeginClear(matches, false, to);
   return true;
 }
 
-function csBeginClear(cells, fromBomb) {
+function csBeginClear(cells, fromBomb, preferredSpawnCell) {
   // A Hot Tamale matched by a cascade still behaves like a bomb.
   if (!fromBomb) {
     let foundTamale = false;
@@ -585,6 +622,29 @@ function csBeginClear(cells, fromBomb) {
       return;
     }
   }
+
+  // A straight run of five or more candies creates a Hot Tamale at the swap
+  // destination, or at the middle of the run for a cascade-generated match.
+  if (!fromBomb) {
+    const fiveRun = csFindFiveInLine(cells);
+    if (fiveRun) {
+      let spawnCell = fiveRun[Math.floor(fiveRun.length / 2)];
+      if (preferredSpawnCell && fiveRun.some(cell =>
+        cell.row === preferredSpawnCell.row && cell.col === preferredSpawnCell.col
+      )) {
+        spawnCell = preferredSpawnCell;
+      }
+      const spawnKey = spawnCell.row + "," + spawnCell.col;
+      const candy = csBoard[spawnCell.row][spawnCell.col];
+      if (candy) {
+        candy.type = "hot_tamale";
+        candy.bornAt = millis();
+        candy.fall = null;
+        cells = cells.filter(cell => cell.row + "," + cell.col !== spawnKey);
+      }
+    }
+  }
+
   const unique = new Map();
   for (let i = 0; i < cells.length; i++) {
     const cell = cells[i];
