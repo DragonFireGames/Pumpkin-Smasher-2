@@ -16,6 +16,7 @@ const CS_BOARD_X = 40;
 const CS_BOARD_Y = 56;
 const CS_BG = "#123904";
 const CS_BLACK = "#10180b";
+const CS_TITLE_BG = "#172719";
 const CS_GREEN = "#1d4a13";
 const CS_GREEN_LIGHT = "#2b5f1b";
 const CS_ORANGE = "#ffa500";
@@ -128,7 +129,7 @@ function draw() {
 
 function csDrawTitle() {
   noStroke();
-  fill(CS_BLACK);
+  fill(CS_TITLE_BG);
   rect(0, 0, width, height);
   stroke(CS_ORANGE);
   strokeWeight(2);
@@ -150,16 +151,16 @@ function csDrawTitle() {
   const next = CS_MODES[(csSelectedMode + 1) % CS_MODES.length];
 
   // One carousel row: candy, name, and neighbors. No second row of circles.
-  csDrawModeCandyBubble(previous.candyId, 62, 187, 25, false);
-  csDrawModeCandyBubble(next.candyId, 338, 187, 25, false);
+  csDrawModeCandyBubble(previous.candyId, 88, 187, 25, false);
+  csDrawModeCandyBubble(next.candyId, 312, 187, 25, false);
   csDrawModeCandyBubble(mode.candyId, 200, 184, 48, true);
 
   noStroke();
   fill(CS_WHITE);
   textStyle(BOLD);
   textSize(24);
-  text("‹", 23, 187);
-  text("›", 377, 187);
+  text("‹", 53, 187);
+  text("›", 347, 187);
 
   fill(CS_ORANGE);
   textStyle(BOLD);
@@ -172,10 +173,13 @@ function csDrawTitle() {
 
   // A single, clear Play button sits below the carousel.
   const hoveringPlay = mouseX >= 112 && mouseX <= 288 && mouseY >= 302 && mouseY <= 348;
-  fill(hoveringPlay ? "#f5a54b" : CS_ORANGE);
+  // Match Pumpkin Smasher's flat brown-and-orange buttons: no rounding or bevel.
+  fill(hoveringPlay ? "#381e08" : "#231709");
+  stroke(CS_ORANGE);
+  strokeWeight(2);
+  rect(112, 302, 176, 46);
   noStroke();
-  rect(112, 302, 176, 46, 9);
-  fill(CS_BLACK);
+  fill(CS_ORANGE);
   textStyle(BOLD);
   textSize(15);
   text("PLAY", width / 2, 325);
