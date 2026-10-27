@@ -99,8 +99,8 @@ function pcCandyMult(key){return PC_CANDIES.reduce((n,v)=>n*(v[key]&&pcHasCandy(
 function pcFootprint(o){return o&&o.mega?[[o.row,o.col],[o.row+1,o.col],[o.row,o.col+1],[o.row+1,o.col+1]]:[[o.row,o.col]];}
 function pcVaults(){const out=[];pcUnique(o=>{if(o.kind==="vault")out.push(o);});return out.sort((a,b)=>(a.row-b.row)||(a.col-b.col));}
 function pcBaseCap(){const w=pcState.workers||{},workerBonus=1+(w.monster||0)*.02+(w.brute||0)*.05;return Math.floor(50*workerBonus*pcCandyMult("capacity"));}
-const PC_VAULT_CAPS=[50,125,250,500,1000,3500,7500,15000,50000,125000,250000,500000];
-const PC_VAULT_UPGRADE_COSTS=[80,150,300,600,1200,2500,5000,10000,25000,50000,100000,200000];
+const PC_VAULT_CAPS=[50,125,250,500,1000,3500,7500,15000,50000,125000,250000,500000,1000000,3500000,7500000,15000000,50000000,125000000,250000000,500000000];
+const PC_VAULT_UPGRADE_COSTS=[80,150,300,600,1200,2500,5000,10000,25000,50000,100000,200000,400000,1000000,2000000,4000000,10000000,25000000,50000000,100000000];
 function pcVaultCap(o){const level=Math.max(0,Math.floor(o.level||0)),base=level<PC_VAULT_CAPS.length?PC_VAULT_CAPS[level]:PC_VAULT_CAPS[PC_VAULT_CAPS.length-1]*Math.pow(2,level-(PC_VAULT_CAPS.length-1));return Math.ceil(base*pcCandyMult("capacity"));}
 function pcVaultUpgradeCost(level){level=Math.max(0,Math.floor(level||0));return Math.ceil(level<PC_VAULT_UPGRADE_COSTS.length?PC_VAULT_UPGRADE_COSTS[level]:PC_VAULT_UPGRADE_COSTS[PC_VAULT_UPGRADE_COSTS.length-1]*Math.pow(2,level-(PC_VAULT_UPGRADE_COSTS.length-1)));}
 function pcCap(){let cap=pcBaseCap();pcVaults().forEach(v=>cap+=pcVaultCap(v));return cap;}
@@ -164,7 +164,7 @@ function pcItem(it,x,y,w,h){
  else if(isB&&d.kind==="generator")pcDrawGrowGenerator(d.tier,ix+sz*.06,iy+sz*.08,sz*1.18,false,true);
  else if(isB&&d.kind==="multiplier"){const si=pcImgs.multiplier;if(si&&si.width)pcSheet(si,ix,iy,sz,3,Math.floor(frameCount/7)%3);else pcDrawShieldFallback(ix,iy,sz);}
  else if(isB&&d.kind==="vault"){const pumpkin=pcImgs.objective||pcImgs.regular;if(pumpkin&&pumpkin.width)pcSheet(pumpkin,ix,iy,sz,1);else pcGen(1,ix,iy,sz);}
- else if(it.type==="delete"){const img=pcImgs.vinesIcon;if(img?.width)pcSheet(img,ix,iy,sz,1);else{noStroke();fill(PC_ORANGE);textAlign(CENTER,CENTER);textSize(sz);text("×",ix,iy);}}
+ else if(it.type==="delete")pcDrawTrashIcon(ix,iy,sz);
  else if(it.type==="daily"||it.type==="buyCandy"){const img=pcImgs.candyBag;if(img?.width)pcSheet(img,ix,iy,sz,1);else{noStroke();fill(PC_ORANGE);rect(ix-5,iy-8,10,16);}}
  else{noStroke();fill(PC_ORANGE);textAlign(CENTER,CENTER);textSize(Math.max(11,sz*.75));text(isB?(d.kind==="shield"?"S":d.kind==="vault"?"V":"$"):(it.type==="sell"?"$":"i"),ix,iy);}
  const tx=x+sz+9,tw=Math.max(26,w-sz-18-w*.28);noStroke();fill(PC_WHITE);textAlign(LEFT,TOP);textSize(Math.max(8,Math.min(11,w*.082)));text(d.name,tx,y+4,tw,h*.40);
@@ -203,13 +203,13 @@ function pcMain(L){
  if(pcSelected){const b=PC_BUILDS.find(v=>v.id===pcSelected);fill(PC_WHITE);textAlign(RIGHT,CENTER);textSize(Math.max(8,Math.min(10,w*.032)));text(pcSelected==="__sell"?"DELETE / SELL":b?b.name:"",x+w-4,L.gridStart+12);}
  pcGrid(L);
 }
-function pcClickUpgradeCost(id){const u=pcState.clickUpgrades||{power:0,bonus:0,cash:0},level=u[id]||0;return Math.ceil(({power:30,bonus:100,cash:50}[id]||50)*Math.pow(({power:1.65,bonus:1.85,cash:1.8}[id]||1.8),level));}
-function pcBuyClickUpgrade(id){const data={power:{name:"Click Power",max:100},bonus:{name:"Click Boost",max:20},cash:{name:"Click Cash",max:100}}[id];if(!data)return;const level=pcState.clickUpgrades[id]||0,cost=pcClickUpgradeCost(id);if(level>=data.max){pcSay(data.name+" is maxed");return;}if(pcState.cash<cost){pcSay(data.name+" costs $"+pcFmt(cost));return;}pcState.cash-=cost;pcState.clickUpgrades[id]=level+1;pcSay(data.name+" upgraded to Lv. "+(level+1));pcSave();}
+function pcClickUpgradeCost(id){const u=pcState.clickUpgrades||{power:0,bonus:0,cash:0},level=u[id]||0;return Math.ceil(({power:20,bonus:60,cash:30}[id]||30)*Math.pow(({power:1.18,bonus:1.22,cash:1.18}[id]||1.18),level));}
+function pcBuyClickUpgrade(id,bulk=false){const data={power:{name:"Click Power",max:100},bonus:{name:"Click Boost",max:20},cash:{name:"Click Cash",max:100}}[id];if(!data)return;let level=pcState.clickUpgrades[id]||0,bought=0,lastCost=0;while(level<data.max){const cost=pcClickUpgradeCost(id);if(pcState.cash<cost){lastCost=cost;break;}pcState.cash-=cost;level++;bought++;pcState.clickUpgrades[id]=level;if(!bulk)break;}if(!bought){pcSay(level>=data.max?data.name+" is maxed":data.name+" costs $"+pcFmt(lastCost||pcClickUpgradeCost(id)));return;}pcSay(bought>1?data.name+" bought "+bought+" levels (Lv. "+level+")":data.name+" upgraded to Lv. "+level);pcSave();}
 function pcDrawClickUpgrades(L,panelX,panelW){
  const bw=Math.min(108,Math.max(58,panelW*.30)),x=panelX+panelW-bw-8,top=L.top+14,gap=6,avail=L.gridStart-top-8,bh=Math.max(25,Math.min(38,(avail-gap*2)/3));
  const positions=["power","bonus","cash"].map((id,i)=>({id,x,y:top+i*(bh+gap)}));
  const names={power:"CLICK +1",bonus:"CLICK BOOST",cash:"CLICK CASH"};
- positions.forEach(p=>{const level=pcState.clickUpgrades[p.id]||0,max=level>=(p.id==="bonus"?20:100),cost=pcClickUpgradeCost(p.id),hover=mouseX>=p.x&&mouseX<=p.x+bw&&mouseY>=p.y&&mouseY<=p.y+bh;fill(hover?"#3d3518":"#172414");stroke(PC_ORANGE);strokeWeight(hover?2:1);rect(p.x,p.y,bw,bh);noStroke();fill(max?"#8ba17a":PC_WHITE);textAlign(CENTER,CENTER);textSize(Math.max(7,Math.min(9,bw*.105)));text(names[p.id],p.x+bw/2,p.y+bh*.32);fill(max?"#9ab58a":PC_ORANGE);textSize(Math.max(7,Math.min(9,bw*.105)));text(max?"MAX":"Lv."+level+"  $"+pcFmt(cost),p.x+bw/2,p.y+bh*.72);const rules={power:["Adds +1 pumpkin to each manual harvest per level.","Costs increase with each purchase."],bonus:["Adds +25% click yield per level, multiplicatively with Click Power.","Maximum level 20."],cash:["Adds $1 per manual click, or to the click payout in Auto-Sell mode.","Chocolate bonuses stack with this upgrade."]};pcTarget(p.x,p.y,bw,bh,()=>pcBuyClickUpgrade(p.id),false,{id:"click-upgrade:"+p.id,title:names[p.id],kind:"upgrade",summary:max?"This click upgrade is maxed.":("Next upgrade costs $"+pcFmt(cost)+"."),rules:rules[p.id]});});
+ positions.forEach(p=>{const level=pcState.clickUpgrades[p.id]||0,max=level>=(p.id==="bonus"?20:100),cost=pcClickUpgradeCost(p.id),hover=mouseX>=p.x&&mouseX<=p.x+bw&&mouseY>=p.y&&mouseY<=p.y+bh;fill(hover?"#3d3518":"#172414");stroke(PC_ORANGE);strokeWeight(hover?2:1);rect(p.x,p.y,bw,bh);noStroke();fill(max?"#8ba17a":PC_WHITE);textAlign(CENTER,CENTER);textSize(Math.max(7,Math.min(9,bw*.105)));text(names[p.id],p.x+bw/2,p.y+bh*.32);fill(max?"#9ab58a":PC_ORANGE);textSize(Math.max(7,Math.min(9,bw*.105)));text(max?"MAX":"Lv."+level+"  $"+pcFmt(cost),p.x+bw/2,p.y+bh*.72);const rules={power:["Adds +1 pumpkin to each manual harvest per level.","Costs increase with each purchase."],bonus:["Adds +25% click yield per level, multiplicatively with Click Power.","Maximum level 20."],cash:["Adds $1 per manual click, or to the click payout in Auto-Sell mode.","Chocolate bonuses stack with this upgrade."]};pcTarget(p.x,p.y,bw,bh,()=>pcBuyClickUpgrade(p.id,keyIsDown(SHIFT)),false,{id:"click-upgrade:"+p.id,title:names[p.id],kind:"upgrade",summary:max?"This click upgrade is maxed.":("Next upgrade costs $"+pcFmt(cost)+"."),rules:[...rules[p.id],"Hold Shift and click to buy as many levels as your cash allows."]});});
 }
 function pcButton(x,y,w,h,label,col,tc){fill(col);stroke(PC_ORANGE);strokeWeight(1);rect(x,y,w,h);noStroke();fill(tc);textAlign(CENTER,CENTER);textSize(Math.max(8,Math.min(11,h*.48)));text(label,x+w/2,y+h/2);}
 function pcGrid(L){
@@ -220,13 +220,14 @@ function pcGrid(L){
   const o=pcState.farm[r][c];
   if(!o){if(pcSelected){noStroke();fill("#8aa96a");textAlign(CENTER,CENTER);textSize(Math.max(9,t*.25));text("+",x+t/2,y+t/2);}pcTarget(x,y,t,t,()=>pcTile(r,c),false,pcFarmHoverInfo(null,r,c));continue;}
   if(o.kind==="generator"){
-   if(!o.mega||(r===o.row&&c===o.col)){const s=o.mega?t*1.9:t*.78;pcDrawGrowGenerator(o.tier,x+t/2+(o.mega?t/2:0),y+t/2+(o.mega?t/2:0),s,false,false,!!o.clogged);if(o.mega){noFill();stroke(PC_ORANGE);strokeWeight(2);rect(x,y,t*2+g,t*2+g);noStroke();fill(PC_BLACK);rect(x+t*.08,y+t*.08,t*.65,t*.3);fill(PC_ORANGE);textAlign(CENTER,CENTER);textSize(Math.max(8,t*.2));text("MEGA",x+t*.4,y+t*.23);}}
-   if(!o.mega){fill(PC_WHITE);noStroke();textAlign(CENTER,BOTTOM);textSize(Math.max(7,t*.17));text(pcFmt(PC_GENS[o.tier].rate)+"/s",x+t/2,y+t-1);}
+   if(!o.mega){pcDrawGrowGenerator(o.tier,x+t/2,y+t/2,t*.78,false,false,!!o.clogged);fill(PC_WHITE);noStroke();textAlign(CENTER,BOTTOM);textSize(Math.max(7,t*.17));text(pcFmt(PC_GENS[o.tier].rate)+"/s",x+t/2,y+t-1);}
   }else if(o.kind==="multiplier"||o.kind==="shield"){const si=pcImgs.multiplier;if(si&&si.width)pcSheet(si,x+t/2,y+t/2,t*.92,3,Math.floor(frameCount/7)%3);else pcDrawShieldFallback(x+t/2,y+t/2,t);}
   else if(o.kind==="vine"){const vi=pcImgs.vinesIcon;if(vi&&vi.width)pcSheet(vi,x+t/2,y+t*.41,t*.70,1);else{noStroke();fill("#5c8b36");textAlign(CENTER,CENTER);textSize(t*.45);text("V",x+t/2,y+t*.41);}fill(PC_ORANGE);noStroke();textAlign(CENTER,BOTTOM);textSize(Math.max(6,t*.14));text("$500",x+t/2,y+t-1);}
   else if(o.kind==="vault"){const pumpkin=pcImgs.objective||pcImgs.regular;if(pumpkin&&pumpkin.width)pcSheet(pumpkin,x+t/2,y+t*.41,t*.65,1);else pcGen(1,x+t/2,y+t*.41,t*.65);if(o.level>0){fill(PC_ORANGE);noStroke();textAlign(CENTER,TOP);textSize(Math.max(7,t*.14));text("L"+(o.level+1),x+t/2,y+1);}const cap=pcVaultCap(o),stored=Number(o.stored)||0,ratio=constrain(stored/Math.max(1,cap),0,1),bw=t*.86,bh=Math.max(3,t*.09),bx=x+t*.07,by=y+t-bh-2;noStroke();fill("#091006");rect(bx,by,bw,bh);fill(ratio>=1?"#ffa500":"#78b84a");rect(bx,by,bw*ratio,bh);fill(PC_WHITE);textAlign(CENTER,BOTTOM);textSize(Math.max(6,Math.min(8,t*.13)));text(pcFmt(stored)+"/"+pcFmt(cap),x+t/2,by-1);}
   pcTarget(x,y,t,t,()=>pcTile(r,c),false,pcFarmHoverInfo(o,r,c));
  }
+ // Draw mega generators after all cell tiles so their 2×2 sprite is not covered by later tile fills.
+ const megas=new Set();for(let r=0;r<pcState.farmRows;r++)for(let c=0;c<pcState.farmCols;c++){const o=pcState.farm[r]&&pcState.farm[r][c];if(!o||o.kind!=="generator"||!o.mega||o.row!==r||o.col!==c||megas.has(o))continue;megas.add(o);const x=L.gridX+c*(t+g),y=clipY+r*(t+g)-pcGridScroll,foot=2*t+g;if(y+foot<clipY||y>clipY+L.view)continue;pcDrawGrowGenerator(o.tier,x+foot/2,y+foot/2,t*1.9,false,false,!!o.clogged);noFill();stroke(PC_ORANGE);strokeWeight(2);rect(x,y,foot,foot);noStroke();fill(PC_BLACK);rect(x+t*.08,y+t*.08,t*.65,t*.3);fill(PC_ORANGE);textAlign(CENTER,CENTER);textSize(Math.max(8,t*.2));text("MEGA",x+t*.4,y+t*.23);}
  pcDrawGridEffectPreview(L);
  drawingContext.restore();
  if(L.content>L.view){fill("#35492c");noStroke();rect(L.mainX+L.mainW-3,clipY,2,L.view);fill(PC_ORANGE);rect(L.mainX+L.mainW-3,clipY+pcGridScroll/Math.max(1,L.content)*L.view,2,Math.max(8,L.view*L.view/L.content));}
@@ -260,6 +261,7 @@ function pcDrawGrowGenerator(t,x,y,s,isVault=false,fullyGrown=false,clogged=fals
  if(img&&img.width&&img.height){const fw=img.width>img.height*1.4?img.width/8:img.width,fy=y+s*.10-(s*.10*phase),h=(isVault?s*.40:s*.46)*growth;pcSheet(img,x,fy,h,img.width>img.height*1.4?8:1,Math.floor(frameCount/8)%8);}
  
 }
+function pcDrawTrashIcon(x,y,s){push();translate(x,y);const sw=Math.max(1,s*.055);stroke(PC_ORANGE);strokeWeight(sw);strokeJoin(MITER);noFill();line(-s*.34,-s*.27,s*.34,-s*.27);line(-s*.14,-s*.38,s*.14,-s*.38);line(-s*.07,-s*.45,s*.07,-s*.45);beginShape();vertex(-s*.25,-s*.18);vertex(-s*.21,s*.34);vertex(s*.21,s*.34);vertex(s*.25,-s*.18);endShape();line(-s*.08,-s*.12,-s*.06,s*.24);line(s*.08,-s*.12,s*.06,s*.24);pop();}
 function pcDrawShieldFallback(x,y,s){noStroke();fill("#9ed8f0");stroke("#e6f5ff");beginShape();vertex(x,y-s*.4);vertex(x+s*.32,y-s*.2);vertex(x+s*.25,y+s*.23);vertex(x,y+s*.4);vertex(x-s*.25,y+s*.23);vertex(x-s*.32,y-s*.2);endShape(CLOSE);}
 function pcSprite(id,x,y,s,frames=8,fps=12){const img=pcImgs[id];if(img?.width)pcSheet(img,x,y,s,frames,Math.floor(frameCount/(60/fps))%frames);else{noStroke();fill(id==="ghost"?"#b6cce0":id==="brute"?"#9d5b45":id==="wizard"?"#6a65bd":PC_ORANGE);ellipse(x,y,s*.65,s*.75);}}
 function pcTile(r,c){
