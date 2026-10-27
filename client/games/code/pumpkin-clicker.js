@@ -50,12 +50,13 @@ function preload(){
  pcImgs.vinesIcon=loadImage("/assets/abilities/vines/icon.png",()=>{},()=>{});
 }
 function setup(){
- const side=Math.max(1,Math.floor(Math.min(window.innerWidth,window.innerHeight)));createCanvas(side,side);pixelDensity(1);frameRate(60);imageMode(CENTER);textFont("Arial");
- const c=document.querySelector("canvas");if(c){c.style.width=side+"px";c.style.height=side+"px";c.style.imageRendering="pixelated";}
+ createCanvas(500,500);pixelDensity(1);frameRate(60);imageMode(CENTER);textFont("Arial");
+ pcResizeCanvasToContainer();
  for(let i=0;i<80;i++)pcSpecks.push({x:random(0,1400),y:random(0,1000),s:random(1,3),a:random(14,43)});
- pcLoad();pcOffline();pcLast=millis();pcLastActivity=Date.now();window.addEventListener("beforeunload",pcSave);window.addEventListener("pagehide",pcSave);window.addEventListener("pointermove",pcMarkActivity,{passive:true});window.addEventListener("pointerdown",pcMarkActivity,{passive:true});window.addEventListener("keydown",pcMarkActivity);window.addEventListener("touchstart",pcMarkActivity,{passive:true});
+ pcLoad();pcOffline();pcLast=millis();pcLastActivity=Date.now();window.addEventListener("beforeunload",pcSave);window.addEventListener("pagehide",pcSave);window.addEventListener("pointermove",pcMarkActivity,{passive:true});window.addEventListener("pointerdown",pcMarkActivity,{passive:true});window.addEventListener("keydown",pcMarkActivity);window.addEventListener("touchstart",pcMarkActivity,{passive:true});window.addEventListener("resize",pcResizeCanvasToContainer);
 }
-function windowResized(){const side=Math.max(1,Math.floor(Math.min(window.innerWidth,window.innerHeight)));resizeCanvas(side,side);const c=document.querySelector("canvas");if(c){c.style.width=side+"px";c.style.height=side+"px";}pcSideScroll=0;}
+function pcResizeCanvasToContainer(){const side=Math.max(1,Math.floor(Math.min(window.innerWidth,window.innerHeight)));const c=document.querySelector("canvas");if(c){c.style.width=side+"px";c.style.height=side+"px";c.style.imageRendering="pixelated";}}
+function windowResized(){pcResizeCanvasToContainer();pcSideScroll=0;}
 function pcLoad(){
  let d=null;try{d=JSON.parse(localStorage.getItem(PC_SAVE)||"null");}catch(e){}
  if(d&&Array.isArray(d.farm)){
@@ -193,7 +194,7 @@ function pcMain(L){
  const pressAge=millis()-pcPumpkinPressedAt,press=pressAge<430?Math.exp(-pressAge/105)*Math.cos(pressAge/34):0;
  push();translate(px,py);scale(pcPumpkinScale-.13*press,pcPumpkinScale-.08*press);
  const img=pcImgs.regular;if(img?.width)pcSheet(img,0,0,sz,1);else{noStroke();fill("#ed8d20");ellipse(0,0,sz*.78,sz*.82);fill("#bd5c11");ellipse(-sz*.18,0,sz*.23,sz*.8);ellipse(sz*.18,0,sz*.23,sz*.8);fill("#4d7b20");rect(-sz*.05,-sz*.52,sz*.1,sz*.22);}pop();
- textAlign(CENTER,CENTER);noStroke();fill(PC_WHITE);const harvestText="PUMPKIN HARVEST",harvestY=py-sz*.66,harvestSize=Math.max(12,Math.min(18,w*.055));textSize(harvestSize);text(harvestText,px,harvestY);const harvestW=textWidth(harvestText);fill("#b8caa4");textSize(Math.max(9,Math.min(12,w*.038)));text("CLICK TO COLLECT",px,py+sz*.78);
+ textAlign(CENTER,CENTER);noStroke();fill(PC_WHITE);const harvestText="PUMPKIN HARVEST",harvestY=py-sz*.58,harvestSize=Math.max(12,Math.min(18,w*.055));textSize(harvestSize);text(harvestText,px,harvestY);const harvestW=textWidth(harvestText);fill("#b8caa4");textSize(Math.max(9,Math.min(12,w*.038)));text("CLICK TO COLLECT",px,py+sz*.70);
  pcTarget(px-harvestW/2-3,harvestY-10,harvestW+6,20,()=>{},false,{id:"main-pumpkin-label",title:"Pumpkin Harvest",kind:"button",summary:"Click the pumpkin to harvest.",rules:["Click upgrades are arranged around the pumpkin.","Pumpkins collect in storage until it fills.","Sell stored pumpkins for cash.","Active candy may improve clicks or cash rewards."]});
  pcTarget(px-sz*.55,py-sz*.55,sz*1.1,sz*1.1,pcClick);
  pcDrawClickUpgrades(L,x,w);
