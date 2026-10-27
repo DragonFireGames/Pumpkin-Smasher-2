@@ -57,7 +57,7 @@ const CS_MODES = [
     id: "puzzle",
     name: "PUZZLE",
     description: "18 moves. Use Hot Tamales to maximize your score.",
-    candyId: "hot_tamale",
+    candyId: "smarties",
     moves: 18,
     seconds: null
   }
@@ -268,6 +268,7 @@ function csRandomCandyId() {
       else if (csMode.id === "fast") weight = 0.045;
       else weight = 0.06;
     }
+    if (type.id === "smarties" && csMode.id === "fast") weight = 2;
     if (type.id === "peppermint") weight = 1.25;
     totalWeight += weight;
     return { id: type.id, weight };
@@ -281,6 +282,9 @@ function csRandomCandyId() {
 }
 
 function csCandyRunMatches(types) {
+  // Smarties only match other Smarties; even Fast Frenzy peppermints cannot wildcard them.
+  if (types.includes("smarties")) return types.every(typeId => typeId === "smarties");
+
   let targetType = null;
   for (let i = 0; i < types.length; i++) {
     const typeId = types[i];
