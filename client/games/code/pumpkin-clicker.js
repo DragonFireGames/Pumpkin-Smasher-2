@@ -50,12 +50,12 @@ function preload(){
  pcImgs.vinesIcon=loadImage("/assets/abilities/vines/icon.png",()=>{},()=>{});
 }
 function setup(){
- createCanvas(windowWidth,windowHeight);pixelDensity(1);frameRate(60);imageMode(CENTER);textFont("Arial");
- const c=document.querySelector("canvas");if(c){c.style.width="100vw";c.style.height="100vh";c.style.imageRendering="pixelated";}
+ const side=Math.max(1,Math.floor(Math.min(window.innerWidth,window.innerHeight)));createCanvas(side,side);pixelDensity(1);frameRate(60);imageMode(CENTER);textFont("Arial");
+ const c=document.querySelector("canvas");if(c){c.style.width=side+"px";c.style.height=side+"px";c.style.imageRendering="pixelated";}
  for(let i=0;i<80;i++)pcSpecks.push({x:random(0,1400),y:random(0,1000),s:random(1,3),a:random(14,43)});
  pcLoad();pcOffline();pcLast=millis();pcLastActivity=Date.now();window.addEventListener("beforeunload",pcSave);window.addEventListener("pagehide",pcSave);window.addEventListener("pointermove",pcMarkActivity,{passive:true});window.addEventListener("pointerdown",pcMarkActivity,{passive:true});window.addEventListener("keydown",pcMarkActivity);window.addEventListener("touchstart",pcMarkActivity,{passive:true});
 }
-function windowResized(){resizeCanvas(windowWidth,windowHeight);pcSideScroll=0;}
+function windowResized(){const side=Math.max(1,Math.floor(Math.min(window.innerWidth,window.innerHeight)));resizeCanvas(side,side);const c=document.querySelector("canvas");if(c){c.style.width=side+"px";c.style.height=side+"px";}pcSideScroll=0;}
 function pcLoad(){
  let d=null;try{d=JSON.parse(localStorage.getItem(PC_SAVE)||"null");}catch(e){}
  if(d&&Array.isArray(d.farm)){
@@ -156,8 +156,10 @@ function pcItems(){
  return [{type:"autosell",d:{id:"autosell",name:"Auto-Sell",cost:650,desc:"Sell stored pumpkins every 60s",kind:"upgrade"}},{type:"daily",d:{name:"Daily Candy",desc:"Free one-hour candy"}},{type:"buyCandy",d:{name:"Buy Random Candy",desc:"One-hour random bonus"}},{type:"sell",d:{name:"Sell Pumpkins",desc:"Trade stored harvest"}},{type:"delete",d:{name:"Delete / Sell",desc:"Clear tile • 25% refund"}},{type:"info",d:{name:"Farm Guide",desc:"Build → click an empty tile"}}];
 }
 function pcItem(it,x,y,w,h){
- const d=it.d,isB=it.type==="build"||it.type==="autosell",sel=(isB&&d.kind!=="upgrade"&&pcSelected===d.id)||(it.type==="delete"&&pcSelected==="__sell");fill(sel?"#263d16":"#172414");stroke(unaffordable?"#ff3030":sel?PC_ORANGE:"#50623f");strokeWeight(unaffordable?2.5:sel?2:1);rect(x,y+1,w,h-3);
- const hovered=mouseX>=x&&mouseX<=x+w&&mouseY>=y&&mouseY<=y+h;let itemCost=0,hasCost=false;if(it.type==="worker"){itemCost=pcWorkerCost(d.id);hasCost=true;}else if(it.type==="build"&&d.kind!=="upgrade"){itemCost=pcBuildCost(d);hasCost=true;}else if(it.type==="autosell"||it.type==="build"&&d.kind==="upgrade"&&!pcState.autoSellPurchased){itemCost=650;hasCost=true;}else if(it.type==="buyCandy"){itemCost=pcCandyPrice();hasCost=true;}const unaffordable=hovered&&hasCost&&(!Number.isFinite(itemCost)||pcState.cash<itemCost);const sz=Math.min(34,h*.62),ix=x+sz/2+4,iy=y+sz/2+5;
+ const d=it.d,isB=it.type==="build"||it.type==="autosell",sel=(isB&&d.kind!=="upgrade"&&pcSelected===d.id)||(it.type==="delete"&&pcSelected==="__sell");
+ const hovered=mouseX>=x&&mouseX<=x+w&&mouseY>=y&&mouseY<=y+h;let itemCost=0,hasCost=false;if(it.type==="worker"){itemCost=pcWorkerCost(d.id);hasCost=true;}else if(it.type==="build"&&d.kind!=="upgrade"){itemCost=pcBuildCost(d);hasCost=true;}else if(it.type==="autosell"||it.type==="build"&&d.kind==="upgrade"&&!pcState.autoSellPurchased){itemCost=650;hasCost=true;}else if(it.type==="buyCandy"){itemCost=pcCandyPrice();hasCost=true;}const unaffordable=hovered&&hasCost&&(!Number.isFinite(itemCost)||pcState.cash<itemCost);
+ fill(sel?"#263d16":"#172414");stroke(unaffordable?"#ff3030":sel?PC_ORANGE:"#50623f");strokeWeight(unaffordable?2.5:sel?2:1);rect(x,y+1,w,h-3);
+ const sz=Math.min(34,h*.62),ix=x+sz/2+4,iy=y+sz/2+5;
  if(it.type==="worker")pcSprite(d.id,ix,iy,sz,d.frames,d.fps);
  else if(isB&&d.kind==="generator")pcDrawGrowGenerator(d.tier,ix+sz*.06,iy+sz*.08,sz*1.18,false,true);
  else if(isB&&d.kind==="multiplier"){const si=pcImgs.multiplier;if(si&&si.width)pcSheet(si,ix,iy,sz,3,Math.floor(frameCount/7)%3);else pcDrawShieldFallback(ix,iy,sz);}
