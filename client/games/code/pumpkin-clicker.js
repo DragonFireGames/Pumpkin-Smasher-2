@@ -59,7 +59,7 @@ function windowResized(){resizeCanvas(windowWidth,windowHeight);pcSideScroll=0;}
 function pcLoad(){
  let d=null;try{d=JSON.parse(localStorage.getItem(PC_SAVE)||"null");}catch(e){}
  if(d&&Array.isArray(d.farm)){
-  const f=pcFresh(+d.prestige||0);pcState=Object.assign(f,d);pcState.workers=Object.assign(f.workers,d.workers||{});pcState.clickUpgrades=Object.assign({power:0,bonus:0,cash:0},d.clickUpgrades||{});pcState.autoSellPurchased=typeof d.autoSellPurchased==="boolean"?d.autoSellPurchased:!!d.autoSell;
+  const f=pcFresh(+d.prestige||0);pcState=Object.assign(f,d);pcState.workers=Object.assign(f.workers,d.workers||{});pcState.clickUpgrades=Object.assign({power:0,bonus:0,cash:0},d.clickUpgrades||{});pcState.autoSellPurchased=typeof d.autoSellPurchased==="boolean"?d.autoSellPurchased:(!!d.autoSell||(+d.totalClicks>0)||(+d.totalWorkers>0)||(Array.isArray(d.farm)&&d.farm.some(row=>Array.isArray(row)&&row.some(Boolean))));
   pcState.farmCols=Math.max(6,+pcState.farmCols||6);pcState.farmRows=Math.max(4,+pcState.farmRows||4);
   pcState.farm=pcState.farm.slice(0,pcState.farmRows);while(pcState.farm.length<pcState.farmRows)pcState.farm.push([]);
   pcState.farm.forEach(r=>{while(r.length<pcState.farmCols)r.push(null);r.length=pcState.farmCols;});
