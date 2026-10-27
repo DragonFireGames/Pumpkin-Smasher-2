@@ -64,12 +64,10 @@ function pcLoad(){
   pcState.farm=pcState.farm.slice(0,pcState.farmRows);while(pcState.farm.length<pcState.farmRows)pcState.farm.push([]);
   pcState.farm.forEach(r=>{while(r.length<pcState.farmCols)r.push(null);r.length=pcState.farmCols;});
   if(!pcState.vinesSeeded){if(!pcState.farm.some(row=>row.some(o=>o&&o.kind==="vine")))pcSeedVines();else pcState.vinesSeeded=true;}
-  // JSON duplicates repeated mega references; reconnect each 2x2 footprint after loading.
+  // JSON duplicates shared generator references; reconnect every large footprint after loading.
   for(let r=0;r<pcState.farmRows;r++)for(let c=0;c<pcState.farmCols;c++){
-   const m=pcState.farm[r][c];
-   if(m&&m.kind==="generator"&&m.mega&&m.row===r&&m.col===c&&r+1<pcState.farmRows&&c+1<pcState.farmCols){
-    pcState.farm[r][c]=m;pcState.farm[r][c+1]=m;pcState.farm[r+1][c]=m;pcState.farm[r+1][c+1]=m;
-   }
+   const m=pcState.farm[r][c],size=m&&m.kind==="generator"?(m.ultra?3:m.mega?2:1):1;
+   if(size>1&&m.row===r&&m.col===c&&r+size<=pcState.farmRows&&c+size<=pcState.farmCols){for(let dy=0;dy<size;dy++)for(let dx=0;dx<size;dx++)pcState.farm[r+dy][c+dx]=m;}
   }
  }else{pcState=pcFresh();pcState.farm=Array.from({length:4},()=>Array(6).fill(null));pcSeedVines();}
  pcState.cash=Math.max(0,+pcState.cash||0);pcState.pumpkins=Math.max(0,+pcState.pumpkins||0);pcState.progress=Math.max(0,+pcState.progress||0);
@@ -96,7 +94,7 @@ function pcFmt(v){
 function pcUnique(fn){const seen=new Set();for(let r=0;r<pcState.farmRows;r++)for(let c=0;c<pcState.farmCols;c++){const o=pcState.farm[r][c];if(o&&!seen.has(o)){seen.add(o);fn(o);}}}
 function pcHasCandy(id){return pcState.activeCandies.some(v=>v.id===id&&v.expiresAt>Date.now());}
 function pcCandyMult(key){return PC_CANDIES.reduce((n,v)=>n*(v[key]&&pcHasCandy(v.id)?v[key]:1),1);}
-function pcFootprint(o){return o&&o.mega?[[o.row,o.col],[o.row+1,o.col],[o.row,o.col+1],[o.row+1,o.col+1]]:[[o.row,o.col]];}
+function pcFootprint(o){if(!o)return [];const size=o.ultra?3:o.mega?2:1,cells=[];for(let dr=0;dr<size;dr++)for(let dc=0;dc<size;dc++)cells.push([o.row+dr,o.col+dc]);return cells;}
 function pcVaults(){const out=[];pcUnique(o=>{if(o.kind==="vault")out.push(o);});return out.sort((a,b)=>(a.row-b.row)||(a.col-b.col));}
 function pcBaseCap(){const w=pcState.workers||{},workerBonus=1+(w.monster||0)*.02+(w.brute||0)*.05;return Math.floor(50*workerBonus*pcCandyMult("capacity"));}
 const PC_VAULT_CAPS=[50,125,250,500,1000,3500,7500,15000,50000,125000,250000,500000,1000000,3500000,7500000,15000000,50000000,125000000,250000000,500000000];
@@ -115,7 +113,7 @@ function pcAdvanceGenerator(o,amount){if(!pcGeneratorCanStore(o)){o.clogged=true
 function pcMultiplierAdjacencyCount(o){let count=0;[[o.row-1,o.col],[o.row+1,o.col],[o.row,o.col-1],[o.row,o.col+1]].forEach(([r,c])=>{if(r<0||c<0||r>=pcState.farmRows||c>=pcState.farmCols)return;const a=pcState.farm[r]&&pcState.farm[r][c];if(a&&a!==o&&(a.kind==="multiplier"||a.kind==="shield"))count++;});return count;}
 function pcShield(o){const seen=new Set();pcFootprint(o).forEach(([r,c])=>{[[r-1,c],[r+1,c],[r,c-1],[r,c+1]].forEach(([y,x])=>{if(y<0||x<0||y>=pcState.farmRows||x>=pcState.farmCols)return;const a=pcState.farm[y]&&pcState.farm[y][x];if(a&&(a.kind==="multiplier"||a.kind==="shield"))seen.add(a);});});let strength=0;seen.forEach(a=>{strength+=Math.pow(1.5,pcMultiplierAdjacencyCount(a));});return 1+.28*strength;}
 function pcVaultNext(o){return pcVaultsForGenerator(o).length>0;}
-function pcGeneratorRate(o){const w=pcState.workers,deb=(1+w.debuffer*.08)*pcCandyMult("workers"),global=(1+w.ghost*.05*deb)*(1+w.speeder*.1*deb)*(1+w.wizard*.18*deb)*(1+w.rusher*.035*deb);return (PC_GENS[o.tier].rate+(w.monster*.1+w.brute*.55)*deb)*pcShield(o)*(pcVaultNext(o)?1.15:1)*(o.mega?1.5:1)*global*pcCandyMult("production")*(1+pcState.prestige*.5);}
+function pcGeneratorRate(o){const w=pcState.workers,deb=(1+w.debuffer*.08)*pcCandyMult("workers"),global=(1+w.ghost*.05*deb)*(1+w.speeder*.1*deb)*(1+w.wizard*.18*deb)*(1+w.rusher*.035*deb);return (PC_GENS[o.tier].rate+(w.monster*.1+w.brute*.55)*deb)*pcShield(o)*(pcVaultNext(o)?1.15:1)*(o.ultra?3:o.mega?1.5:1)*global*pcCandyMult("production")*(1+pcState.prestige*.5);}
 function pcRate(){let total=0;pcUnique(o=>{if(o.kind==="generator")total+=pcGeneratorRate(o);});return total;}
 function pcTick(){
  const now=millis(),dt=Math.max(0,Math.min(.25,(now-pcLast)/1000));pcLast=now;const activeAuto=pcState.autoSell&&pcUserIsActive();
@@ -193,8 +191,9 @@ function pcMain(L){
  const pressAge=millis()-pcPumpkinPressedAt,press=pressAge<430?Math.exp(-pressAge/105)*Math.cos(pressAge/34):0;
  push();translate(px,py);scale(pcPumpkinScale-.13*press,pcPumpkinScale-.08*press);
  const img=pcImgs.regular;if(img?.width)pcSheet(img,0,0,sz,1);else{noStroke();fill("#ed8d20");ellipse(0,0,sz*.78,sz*.82);fill("#bd5c11");ellipse(-sz*.18,0,sz*.23,sz*.8);ellipse(sz*.18,0,sz*.23,sz*.8);fill("#4d7b20");rect(-sz*.05,-sz*.52,sz*.1,sz*.22);}pop();
- textAlign(CENTER,CENTER);noStroke();fill(PC_WHITE);textSize(Math.max(12,Math.min(18,w*.055)));text("PUMPKIN HARVEST",px,py-sz*.66);fill("#b8caa4");textSize(Math.max(9,Math.min(12,w*.038)));text("CLICK TO COLLECT",px,py+sz*.78);
- pcTarget(px-sz*.55,py-sz*.55,sz*1.1,sz*1.1,pcClick,false,{id:"main-pumpkin",title:"Pumpkin Harvest",kind:"button",summary:"Click to harvest pumpkins.",rules:["Click upgrades are arranged around the pumpkin.","Pumpkins collect in storage until it fills.","Sell stored pumpkins for cash.","Active candy may improve clicks or cash rewards."]});
+ textAlign(CENTER,CENTER);noStroke();fill(PC_WHITE);const harvestText="PUMPKIN HARVEST",harvestY=py-sz*.66,harvestSize=Math.max(12,Math.min(18,w*.055));textSize(harvestSize);text(harvestText,px,harvestY);const harvestW=textWidth(harvestText);fill("#b8caa4");textSize(Math.max(9,Math.min(12,w*.038)));text("CLICK TO COLLECT",px,py+sz*.78);
+ pcTarget(px-harvestW/2-3,harvestY-10,harvestW+6,20,()=>{},false,{id:"main-pumpkin-label",title:"Pumpkin Harvest",kind:"button",summary:"Click the pumpkin to harvest.",rules:["Click upgrades are arranged around the pumpkin.","Pumpkins collect in storage until it fills.","Sell stored pumpkins for cash.","Active candy may improve clicks or cash rewards."]});
+ pcTarget(px-sz*.55,py-sz*.55,sz*1.1,sz*1.1,pcClick);
  pcDrawClickUpgrades(L,x,w);
  const by=L.gridStart-29,bw=Math.max(70,(w-16)/2);pcButton(x+4,by,bw,23,"SELL HARVEST",PC_ORANGE,PC_BLACK);pcTarget(x+4,by,bw,23,pcSell);
  const cost=pcPrestigeCost(),ready=pcState.cash>=cost;pcButton(x+8+bw,by,bw,23,"PRESTIGE $"+pcFmt(cost),ready?PC_ORANGE:"#4a553e",ready?PC_BLACK:"#9aa38e");pcTarget(x+8+bw,by,bw,23,pcPrestige);
@@ -220,14 +219,14 @@ function pcGrid(L){
   const o=pcState.farm[r][c];
   if(!o){if(pcSelected){noStroke();fill("#8aa96a");textAlign(CENTER,CENTER);textSize(Math.max(9,t*.25));text("+",x+t/2,y+t/2);}pcTarget(x,y,t,t,()=>pcTile(r,c),false,pcFarmHoverInfo(null,r,c));continue;}
   if(o.kind==="generator"){
-   if(!o.mega){pcDrawGrowGenerator(o.tier,x+t/2,y+t/2,t*.78,false,false,!!o.clogged);fill(PC_WHITE);noStroke();textAlign(CENTER,BOTTOM);textSize(Math.max(7,t*.17));text(pcFmt(PC_GENS[o.tier].rate)+"/s",x+t/2,y+t-1);}
+   if(!o.mega&&!o.ultra){pcDrawGrowGenerator(o.tier,x+t/2,y+t/2,t*.78,false,false,!!o.clogged);fill(PC_WHITE);noStroke();textAlign(CENTER,BOTTOM);textSize(Math.max(7,t*.17));text(pcFmt(PC_GENS[o.tier].rate)+"/s",x+t/2,y+t-1);}
   }else if(o.kind==="multiplier"||o.kind==="shield"){const si=pcImgs.multiplier;if(si&&si.width)pcSheet(si,x+t/2,y+t/2,t*.92,3,Math.floor(frameCount/7)%3);else pcDrawShieldFallback(x+t/2,y+t/2,t);}
   else if(o.kind==="vine"){const vi=pcImgs.vinesIcon;if(vi&&vi.width)pcSheet(vi,x+t/2,y+t*.41,t*.70,1);else{noStroke();fill("#5c8b36");textAlign(CENTER,CENTER);textSize(t*.45);text("V",x+t/2,y+t*.41);}fill(PC_ORANGE);noStroke();textAlign(CENTER,BOTTOM);textSize(Math.max(6,t*.14));text("$500",x+t/2,y+t-1);}
   else if(o.kind==="vault"){const pumpkin=pcImgs.objective||pcImgs.regular;if(pumpkin&&pumpkin.width)pcSheet(pumpkin,x+t/2,y+t*.41,t*.65,1);else pcGen(1,x+t/2,y+t*.41,t*.65);if(o.level>0){fill(PC_ORANGE);noStroke();textAlign(CENTER,TOP);textSize(Math.max(7,t*.14));text("L"+(o.level+1),x+t/2,y+1);}const cap=pcVaultCap(o),stored=Number(o.stored)||0,ratio=constrain(stored/Math.max(1,cap),0,1),bw=t*.86,bh=Math.max(3,t*.09),bx=x+t*.07,by=y+t-bh-2;noStroke();fill("#091006");rect(bx,by,bw,bh);fill(ratio>=1?"#ffa500":"#78b84a");rect(bx,by,bw*ratio,bh);fill(PC_WHITE);textAlign(CENTER,BOTTOM);textSize(Math.max(6,Math.min(8,t*.13)));text(pcFmt(stored)+"/"+pcFmt(cap),x+t/2,by-1);}
   pcTarget(x,y,t,t,()=>pcTile(r,c),false,pcFarmHoverInfo(o,r,c));
  }
- // Draw mega generators after all cell tiles so their 2×2 sprite is not covered by later tile fills.
- const megas=new Set();for(let r=0;r<pcState.farmRows;r++)for(let c=0;c<pcState.farmCols;c++){const o=pcState.farm[r]&&pcState.farm[r][c];if(!o||o.kind!=="generator"||!o.mega||o.row!==r||o.col!==c||megas.has(o))continue;megas.add(o);const x=L.gridX+c*(t+g),y=clipY+r*(t+g)-pcGridScroll,foot=2*t+g;if(y+foot<clipY||y>clipY+L.view)continue;pcDrawGrowGenerator(o.tier,x+foot/2,y+foot/2,t*1.9,false,false,!!o.clogged);noFill();stroke(PC_ORANGE);strokeWeight(2);rect(x,y,foot,foot);noStroke();fill(PC_BLACK);rect(x+t*.08,y+t*.08,t*.65,t*.3);fill(PC_ORANGE);textAlign(CENTER,CENTER);textSize(Math.max(8,t*.2));text("MEGA",x+t*.4,y+t*.23);}
+ // Draw multi-tile generators after all cell backgrounds so their sprites stay visible.
+ const largeGenerators=new Set();for(let r=0;r<pcState.farmRows;r++)for(let c=0;c<pcState.farmCols;c++){const o=pcState.farm[r]&&pcState.farm[r][c];if(!o||o.kind!=="generator"||(!o.mega&&!o.ultra)||o.row!==r||o.col!==c||largeGenerators.has(o))continue;largeGenerators.add(o);const x=L.gridX+c*(t+g),y=clipY+r*(t+g)-pcGridScroll,size=o.ultra?3:2,foot=size*t+(size-1)*g;if(y+foot<clipY||y>clipY+L.view)continue;pcDrawGrowGenerator(o.tier,x+foot/2,y+foot/2,t*(size-.1),false,false,!!o.clogged);noFill();stroke(PC_ORANGE);strokeWeight(2);rect(x,y,foot,foot);noStroke();fill(PC_BLACK);rect(x+t*.08,y+t*.08,t*(o.ultra?1.05:.65),t*.3);fill(PC_ORANGE);textAlign(CENTER,CENTER);textSize(Math.max(8,t*(o.ultra?.17:.2)));text(o.ultra?"ULTRA":"MEGA",x+t*(o.ultra?.55:.4),y+t*.23);}
  pcDrawGridEffectPreview(L);
  drawingContext.restore();
  if(L.content>L.view){fill("#35492c");noStroke();rect(L.mainX+L.mainW-3,clipY,2,L.view);fill(PC_ORANGE);rect(L.mainX+L.mainW-3,clipY+pcGridScroll/Math.max(1,L.content)*L.view,2,Math.max(8,L.view*L.view/L.content));}
@@ -272,12 +271,12 @@ function pcTile(r,c){
  if(!pcSelected){
   if(o&&o.kind==="vault"){const level=Math.max(0,o.level||0),cost=pcVaultUpgradeCost(level);if(pcState.cash<cost){pcSay("Vault upgrade costs $"+pcFmt(cost));return;}pcState.cash-=cost;o.level=level+1;pcSay("Vault upgraded: "+pcFmt(pcVaultCap(o))+" capacity");pcSave();return;}
   if(o&&o.kind==="generator"){
+   if(o.mega||o.ultra){const pieces=pcFragmentGenerator(o);pcSay((o.ultra?"Ultra":"Mega")+" generator fragmented into "+pieces+" generators");pcSave();return;}
    const cost=Math.ceil(PC_GENS[o.tier].cost*.6);
    if(pcState.cash<cost){pcSay("Not enough cash to upgrade");return;}
    if(o.tier>=3){pcSay("Diamond pumpkins are max tier");return;}
-   if(o.mega){for(let y=o.row;y<o.row+2;y++)for(let x=o.col;x<o.col+2;x++)pcState.farm[y][x]=null;}
    pcState.cash-=cost;
-   pcState.farm[r][c]={kind:"generator",tier:o.tier+1,row:r,col:c,mega:false};
+   pcState.farm[r][c]={kind:"generator",tier:o.tier+1,row:r,col:c,mega:false,ultra:false,progress:0,clogged:false};
    pcMerge();pcSay("Generator upgraded");pcSave();
   }else pcSay(o&&o.kind==="vault"?"Vaults increase storage":"Choose a building from BUILD first");
   return;
@@ -293,14 +292,22 @@ function pcTile(r,c){
  if(obj.kind==="generator")pcMerge();
  pcSelected=null;pcSay(b.name+" placed");pcSave();
 }
-function pcTileValue(o){if(!o)return 0;if(o.kind==="generator")return PC_GENS[o.tier].cost*(o.mega?4:1);if(o.kind==="multiplier"||o.kind==="shield")return 180;if(o.kind==="vault"){let value=100;for(let i=0;i<Math.max(0,o.level||0);i++)value+=pcVaultUpgradeCost(i);return value;}return 0;}
-function pcRemoveTile(r,c,o){const value=pcTileValue(o),refund=Math.floor(value*.25),vaultStored=o.kind==="vault"?(Number(o.stored)||0):0,coords=o.kind==="generator"&&o.mega?[[o.row,o.col],[o.row+1,o.col],[o.row,o.col+1],[o.row+1,o.col+1]]:[[r,c]],oldCells=coords.map(([y,x])=>({y,x,value:pcState.farm[y]&&pcState.farm[y][x]}));coords.forEach(([y,x])=>{if(pcState.farm[y])pcState.farm[y][x]=null;});pcSyncPumpkins();if(vaultStored>0){if(pcAvailableStorage()<vaultStored){oldCells.forEach(q=>{if(pcState.farm[q.y])pcState.farm[q.y][q.x]=q.value;});pcSyncPumpkins();pcSay("Sell the vault contents or free storage before deleting it");return;}pcDepositGeneral(vaultStored);}pcState.cash+=refund;pcSelected="__sell";pcSay("Tile removed • refunded $"+pcFmt(refund));pcSave();}
+function pcTileValue(o){if(!o)return 0;if(o.kind==="generator")return PC_GENS[o.tier].cost*(o.ultra?9:o.mega?4:1);if(o.kind==="multiplier"||o.kind==="shield")return 180;if(o.kind==="vault"){let value=100;for(let i=0;i<Math.max(0,o.level||0);i++)value+=pcVaultUpgradeCost(i);return value;}return 0;}
+function pcRemoveTile(r,c,o){const value=pcTileValue(o),refund=Math.floor(value*.25),vaultStored=o.kind==="vault"?(Number(o.stored)||0):0,size=o.kind==="generator"?(o.ultra?3:o.mega?2:1):1,coords=[];for(let dy=0;dy<size;dy++)for(let dx=0;dx<size;dx++)coords.push([o.kind==="generator"?o.row+dy:r,o.kind==="generator"?o.col+dx:c]);const oldCells=coords.map(([y,x])=>({y,x,value:pcState.farm[y]&&pcState.farm[y][x]}));coords.forEach(([y,x])=>{if(pcState.farm[y])pcState.farm[y][x]=null;});pcSyncPumpkins();if(vaultStored>0){if(pcAvailableStorage()<vaultStored){oldCells.forEach(q=>{if(pcState.farm[q.y])pcState.farm[q.y][q.x]=q.value;});pcSyncPumpkins();pcSay("Sell the vault contents or free storage before deleting it");return;}pcDepositGeneral(vaultStored);}pcState.cash+=refund;pcSelected="__sell";pcSay("Tile removed • refunded $"+pcFmt(refund));pcSave();}
+function pcFragmentGenerator(o){const size=o&&o.ultra?3:o&&o.mega?2:1;if(size===1)return 1;for(let dy=0;dy<size;dy++)for(let dx=0;dx<size;dx++){const r=o.row+dy,c=o.col+dx;if(pcState.farm[r])pcState.farm[r][c]={kind:"generator",tier:o.tier,row:r,col:c,mega:false,ultra:false,progress:0,clogged:false};}return size*size;}
 function pcMerge(){
+ // A full matching 3×3 takes priority, even if its first four tiles already formed a Mega.
+ for(let r=0;r<=pcState.farmRows-3;r++)for(let c=0;c<=pcState.farmCols-3;c++){
+  const a=pcState.farm[r][c];if(!a||a.kind!=="generator"||a.ultra)continue;
+  const cells=[];for(let dy=0;dy<3;dy++)for(let dx=0;dx<3;dx++)cells.push(pcState.farm[r+dy][c+dx]);
+  if(cells.some(v=>!v||v.kind!=="generator"||v.ultra||v.tier!==a.tier))continue;
+  const u={kind:"generator",tier:a.tier,row:r,col:c,mega:false,ultra:true};for(let dy=0;dy<3;dy++)for(let dx=0;dx<3;dx++)pcState.farm[r+dy][c+dx]=u;pcSay("Nine pumpkins became an ULTRA generator!");
+ }
  for(let r=0;r<pcState.farmRows-1;r++)for(let c=0;c<pcState.farmCols-1;c++){
   const a=pcState.farm[r][c],b=pcState.farm[r][c+1],d=pcState.farm[r+1][c],e=pcState.farm[r+1][c+1];
-  if(!a||a.kind!=="generator"||a.mega||!b||!d||!e||b===a||d===a||e===a)continue;
-  if([b,d,e].some(v=>v.kind!=="generator"||v.mega||v.tier!==a.tier))continue;
-  const m={kind:"generator",tier:a.tier,row:r,col:c,mega:true};pcState.farm[r][c]=m;pcState.farm[r][c+1]=m;pcState.farm[r+1][c]=m;pcState.farm[r+1][c+1]=m;pcSay("Four pumpkins became a MEGA generator!");
+  if(!a||a.kind!=="generator"||a.mega||a.ultra||!b||!d||!e)continue;
+  if([b,d,e].some(v=>!v||v.kind!=="generator"||v.mega||v.ultra||v.tier!==a.tier))continue;
+  const m={kind:"generator",tier:a.tier,row:r,col:c,mega:true,ultra:false};pcState.farm[r][c]=m;pcState.farm[r][c+1]=m;pcState.farm[r+1][c]=m;pcState.farm[r+1][c+1]=m;pcSay("Four pumpkins became a MEGA generator!");
  }
 }
 function pcBuyWorker(id){const w=PC_WORKERS.find(v=>v.id===id);if(!w)return;if(pcState.cash<w.cost){pcSay("Not enough cash");return;}pcState.cash-=w.cost;pcState.workers[id]++;pcState.totalWorkers++;pcSay(w.name+" hired");pcSave();}
@@ -340,7 +347,7 @@ function pcItemHoverInfo(it){
   return {id:"worker:"+d.id,title:d.name,kind:"worker",summary:d.desc,rules:["Hire price: $"+pcFmt(d.cost)+". Owned: "+count+".",...(rules[d.id]||[]),"Workers never occupy farm tiles and have no recurring wages."]};
  }
  if(it.type==="build"||it.type==="autosell"){
-  if(d.kind==="generator")return {id:"build:"+d.id,title:d.name,kind:"build",summary:"Produces "+d.desc+".",rules:["Cost: $"+pcFmt(d.cost)+". Choose this, then click an empty farm tile.","Click an existing generator to upgrade it for 60% of the current tier’s base cost.","Four matching generators in a 2×2 square combine into a mega-generator."]};
+  if(d.kind==="generator")return {id:"build:"+d.id,title:d.name,kind:"build",summary:"Produces "+d.desc+".",rules:["Cost: $"+pcFmt(d.cost)+". Choose this, then click an empty farm tile.","Click an existing generator to upgrade it for 60% of the current tier’s base cost.","Four matching generators in a 2×2 square form a Mega; nine matching generators in a 3×3 square form an Ultra."]};
   if(d.kind==="multiplier")return {id:"build:"+d.id,title:"Multiplier",kind:"build",summary:"Boosts adjacent generators; neighboring multipliers amplify one another.",rules:["Cost: $"+pcFmt(d.cost)+". Place it on an empty tile.","Only the four orthogonally adjacent tiles count; diagonals do not.","Each neighboring multiplier boosts the other multiplier’s strength by 1.5×."]};
   if(d.kind==="vault")return {id:"build:"+d.id,title:"Vault",kind:"build",summary:"Dedicated storage grows nonlinearly with each level.",rules:["Cost: $"+pcFmt(d.cost)+". Place it on an empty tile.","Its storage zone is a 3×3 area centered on the vault.","Generators in overlapping vault zones fill vaults top-to-bottom, then left-to-right, and finally base storage.","Click a placed vault to upgrade it; capacity grows by 1.5× per level, and upgrade cost doubles.","Monster and Brute workers increase the base storage capacity, which starts at 50."]};
   return {id:"build:"+d.id,title:d.name,kind:"build",summary:"Automatically sells generated pumpkins for cash.",rules:["One-time purchase: $650.","After purchase, click the Auto-Sell card in Misc to switch it on or off without paying again.","Auto-Sell empties stored pumpkins every 60 seconds of active play. Its on/off setting is saved, but prestige resets the purchase. While inactive, production accumulates as pumpkins instead of cash."]};
@@ -357,8 +364,8 @@ function pcFarmHoverInfo(o,r,c){
  }
  if(o.kind==="vine")return {id:"tile-vine:"+r+":"+c,title:"Vines • Blocked Tile",kind:"tile",summary:"Pay $500 to clear this tile.",rules:["Vines block building placement.","Click this tile and pay $500 to remove them.","Delete / Sell also removes vines for $500, without a refund."]};
  if(o.kind==="generator"){
-  const g=PC_GENS[o.tier],rate=pcGeneratorRate(o),vaults=pcGeneratorDestinations(o),dest=vaults.map(v=>"Vault ("+(v.row+1)+","+(v.col+1)+")").concat(["Base storage"]);
-  return {id:"tile-object:"+o.row+":"+o.col,title:(o.mega?"Mega ":"")+g.name,kind:"tile",summary:"Output: "+pcFmt(rate)+" pumpkins/sec."+(o.clogged?" STALLED — storage is full.":""),rules:[o.mega?"Occupies a 2×2 area and receives a mega production bonus.":"Occupies one tile and grows a pumpkin on its generator pot.","Storage priority: "+dest.join(" → ")+".","Vault zones are 3×3; overlapping vaults are ordered top-to-bottom, then left-to-right.","When every assigned vault and base storage are full, this generator stalls at full growth.","Click a generator to upgrade it for 60% of its current tier’s base cost.","Four matching same-tier generators in a 2×2 square combine automatically."]};
+  const g=PC_GENS[o.tier],rate=pcGeneratorRate(o),vaults=pcGeneratorDestinations(o),dest=vaults.map(v=>"Vault ("+(v.row+1)+","+(v.col+1)+")").concat(["Base storage"]),size=o.ultra?3:o.mega?2:1;
+  return {id:"tile-object:"+o.row+":"+o.col,title:(o.ultra?"Ultra ":o.mega?"Mega ":"")+g.name,kind:"tile",summary:"Output: "+pcFmt(rate)+" pumpkins/sec."+(o.clogged?" STALLED — storage is full.":""),rules:[size>1?"Occupies a "+size+"×"+size+" area and can be fragmented back into individual generators.":"Occupies one tile and grows a pumpkin on its generator pot.","Storage priority: "+dest.join(" → ")+".","Vault zones are 3×3; overlapping vaults are ordered top-to-bottom, then left-to-right.","When every assigned vault and base storage are full, this generator stalls at full growth.","Click a regular generator to upgrade it for 60% of its current tier’s base cost.","Four matching generators in a 2×2 square form a Mega; nine matching generators in a 3×3 square form an Ultra."]};
  }
  if(o.kind==="multiplier"||o.kind==="shield")return {id:"tile-object:"+o.row+":"+o.col,title:"Multiplier",kind:"tile",summary:"Boosts directly adjacent pumpkin generators.",rules:["Only up, down, left and right adjacent tiles are affected.","Diagonal generators receive no bonus.","Adjacent multipliers stack with diminishing returns."]};
  if(o.kind==="vault"){const level=Math.max(0,o.level||0),cost=pcVaultUpgradeCost(level),stored=Number(o.stored)||0,cap=pcVaultCap(o);return {id:"tile-object:"+o.row+":"+o.col,title:"Vault • Level "+(level+1),kind:"tile",summary:pcFmt(stored)+" / "+pcFmt(cap)+" pumpkins stored.",rules:["Click the vault to upgrade it for $"+pcFmt(cost)+".","Capacity follows the storage curve: 50, 125, 250, 500, 1,000, 3,500, then 7.5M through 500M at higher levels.","Its zone is a 3×3 area centered on this vault.","Generators in multiple zones fill vaults in row-major order, then base storage.","Base storage capacity (50 by default) is increased by Monster and Brute workers."]};}
