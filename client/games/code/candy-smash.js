@@ -486,7 +486,10 @@ function csFindBasicHint() {
           if (matchInfo && !matchInfo.special &&
               types.every(type => type === types[0]) && includesSwap) {
             hint = {
-              cells: matches.map(cell => ({ row: cell.row, col: cell.col })),
+              cells: [
+                { row: from.row, col: from.col },
+                { row: to.row, col: to.col }
+              ],
               from: { row: from.row, col: from.col },
               to: { row: to.row, col: to.col }
             };
