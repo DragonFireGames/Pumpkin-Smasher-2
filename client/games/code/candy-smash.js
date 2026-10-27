@@ -315,6 +315,27 @@ function csEnsureFastPeppermint(board, requireLegalMove) {
   board[0][0] = csCreateCandy("peppermint");
   return false;
 }
+function csCreateCandyAt(board, row, col, avoidImmediateMatch) {
+  let type = csRandomCandyId();
+  if (avoidImmediateMatch) {
+    let attempts = 0;
+    while (csWouldMakeMatchAt(board, row, col, type) && attempts < 60) {
+      type = csRandomCandyId();
+      attempts++;
+    }
+    if (csWouldMakeMatchAt(board, row, col, type)) {
+      const ordinary = CS_CANDY_TYPES.filter(item => !item.special).map(item => item.id);
+      for (let i = 0; i < ordinary.length; i++) {
+        if (!csWouldMakeMatchAt(board, row, col, ordinary[i])) {
+          type = ordinary[i];
+          break;
+        }
+      }
+    }
+  }
+  return csCreateCandy(type);
+}
+
 function csCreateInitialBoard() {
   for (let attempt = 0; attempt < 60; attempt++) {
     const board = [];
@@ -531,10 +552,6 @@ function csBeginClear(cells, fromBomb) {
   csPhaseStartedAt = millis();
   csPhaseEndsAt = csPhaseStartedAt + CS_CLEAR_DELAY;
 
-  if (csMode.id === "puzzle" && csScore >= csMode.target) {
-    csEndWon = true;
-    csEndReason = "PUZZLE SOLVED!";
-  }
 }
 
 function csUpdateGame() {
@@ -564,10 +581,6 @@ function csUpdateGame() {
     const matches = csFindMatches(csBoard);
     if (matches.length) {
       csBeginClear(matches, false);
-      if (csEndWon && csMode.id === "puzzle") {
-        // Keep resolving the winning cascade so the board settles before the result.
-        csEndReason = "PUZZLE SOLVED!";
-      }
     } else {
       csState = "playing";
       csCombo = 1;
