@@ -2630,6 +2630,10 @@ var GameList = [
   {
     name: "Pumpkin Clicker",
     source: "/game/pumpkin-clicker"
+  },
+  {
+    name: "Pumpkin Minesweeper",
+    source: "/game/pumpkin-minesweeper"
   }
 ];
 var arcadeGameIndex = 0;
