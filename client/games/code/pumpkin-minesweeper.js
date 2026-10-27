@@ -35,7 +35,7 @@ let boardLayout = { x: 0, y: 0, cellSize: 0 };
 function preload() {
   images.pumpkin = loadImage("/assets/pumpkins/pumpkin.png", () => {}, () => {});
   images.target = loadImage("/assets/entities/nuke/target.png", () => {}, () => {});
-  images.monsterIcon = loadImage("/assets/entities/monster/icon.png", () => {}, () => {});
+  images.jackLantern = loadImage("/assets/misc/jack_o_lantern.png", () => {}, () => {});
   images.explosion = loadImage("/assets/entities/mine/explode.png", () => {}, () => {});
 }
 
@@ -225,8 +225,8 @@ function drawCell(cell) {
   const isExplodingCell = gameState === "exploding" && explodedCell && explodedCell.row === cell.row && explodedCell.col === cell.col;
   if (!isExplodingCell && images.pumpkin && images.pumpkin.width > 0) {
     noStroke();
-    const pumpkinWidth = size * 0.96;
-    const pumpkinHeight = pumpkinWidth * images.pumpkin.height / images.pumpkin.width;
+    const pumpkinHeight = size * 46 / 50;
+    const pumpkinWidth = images.pumpkin.width * pumpkinHeight / images.pumpkin.height;
     image(images.pumpkin, x + size / 2, y + size / 2, pumpkinWidth, pumpkinHeight);
   }
 
@@ -255,10 +255,10 @@ function drawTargetMarker(x, y, size) {
 }
 
 function drawMineMarker(cx, cy, size) {
-  const icon = images.monsterIcon;
+  const icon = images.jackLantern;
   if (!icon || !icon.width || !icon.height) return;
-  const displayHeight = size * 0.96;
-  const displayWidth = displayHeight * icon.width / icon.height;
+  const displayHeight = size * 46 / 50;
+  const displayWidth = icon.width * displayHeight / icon.height;
   image(icon, cx, cy, displayWidth, displayHeight);
 }
 
