@@ -22,8 +22,7 @@ const CS_ORANGE = "#ffa500";
 const CS_WHITE = "#f6f2dd";
 const CS_CLEAR_DELAY = 170;
 const CS_FALL_DELAY = 390;
-const CS_SMARTIES_TIME_BONUS = 5;
-const CS_PUZZLE_TARGET = 750;
+const CS_PEPPERMINT_TIME_BONUS = 5;
 
 const CS_CANDY_TYPES = [
   { id: "blue", name: "Blue Candy", path: "/assets/candies/blue-candy.png", weight: 1 },
@@ -32,33 +31,33 @@ const CS_CANDY_TYPES = [
   { id: "chocolate", name: "Chocolate", path: "/assets/candies/chocolate.png", weight: 1 },
   { id: "ghost", name: "Ghost Chew", path: "/assets/candies/ghost-chew.png", weight: 1 },
   { id: "hot_tamale", name: "Hot Tamale", path: "/assets/candies/hot-tamale.png", weight: 0.10, special: "bomb" },
-  { id: "smarties", name: "Smarties", path: "/assets/candies/smarties.png", weight: 0.72, special: "time" }
+  { id: "peppermint", name: "Peppermint", path: "/assets/candies/peppermint.png", weight: 1.0, special: "wildcard" }
 ];
 
 const CS_MODES = [
   {
     id: "fast",
     name: "FAST FRENZY",
-    description: "60 seconds. Smarties add time.",
+    description: "60 seconds. Peppermints match anything and add time.",
+    candyId: "peppermint",
     moves: null,
-    seconds: 60,
-    target: null
+    seconds: 60
   },
   {
     id: "classic",
     name: "CLASSIC",
-    description: "30 moves. Score as much as you can.",
-    moves: 30,
-    seconds: null,
-    target: null
+    description: "Play until no legal swaps remain. No time or move limit.",
+    candyId: "corn",
+    moves: null,
+    seconds: null
   },
   {
     id: "puzzle",
     name: "PUZZLE",
-    description: "Reach 750 points in 18 moves.",
+    description: "18 moves. Use Hot Tamales to maximize your score.",
+    candyId: "hot_tamale",
     moves: 18,
-    seconds: null,
-    target: CS_PUZZLE_TARGET
+    seconds: null
   }
 ];
 
@@ -129,10 +128,10 @@ function draw() {
 function csDrawTitle() {
   noStroke();
   fill(CS_BLACK);
-  rect(0, 0, width, 103);
+  rect(0, 0, width, 96);
   stroke(CS_ORANGE);
   strokeWeight(2);
-  line(0, 102, width, 102);
+  line(0, 95, width, 95);
 
   noStroke();
   fill(CS_ORANGE);
@@ -142,50 +141,83 @@ function csDrawTitle() {
   text("CANDY SMASH", width / 2, 35);
   fill(CS_WHITE);
   textStyle(NORMAL);
-  textSize(10);
-  text("MATCH CANDIES. TRIGGER SPECIALS. CHASE YOUR SCORE.", width / 2, 74);
+  textSize(9);
+  text("PICK YOUR FLAVOR OF MATCH-THREE", width / 2, 73);
 
-  for (let i = 0; i < CS_MODES.length; i++) {
-    const mode = CS_MODES[i];
-    const x = 28;
-    const y = 121 + i * 65;
-    const w = 344;
-    const h = 54;
-    const hovered = mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + h;
-    fill(i === csSelectedMode ? "#243b16" : CS_BLACK);
-    stroke(i === csSelectedMode || hovered ? CS_ORANGE : "#49643a");
-    strokeWeight(i === csSelectedMode ? 2 : hovered ? 2 : 1);
-    rect(x, y, w, h);
-    noStroke();
-    fill(CS_ORANGE);
-    textAlign(LEFT, CENTER);
-    textStyle(BOLD);
-    textSize(13);
-    text(mode.name, x + 13, y + 17);
-    fill(CS_WHITE);
-    textStyle(NORMAL);
-    textSize(9);
-    text(mode.description, x + 13, y + 38);
-  }
+  const mode = CS_MODES[csSelectedMode];
+  fill(CS_ORANGE);
+  textStyle(BOLD);
+  textSize(15);
+  text(mode.name, width / 2, 118);
+  fill(CS_WHITE);
+  textStyle(NORMAL);
+  textSize(8);
+  text(mode.description, width / 2, 140);
 
-  const playHovered = mouseX >= 117 && mouseX <= 283 && mouseY >= 324 && mouseY <= 365;
-  fill(playHovered ? "#365f21" : "#244519");
-  stroke(CS_ORANGE);
-  strokeWeight(2);
-  rect(117, 324, 166, 41);
+  const previous = CS_MODES[(csSelectedMode + CS_MODES.length - 1) % CS_MODES.length];
+  const next = CS_MODES[(csSelectedMode + 1) % CS_MODES.length];
+  csDrawModeCandyBubble(previous.candyId, 76, 224, 34, false);
+  csDrawModeCandyBubble(next.candyId, 324, 224, 34, false);
+  csDrawModeCandyBubble(mode.candyId, 200, 224, 65, true);
+
   noStroke();
   fill(CS_WHITE);
-  textAlign(CENTER, CENTER);
   textStyle(BOLD);
-  textSize(14);
-  text("PLAY", width / 2, 345);
+  textSize(24);
+  text("‹", 31, 224);
+  text("›", 369, 224);
 
-  textStyle(NORMAL);
   fill(CS_WHITE);
+  textStyle(BOLD);
+  textSize(10);
+  text("CLICK THE BIG CANDY TO PLAY", width / 2, 303);
+  textStyle(NORMAL);
+  fill("#b9d4ad");
   textSize(8);
-  text("CLICK OR USE ↑ ↓, THEN ENTER", width / 2, 385);
+  text("LEFT / RIGHT TO BROWSE", width / 2, 319);
+
+  const positions = [105, 200, 295];
+  for (let i = 0; i < CS_MODES.length; i++) {
+    const selected = i === csSelectedMode;
+    csDrawModeCandyBubble(CS_MODES[i].candyId, positions[i], 354, selected ? 23 : 19, selected);
+    fill(selected ? CS_ORANGE : CS_WHITE);
+    textStyle(selected ? BOLD : NORMAL);
+    textSize(7);
+    text(CS_MODES[i].id === "fast" ? "FAST" : CS_MODES[i].name, positions[i], 385);
+  }
+  textStyle(NORMAL);
 }
 
+function csDrawModeCandyBubble(candyId, x, y, radius, selected) {
+  noStroke();
+  fill(CS_BLACK);
+  ellipse(x, y + 2, radius * 2 + 6, radius * 2 + 6);
+  fill(selected ? "#355d20" : "#1d4314");
+  stroke(selected ? CS_ORANGE : "#68875a");
+  strokeWeight(selected ? 3 : 1.5);
+  ellipse(x, y, radius * 2, radius * 2);
+
+  if (candyId === "hot_tamale") {
+    csDrawStarburst(x, y, radius * 1.7, "#e13d36");
+  } else if (candyId === "peppermint") {
+    noFill();
+    stroke("#57e5a2");
+    strokeWeight(Math.max(1.5, radius * 0.07));
+    ellipse(x, y, radius * 1.7, radius * 1.7);
+  }
+
+  const sprite = csImages[candyId];
+  if (sprite && sprite.width > 0 && sprite.height > 0) {
+    const displaySize = radius * 1.42;
+    const displayHeight = displaySize;
+    const displayWidth = displayHeight * sprite.width / sprite.height;
+    image(sprite, x, y, Math.min(displayWidth, radius * 1.65), Math.min(displayHeight, radius * 1.65));
+  } else {
+    fill(candyId === "hot_tamale" ? "#e13d36" : candyId === "peppermint" ? "#f3f0e7" : "#f4d56f");
+    noStroke();
+    ellipse(x, y, radius, radius);
+  }
+}
 function csStartGame(modeIndex) {
   csSelectedMode = Math.max(0, Math.min(CS_MODES.length - 1, modeIndex));
   csMode = CS_MODES[csSelectedMode];
@@ -216,57 +248,87 @@ function csCreateCandy(id) {
   };
 }
 
+function csIsWildcardType(typeId) {
+  return csMode && csMode.id === "fast" && typeId === "peppermint";
+}
+
 function csRandomCandyId() {
+  const candidates = CS_CANDY_TYPES.filter(type => type.id !== "peppermint" || csMode.id === "fast");
   let totalWeight = 0;
-  for (let i = 0; i < CS_CANDY_TYPES.length; i++) totalWeight += CS_CANDY_TYPES[i].weight;
+  const weighted = candidates.map(type => {
+    let weight = type.weight;
+    if (type.id === "hot_tamale") {
+      if (csMode.id === "puzzle") weight = 0.85;
+      else if (csMode.id === "fast") weight = 0.045;
+      else weight = 0.06;
+    }
+    if (type.id === "peppermint") weight = 1.25;
+    totalWeight += weight;
+    return { id: type.id, weight };
+  });
   let roll = Math.random() * totalWeight;
-  for (let i = 0; i < CS_CANDY_TYPES.length; i++) {
-    roll -= CS_CANDY_TYPES[i].weight;
-    if (roll <= 0) return CS_CANDY_TYPES[i].id;
+  for (let i = 0; i < weighted.length; i++) {
+    roll -= weighted[i].weight;
+    if (roll <= 0) return weighted[i].id;
   }
-  return CS_CANDY_TYPES[0].id;
+  return weighted[0].id;
+}
+
+function csCandyRunMatches(types) {
+  let targetType = null;
+  for (let i = 0; i < types.length; i++) {
+    const typeId = types[i];
+    if (csIsWildcardType(typeId)) continue;
+    if (targetType === null) targetType = typeId;
+    else if (targetType !== typeId) return false;
+  }
+  return true;
 }
 
 function csWouldMakeMatchAt(board, row, col, type) {
   if (col >= 2 && board[row][col - 1] && board[row][col - 2] &&
-      board[row][col - 1].type === type && board[row][col - 2].type === type) return true;
+      csCandyRunMatches([board[row][col - 2].type, board[row][col - 1].type, type])) return true;
   if (row >= 2 && board[row - 1][col] && board[row - 2][col] &&
-      board[row - 1][col].type === type && board[row - 2][col].type === type) return true;
+      csCandyRunMatches([board[row - 2][col].type, board[row - 1][col].type, type])) return true;
   return false;
 }
 
-function csCreateCandyAt(board, row, col, avoidImmediateMatch) {
-  let type = csRandomCandyId();
-  if (avoidImmediateMatch) {
-    let attempts = 0;
-    while (csWouldMakeMatchAt(board, row, col, type) && attempts < 60) {
-      type = csRandomCandyId();
-      attempts++;
+function csEnsureFastPeppermint(board, requireLegalMove) {
+  if (csMode.id !== "fast") return true;
+  for (let row = 0; row < CS_ROWS; row++) {
+    for (let col = 0; col < CS_COLS; col++) {
+      if (board[row][col] && board[row][col].type === "peppermint") return true;
     }
-    if (csWouldMakeMatchAt(board, row, col, type)) {
-      const ordinary = CS_CANDY_TYPES.filter(item => !item.special).map(item => item.id);
-      for (let i = 0; i < ordinary.length; i++) {
-        if (!csWouldMakeMatchAt(board, row, col, ordinary[i])) {
-          type = ordinary[i];
-          break;
-        }
+  }
+
+  for (let row = 0; row < CS_ROWS; row++) {
+    for (let col = 0; col < CS_COLS; col++) {
+      const previous = board[row][col];
+      board[row][col] = csCreateCandy("peppermint");
+      const noMatches = csFindMatches(board).length === 0;
+      const hasMoves = !requireLegalMove || csBoardHasLegalMove(board);
+      if (noMatches && hasMoves) return true;
+      board[row][col] = previous;
+    }
+  }
+
+  board[0][0] = csCreateCandy("peppermint");
+  return false;
+}
+function csCreateInitialBoard() {
+  for (let attempt = 0; attempt < 60; attempt++) {
+    const board = [];
+    for (let row = 0; row < CS_ROWS; row++) {
+      board[row] = [];
+      for (let col = 0; col < CS_COLS; col++) {
+        board[row][col] = null;
+        board[row][col] = csCreateCandyAt(board, row, col, true);
       }
     }
+    csEnsureFastPeppermint(board, true);
+    if (csFindMatches(board).length === 0 && csBoardHasLegalMove(board)) return board;
   }
-  return csCreateCandy(type);
-}
-
-function csCreateInitialBoard() {
-  const board = [];
-  for (let row = 0; row < CS_ROWS; row++) {
-    board[row] = [];
-    for (let col = 0; col < CS_COLS; col++) {
-      board[row][col] = null;
-      board[row][col] = csCreateCandyAt(board, row, col, true);
-    }
-  }
-  if (!csBoardHasLegalMove(board)) return csCreateFreshPlayableBoard();
-  return board;
+  return csCreateFreshPlayableBoard();
 }
 
 function csCreateFreshPlayableBoard() {
@@ -279,6 +341,7 @@ function csCreateFreshPlayableBoard() {
         board[row][col] = csCreateCandyAt(board, row, col, true);
       }
     }
+    csEnsureFastPeppermint(board, true);
     if (csFindMatches(board).length === 0 && csBoardHasLegalMove(board)) return board;
   }
   const fallback = [];
@@ -289,56 +352,43 @@ function csCreateFreshPlayableBoard() {
       fallback[row][col] = csCreateCandy(ordinary[(row + col * 2) % ordinary.length]);
     }
   }
-  // Make one guaranteed legal swap without creating an initial match.
   fallback[0][0].type = ordinary[0];
   fallback[0][1].type = ordinary[1];
   fallback[1][0].type = ordinary[1];
   fallback[1][1].type = ordinary[0];
   fallback[2][0].type = ordinary[0];
   fallback[2][1].type = ordinary[2];
+  csEnsureFastPeppermint(fallback, true);
   return fallback;
 }
-
 function csFindMatches(board) {
   const matches = new Map();
 
+  // Peppermint is a wildcard only in Fast Frenzy.
   for (let row = 0; row < CS_ROWS; row++) {
-    let start = 0;
-    while (start < CS_COLS) {
-      const candy = board[row][start];
-      if (!candy) {
-        start++;
-        continue;
+    for (let col = 0; col <= CS_COLS - 3; col++) {
+      const run = [board[row][col], board[row][col + 1], board[row][col + 2]];
+      if (run.every(Boolean) && csCandyRunMatches(run.map(candy => candy.type))) {
+        for (let offset = 0; offset < 3; offset++) {
+          const key = row + "," + (col + offset);
+          matches.set(key, { row, col: col + offset });
+        }
       }
-      let end = start + 1;
-      while (end < CS_COLS && board[row][end] && board[row][end].type === candy.type) end++;
-      if (end - start >= 3) {
-        for (let col = start; col < end; col++) matches.set(row + "," + col, { row, col });
-      }
-      start = end;
     }
   }
-
   for (let col = 0; col < CS_COLS; col++) {
-    let start = 0;
-    while (start < CS_ROWS) {
-      const candy = board[start][col];
-      if (!candy) {
-        start++;
-        continue;
+    for (let row = 0; row <= CS_ROWS - 3; row++) {
+      const run = [board[row][col], board[row + 1][col], board[row + 2][col]];
+      if (run.every(Boolean) && csCandyRunMatches(run.map(candy => candy.type))) {
+        for (let offset = 0; offset < 3; offset++) {
+          const key = (row + offset) + "," + col;
+          matches.set(key, { row: row + offset, col });
+        }
       }
-      let end = start + 1;
-      while (end < CS_ROWS && board[end][col] && board[end][col].type === candy.type) end++;
-      if (end - start >= 3) {
-        for (let row = start; row < end; row++) matches.set(row + "," + col, { row, col });
-      }
-      start = end;
     }
   }
-
   return Array.from(matches.values());
 }
-
 function csSwapBoardCandies(board, a, b) {
   const temp = board[a.row][a.col];
   board[a.row][a.col] = board[b.row][b.col];
@@ -464,17 +514,17 @@ function csBeginClear(cells, fromBomb) {
     return;
   }
 
-  let smartiesCount = 0;
+  let peppermintsCount = 0;
   for (let i = 0; i < csPendingMatches.length; i++) {
     const cell = csPendingMatches[i];
     const candy = csBoard[cell.row][cell.col];
-    if (candy && candy.type === "smarties") smartiesCount++;
+    if (candy && candy.type === "peppermint") peppermintsCount++;
   }
 
   csScore += csPendingMatches.length * 10 * csCombo;
   if (fromBomb) csScore += Math.min(100, csPendingMatches.length * 2);
-  if (csMode.id === "fast" && smartiesCount > 0) {
-    csTimeLeft += smartiesCount * CS_SMARTIES_TIME_BONUS;
+  if (csMode.id === "fast" && peppermintsCount > 0) {
+    csTimeLeft += peppermintsCount * CS_PEPPERMINT_TIME_BONUS;
   }
   csCombo++;
   csState = "clearing";
@@ -490,7 +540,7 @@ function csBeginClear(cells, fromBomb) {
 function csUpdateGame() {
   const now = millis();
 
-  if (csState === "playing" && csMode.id === "fast") {
+  if (csMode.id === "fast" && csState !== "gameover") {
     csTimeLeft -= Math.max(0, now - csLastTickAt) / 1000;
     if (csTimeLeft <= 0) {
       csTimeLeft = 0;
@@ -525,12 +575,8 @@ function csUpdateGame() {
     }
   }
 
-  if (csState === "playing" && csMode.id === "puzzle" && csEndWon) {
-    csFinishGame(true, "PUZZLE SOLVED!");
-  } else if (csState === "playing" && csMode.moves !== null && csMovesLeft <= 0) {
-    if (csMode.id === "puzzle" && csScore >= csMode.target) csFinishGame(true, "PUZZLE SOLVED!");
-    else if (csMode.id === "puzzle") csFinishGame(false, "OUT OF MOVES");
-    else csFinishGame(false, "OUT OF MOVES");
+  if (csState === "playing" && csMode.moves !== null && csMovesLeft <= 0) {
+    csFinishGame(false, "OUT OF MOVES");
   }
 }
 
@@ -553,7 +599,8 @@ function csApplyGravityAndRefill() {
       csBoard[writeRow][col] = candy;
       writeRow--;
     }
-    for (let row = writeRow; row >= 0; row--) {
+    // Fill from the top down so generated candies can avoid triples above them.
+    for (let row = 0; row <= writeRow; row++) {
       const candy = csCreateCandyAt(csBoard, row, col, true);
       candy.fall = {
         fromY: CS_BOARD_Y - (writeRow - row + 1) * CS_CELL - 10,
@@ -563,21 +610,19 @@ function csApplyGravityAndRefill() {
       csBoard[row][col] = candy;
     }
   }
+  csEnsureFastPeppermint(csBoard, false);
 }
 
 function csAfterBoardSettles() {
-  if (csMode.id === "puzzle" && csScore >= csMode.target) {
-    csFinishGame(true, "PUZZLE SOLVED!");
-    return;
-  }
   if (csMode.moves !== null && csMovesLeft <= 0) {
-    if (csMode.id === "puzzle") csFinishGame(false, "OUT OF MOVES");
-    else csFinishGame(false, "OUT OF MOVES");
+    csFinishGame(false, "OUT OF MOVES");
     return;
   }
-  if (!csBoardHasLegalMove(csBoard)) csReshuffleBoard();
+  if (!csBoardHasLegalMove(csBoard)) {
+    if (csMode.id === "classic") csFinishGame(false, "NO MOVES LEFT");
+    else csReshuffleBoard();
+  }
 }
-
 function csReshuffleBoard() {
   csShuffleCount++;
   const candies = [];
@@ -660,8 +705,8 @@ function csDrawHud() {
   fill(CS_WHITE);
   textStyle(NORMAL);
   textSize(9);
-  if (csMode.id === "puzzle") text("TARGET " + csMode.target, width - 8, 31);
-  else if (csMode.id === "fast") text("SMARTIES +5 SEC", width - 8, 31);
+  if (csMode.id === "fast") text("PEPPERMINT +5 SEC EACH", width - 8, 31);
+  else if (csMode.id === "puzzle") text("HOT TAMALES ARE COMMON", width - 8, 31);
   else text("MATCH 3 OR MORE", width - 8, 31);
 }
 
@@ -743,7 +788,7 @@ function csDrawCandy(candy, x, y, cellSize) {
   // Placeholder special-candy markers live behind the artwork on purpose.
   if (candy.type === "hot_tamale") {
     csDrawStarburst(x, y, cellSize * 0.86, "#e13d36");
-  } else if (candy.type === "smarties") {
+  } else if (candy.type === "peppermint") {
     noFill();
     stroke("#57e5a2");
     strokeWeight(3);
@@ -761,7 +806,7 @@ function csDrawCandy(candy, x, y, cellSize) {
     image(sprite, x, y, Math.min(displayWidth, cellSize * 0.9), Math.min(displayHeight, cellSize * 0.9));
   } else {
     noStroke();
-    fill(candy.type === "hot_tamale" ? "#e13d36" : candy.type === "smarties" ? "#57e5a2" : "#f5d66c");
+    fill(candy.type === "hot_tamale" ? "#e13d36" : candy.type === "peppermint" ? "#57e5a2" : "#f5d66c");
     ellipse(x, y, cellSize * 0.55, cellSize * 0.55);
     fill(CS_BLACK);
     textStyle(BOLD);
@@ -826,9 +871,9 @@ function csDrawGameOver() {
   textSize(14);
   text("SCORE  " + csScore, width / 2, panelY + 73);
   textSize(10);
-  if (csMode.id === "puzzle") text("TARGET  " + csMode.target, width / 2, panelY + 96);
-  else if (csMode.id === "fast") text("TIME EXTENSIONS  FROM SMARTIES", width / 2, panelY + 96);
-  else text("MOVES USED  " + (csMode.moves - Math.max(0, csMovesLeft)), width / 2, panelY + 96);
+  if (csMode.id === "fast") text("PEPPERMINTS ADDED TIME", width / 2, panelY + 96);
+  else if (csMode.id === "puzzle") text("MOVES USED  " + (csMode.moves - Math.max(0, csMovesLeft)), width / 2, panelY + 96);
+  else text("NO LEGAL SWAPS REMAIN", width / 2, panelY + 96);
 
   const replayHover = mouseX >= 69 && mouseX <= 195 && mouseY >= 220 && mouseY <= 258;
   const menuHover = mouseX >= 205 && mouseX <= 331 && mouseY >= 220 && mouseY <= 258;
@@ -852,16 +897,24 @@ function csDrawGameOver() {
 
 function mousePressed(event) {
   if (csState === "title") {
-    for (let i = 0; i < CS_MODES.length; i++) {
-      const x = 28;
-      const y = 121 + i * 65;
-      if (mouseX >= x && mouseX <= x + 344 && mouseY >= y && mouseY <= y + 54) {
+    if (Math.hypot(mouseX - 200, mouseY - 224) <= 67) {
+      csStartGame(csSelectedMode);
+      return false;
+    }
+    if (mouseY >= 170 && mouseY <= 280 && mouseX < 130) {
+      csSelectedMode = (csSelectedMode + CS_MODES.length - 1) % CS_MODES.length;
+      return false;
+    }
+    if (mouseY >= 170 && mouseY <= 280 && mouseX > 270) {
+      csSelectedMode = (csSelectedMode + 1) % CS_MODES.length;
+      return false;
+    }
+    const positions = [105, 200, 295];
+    for (let i = 0; i < positions.length; i++) {
+      if (Math.hypot(mouseX - positions[i], mouseY - 354) <= 25) {
         csSelectedMode = i;
         return false;
       }
-    }
-    if (mouseX >= 117 && mouseX <= 283 && mouseY >= 324 && mouseY <= 365) {
-      csStartGame(csSelectedMode);
     }
     return false;
   }
@@ -900,11 +953,11 @@ function keyPressed(event) {
   if (event && event.repeat) return false;
 
   if (csState === "title") {
-    if (key === "ArrowUp" || key === "ArrowLeft") {
+    if (key === "ArrowLeft") {
       csSelectedMode = (csSelectedMode - 1 + CS_MODES.length) % CS_MODES.length;
       return false;
     }
-    if (key === "ArrowDown" || key === "ArrowRight") {
+    if (key === "ArrowRight") {
       csSelectedMode = (csSelectedMode + 1) % CS_MODES.length;
       return false;
     }
