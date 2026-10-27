@@ -15,12 +15,9 @@ const CS_CELL = 40;
 const CS_BOARD_X = 40;
 const CS_BOARD_Y = 56;
 const CS_BG = "#123904";
-const CS_BLACK = "#10180b";
-const CS_TITLE_BG = "#172719";
-const CS_GREEN = "#1d4a13";
-const CS_GREEN_LIGHT = "#2b5f1b";
+const CS_BLACK = "#0C2504";
 const CS_ORANGE = "#ffa500";
-const CS_WHITE = "#f6f2dd";
+const CS_WHITE = "#ffffff";
 const CS_CLEAR_DELAY = 170;
 const CS_FALL_DELAY = 390;
 const CS_PEPPERMINT_TIME_BONUS = 1;
@@ -129,7 +126,7 @@ function draw() {
 
 function csDrawTitle() {
   noStroke();
-  fill(CS_TITLE_BG);
+  fill(CS_BG);
   rect(0, 0, width, height);
   stroke(CS_ORANGE);
   strokeWeight(2);
@@ -184,7 +181,7 @@ function csDrawTitle() {
   textSize(15);
   text("PLAY", width / 2, 325);
 
-  fill("#b9d4ad");
+  fill("#ffffff");
   textStyle(NORMAL);
   textSize(8);
   text("USE ← / → OR CLICK THE SIDES TO BROWSE", width / 2, 377);
@@ -193,11 +190,8 @@ function csDrawTitle() {
 
 function csDrawModeCandyBubble(candyId, x, y, radius, selected) {
   // A single simple circle behind the candy; effects can be layered in later.
-  noStroke();
-  fill(CS_BLACK);
-  ellipse(x, y + 2, radius * 2 + 4, radius * 2 + 4);
-  fill(selected ? "#355d20" : "#1d4314");
-  stroke(selected ? CS_ORANGE : "#68875a");
+  fill(selected ? "#1C4E0A" : "#123904");
+  stroke(selected ? CS_ORANGE : "#505050");
   strokeWeight(selected ? 3 : 1.5);
   ellipse(x, y, radius * 2, radius * 2);
 
@@ -208,7 +202,7 @@ function csDrawModeCandyBubble(candyId, x, y, radius, selected) {
     const displayWidth = displayHeight * sprite.width / sprite.height;
     image(sprite, x, y, Math.min(displayWidth, radius * 1.65), Math.min(displayHeight, radius * 1.65));
   } else {
-    fill(candyId === "hot_tamale" ? "#e13d36" : candyId === "peppermint" ? "#f3f0e7" : "#f4d56f");
+    fill(candyId === "hot_tamale" ? "#ffa500" : candyId === "peppermint" ? "#ffffff" : "#ffa500");
     noStroke();
     ellipse(x, y, radius, radius);
   }
@@ -674,7 +668,7 @@ function csDrawGame() {
   if (csState === "clearing") csDrawClearHighlights();
   if (csLastInvalidSwap && millis() - csLastInvalidAt < 180) {
     noFill();
-    stroke("#ff514d");
+    stroke("#ffa500");
     strokeWeight(2);
     const a = csLastInvalidSwap.from;
     const b = csLastInvalidSwap.to;
@@ -730,8 +724,8 @@ function csDrawBoard() {
       const y = CS_BOARD_Y + row * CS_CELL;
       const candy = csBoard[row] && csBoard[row][col];
 
-      fill((row + col) % 2 === 0 ? "#173f0c" : "#19450f");
-      stroke("#28541b");
+      fill((row + col) % 2 === 0 ? "#123904" : "#1C4E0A");
+      stroke("#1C4E0A");
       strokeWeight(1);
       rect(x, y, CS_CELL, CS_CELL);
 
@@ -760,7 +754,7 @@ function csDrawBoard() {
         rect(x + 2, y + 2, CS_CELL - 4, CS_CELL - 4);
       } else if (isFocus && csState === "playing" && !csSelected) {
         noFill();
-        stroke("#f6f2dd");
+        stroke("#ffffff");
         strokeWeight(1);
         rect(x + 4, y + 4, CS_CELL - 8, CS_CELL - 8);
       }
@@ -793,19 +787,6 @@ function csDrawCandy(candy, x, y, cellSize) {
   const type = CS_CANDY_TYPES.find(item => item.id === candy.type);
   if (!type) return;
 
-  // Placeholder special-candy markers live behind the artwork on purpose.
-  if (candy.type === "hot_tamale") {
-    csDrawStarburst(x, y, cellSize * 0.86, "#e13d36");
-  } else if (candy.type === "peppermint") {
-    noFill();
-    stroke("#57e5a2");
-    strokeWeight(3);
-    ellipse(x, y, cellSize * 0.82, cellSize * 0.82);
-    stroke("#b8ffe0");
-    strokeWeight(1);
-    ellipse(x, y, cellSize * 0.67, cellSize * 0.67);
-  }
-
   const sprite = csImages[candy.type];
   if (sprite && sprite.width > 0 && sprite.height > 0) {
     const displaySize = cellSize * (type.special ? 0.72 : 0.78);
@@ -814,7 +795,7 @@ function csDrawCandy(candy, x, y, cellSize) {
     image(sprite, x, y, Math.min(displayWidth, cellSize * 0.9), Math.min(displayHeight, cellSize * 0.9));
   } else {
     noStroke();
-    fill(candy.type === "hot_tamale" ? "#e13d36" : candy.type === "peppermint" ? "#57e5a2" : "#f5d66c");
+    fill(candy.type === "hot_tamale" ? "#ffa500" : candy.type === "peppermint" ? "#1C4E0A" : "#ffa500");
     ellipse(x, y, cellSize * 0.55, cellSize * 0.55);
     fill(CS_BLACK);
     textStyle(BOLD);
@@ -825,23 +806,6 @@ function csDrawCandy(candy, x, y, cellSize) {
   }
 }
 
-function csDrawStarburst(x, y, size, colorValue) {
-  push();
-  translate(x, y);
-  rotate(-HALF_PI);
-  noStroke();
-  fill(colorValue);
-  beginShape();
-  const points = 10;
-  for (let i = 0; i < points * 2; i++) {
-    const angle = i * PI / points;
-    const radius = i % 2 === 0 ? size / 2 : size * 0.34;
-    vertex(Math.cos(angle) * radius, Math.sin(angle) * radius);
-  }
-  endShape(CLOSE);
-  pop();
-}
-
 function csDrawClearHighlights() {
   const pulse = 0.4 + 0.6 * Math.abs(Math.sin((millis() - csPhaseStartedAt) / 55));
   for (let i = 0; i < csPendingMatches.length; i++) {
@@ -849,7 +813,7 @@ function csDrawClearHighlights() {
     const x = CS_BOARD_X + cell.col * CS_CELL;
     const y = CS_BOARD_Y + cell.row * CS_CELL;
     noStroke();
-    fill(255, 246, 220, 70 + pulse * 110);
+    fill(255, 255, 255, 70 + pulse * 110);
     rect(x + 3, y + 3, CS_CELL - 6, CS_CELL - 6);
   }
 }
@@ -871,7 +835,7 @@ function csDrawGameOver() {
   noStroke();
   textAlign(CENTER, CENTER);
   textStyle(BOLD);
-  fill(csEndWon ? "#8fe388" : CS_ORANGE);
+  fill(csEndWon ? "#ffffff" : CS_ORANGE);
   textSize(csEndWon ? 22 : 24);
   text(csEndReason || "GAME OVER", width / 2, panelY + 36);
   fill(CS_WHITE);
@@ -885,11 +849,11 @@ function csDrawGameOver() {
 
   const replayHover = mouseX >= 69 && mouseX <= 195 && mouseY >= 220 && mouseY <= 258;
   const menuHover = mouseX >= 205 && mouseX <= 331 && mouseY >= 220 && mouseY <= 258;
-  fill(replayHover ? "#365f21" : "#244519");
+  fill(replayHover ? "#1C4E0A" : "#0C2504");
   stroke(CS_ORANGE);
   strokeWeight(1);
   rect(69, 220, 126, 38);
-  fill(menuHover ? "#365f21" : CS_BLACK);
+  fill(menuHover ? "#1C4E0A" : CS_BLACK);
   rect(205, 220, 126, 38);
   noStroke();
   fill(CS_WHITE);
