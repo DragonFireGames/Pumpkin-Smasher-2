@@ -13,8 +13,8 @@ const resultRevealDuration = 3000;
 const targetFrameRate = 10;
 const difficulties = [
   { id: "small", label: "SMALL", cols: 9, rows: 9, mines: 10 },
-  { id: "medium", label: "MEDIUM", cols: 12, rows: 12, mines: 17 },
-  { id: "large", label: "LARGE", cols: 16, rows: 16, mines: 31 }
+  { id: "medium", label: "MEDIUM", cols: 12, rows: 12, mines: 16 },
+  { id: "large", label: "LARGE", cols: 16, rows: 16, mines: 30 }
 ];
 
 let images = {};
