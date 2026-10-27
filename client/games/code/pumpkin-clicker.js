@@ -1,44 +1,199 @@
 /* Pumpkin Clicker. Canvas-only p5 game; hard-edged Pumpkin Smasher style. */
-const saveKey="pumpkin-clicker-save-v1", dailyKey="pumpkin-clicker-daily-v1";
-const orange="#ffa500", black="#10180b", backgroundColor="#123904", white="#f6f2dd";
-const generators=[
- {id:"green",name:"Green Pumpkin",cost:10,rate:.2,growth:1.4,path:"/assets/pumpkins/new_pumpkin.png"},
- {id:"regular",name:"Pumpkin",cost:60,rate:1,growth:1.45,path:"/assets/pumpkins/pumpkin.png"},
- {id:"gold",name:"Gold Pumpkin",cost:500,rate:5,growth:1.5,path:"/assets/pumpkins/gold_pumpkin.png"},
- {id:"diamond",name:"Diamond Pumpkin",cost:2200,rate:24,growth:1.6,path:"/assets/pumpkins/diamond_pumpkin.png"}
-];
-const workers=[
- {id:"monster",name:"Monster",cost:100,desc:"+0.10/sec per gen",path:"/assets/entities/monster/attack.png",frames:8,fps:12},
- {id:"ghost",name:"Ghost",cost:400,desc:"+5% all production",path:"/assets/entities/ghost/attack.png",frames:8,fps:12},
- {id:"speeder",name:"Speeder",cost:700,desc:"+10% all production",path:"/assets/entities/speeder/attack.png",frames:8,fps:16},
- {id:"rusher",name:"Rusher",cost:1200,desc:"Burst every 10 seconds",path:"/assets/entities/rusher/idle.png",frames:14,fps:12},
- {id:"brute",name:"Brute",cost:1800,desc:"+0.55/sec per gen",path:"/assets/entities/brute/attack.png",frames:8,fps:12},
- {id:"wizard",name:"Wizard",cost:3400,desc:"+18% all production",path:"/assets/entities/wizard/idle.png",frames:14,fps:12},
- {id:"debuffer",name:"Debuffer",cost:6400,desc:"+8% worker bonuses",path:"/assets/entities/debuffer/idle.png",frames:14,fps:12}
-];
-const buildings=[
- {id:"g0",name:"Green Pumpkin",cost:10,desc:"0.20 pumpkins/sec",kind:"generator",tier:0},
- {id:"g1",name:"Pumpkin",cost:60,desc:"1 pumpkin/sec",kind:"generator",tier:1},
- {id:"g2",name:"Gold Pumpkin",cost:500,desc:"5 pumpkins/sec",kind:"generator",tier:2},
- {id:"g3",name:"Diamond Pumpkin",cost:2200,desc:"24 pumpkins/sec",kind:"generator",tier:3},
- {id:"shield",name:"Multiplier",cost:180,desc:"Boosts directly adjacent generators",kind:"multiplier"},
- {id:"vault",name:"Vault",cost:60,desc:"50 base storage; scales per level",kind:"vault"}
-];
-const candies=[
- {id:"candy_corn",name:"Candy Corn",path:"/assets/candies/candy-corn.png",desc:"3× generator production",production:3},
- {id:"smarties",name:"Smarties",path:"/assets/candies/smarties.png",desc:"Clicks harvest 3 pumpkins",click:3},
- {id:"peppermint",name:"Peppermint",path:"/assets/candies/peppermint.png",desc:"Sell pumpkins for 2× cash",sell:2},
- {id:"lolipop",name:"Lollipop",path:"/assets/candies/lolipop.png",desc:"+50% total production",production:1.5},
- {id:"hot_tamale",name:"Hot Tamale",path:"/assets/candies/hot-tamale.png",desc:"2× generator production",production:2},
- {id:"ghost_chew",name:"Ghost Chew",path:"/assets/candies/ghost-chew.png",desc:"+50% pumpkin storage",capacity:1.5},
- {id:"chocolate",name:"Chocolate",path:"/assets/candies/chocolate.png",desc:"+$5 per manual click",clickCash:5},
- {id:"candied_apple",name:"Candied Apple",path:"/assets/candies/candied-apple.png",desc:"+25% generator production",production:1.25},
- {id:"blue_candy",name:"Blue Candy",path:"/assets/candies/blue-candy.png",desc:"Doubles additive worker bonuses",workers:2}
-];
-let images={},game,targets=[],shopTab="workers",shopScroll=0,gridScroll=0,selectedBuild=null,bulkPlaceRemaining=0,shiftHeld=false,toastMessage="",toastEnd=0,lastTick=0,saveTicks=0,dailyClaimed=false,backgroundSpecks=[],candyOpening=null,candyQueue=[],candyConfetti=[],lastConfettiTime=0,clickBuyMode=1;
-let hoverId="",hoverSince=0,hoverTarget=null,pumpkinScale=1,pumpkinPressedAt=-10000,lastActivity=Date.now();
 
-function newGameState(p=0){return {cash:25,pumpkins:0,baseStored:0,storageVersion:2,vinesSeeded:false,vinesCleared:0,prestige:p,totalClicks:0,totalSold:0,totalHarvested:0,totalWorkers:0,candyPurchases:0,autoSell:false,autoSellPurchased:false,autoSellProgressMs:0,progress:0,activeCandies:[],clickUpgrades:{power:0,bonus:0,cash:0},workers:{monster:0,ghost:0,speeder:0,rusher:0,brute:0,wizard:0,debuffer:0},farmCols:6+p,farmRows:4+p,farm:[],lastSavedAt:Date.now()};}
+const saveKey = "pumpkin-clicker-save-v1";
+const dailyKey = "pumpkin-clicker-daily-v1";
+
+const orange = "#ffa500";
+const black = "#10180b";
+const backgroundColor = "#123904";
+const white = "#f6f2dd";
+
+const generators = [
+  {
+    id: "green",
+    name: "Green Pumpkin",
+    cost: 10,
+    rate: 0.2,
+    growth: 1.4,
+    path: "/assets/pumpkins/new_pumpkin.png"
+  },
+  {
+    id: "regular",
+    name: "Pumpkin",
+    cost: 60,
+    rate: 1,
+    growth: 1.45,
+    path: "/assets/pumpkins/pumpkin.png"
+  },
+  {
+    id: "gold",
+    name: "Gold Pumpkin",
+    cost: 500,
+    rate: 5,
+    growth: 1.5,
+    path: "/assets/pumpkins/gold_pumpkin.png"
+  },
+  {
+    id: "diamond",
+    name: "Diamond Pumpkin",
+    cost: 2200,
+    rate: 24,
+    growth: 1.6,
+    path: "/assets/pumpkins/diamond_pumpkin.png"
+  }
+];
+
+const workers = [
+  {
+    id: "monster",
+    name: "Monster",
+    cost: 100,
+    desc: "+0.10/sec per gen",
+    path: "/assets/entities/monster/attack.png",
+    frames: 8,
+    fps: 12
+  },
+  {
+    id: "ghost",
+    name: "Ghost",
+    cost: 400,
+    desc: "+5% all production",
+    path: "/assets/entities/ghost/attack.png",
+    frames: 8,
+    fps: 12
+  },
+  {
+    id: "speeder",
+    name: "Speeder",
+    cost: 700,
+    desc: "+10% all production",
+    path: "/assets/entities/speeder/attack.png",
+    frames: 8,
+    fps: 16
+  },
+  {
+    id: "rusher",
+    name: "Rusher",
+    cost: 1200,
+    desc: "Burst every 10 seconds",
+    path: "/assets/entities/rusher/idle.png",
+    frames: 14,
+    fps: 12
+  },
+  {
+    id: "brute",
+    name: "Brute",
+    cost: 1800,
+    desc: "+0.55/sec per gen",
+    path: "/assets/entities/brute/attack.png",
+    frames: 8,
+    fps: 12
+  },
+  {
+    id: "wizard",
+    name: "Wizard",
+    cost: 3400,
+    desc: "+18% all production",
+    path: "/assets/entities/wizard/idle.png",
+    frames: 14,
+    fps: 12
+  },
+  {
+    id: "debuffer",
+    name: "Debuffer",
+    cost: 6400,
+    desc: "+8% worker bonuses",
+    path: "/assets/entities/debuffer/idle.png",
+    frames: 14,
+    fps: 12
+  }
+];
+
+const buildings = [
+  { id: "g0", name: "Green Pumpkin", cost: 10, desc: "0.20 pumpkins/sec", kind: "generator", tier: 0 },
+  { id: "g1", name: "Pumpkin", cost: 60, desc: "1 pumpkin/sec", kind: "generator", tier: 1 },
+  { id: "g2", name: "Gold Pumpkin", cost: 500, desc: "5 pumpkins/sec", kind: "generator", tier: 2 },
+  { id: "g3", name: "Diamond Pumpkin", cost: 2200, desc: "24 pumpkins/sec", kind: "generator", tier: 3 },
+  { id: "shield", name: "Multiplier", cost: 180, desc: "Boosts directly adjacent generators", kind: "multiplier" },
+  { id: "vault", name: "Vault", cost: 60, desc: "50 base storage; scales per level", kind: "vault" }
+];
+
+const candies = [
+  { id: "candy_corn", name: "Candy Corn", path: "/assets/candies/candy-corn.png", desc: "3× generator production", production: 3 },
+  { id: "smarties", name: "Smarties", path: "/assets/candies/smarties.png", desc: "Clicks harvest 3 pumpkins", click: 3 },
+  { id: "peppermint", name: "Peppermint", path: "/assets/candies/peppermint.png", desc: "Sell pumpkins for 2× cash", sell: 2 },
+  { id: "lolipop", name: "Lollipop", path: "/assets/candies/lolipop.png", desc: "+50% total production", production: 1.5 },
+  { id: "hot_tamale", name: "Hot Tamale", path: "/assets/candies/hot-tamale.png", desc: "2× generator production", production: 2 },
+  { id: "ghost_chew", name: "Ghost Chew", path: "/assets/candies/ghost-chew.png", desc: "+50% pumpkin storage", capacity: 1.5 },
+  { id: "chocolate", name: "Chocolate", path: "/assets/candies/chocolate.png", desc: "+$5 per manual click", clickCash: 5 },
+  { id: "candied_apple", name: "Candied Apple", path: "/assets/candies/candied-apple.png", desc: "+25% generator production", production: 1.25 },
+  { id: "blue_candy", name: "Blue Candy", path: "/assets/candies/blue-candy.png", desc: "Doubles additive worker bonuses", workers: 2 }
+];
+
+let images = {};
+let game;
+let targets = [];
+let shopTab = "workers";
+let shopScroll = 0;
+let gridScroll = 0;
+let selectedBuild = null;
+let bulkPlaceRemaining = 0;
+let shiftHeld = false;
+let toastMessage = "";
+let toastEnd = 0;
+let lastTick = 0;
+let saveTicks = 0;
+let dailyClaimed = false;
+let backgroundSpecks = [];
+let candyOpening = null;
+let candyQueue = [];
+let candyConfetti = [];
+let lastConfettiTime = 0;
+let clickBuyMode = 1;
+
+let hoverId = "";
+let hoverSince = 0;
+let hoverTarget = null;
+let pumpkinScale = 1;
+let pumpkinPressedAt = -10000;
+let lastActivity = Date.now();
+
+function newGameState(prestige = 0) {
+  return {
+    cash: 25,
+    pumpkins: 0,
+    baseStored: 0,
+    storageVersion: 2,
+    vinesSeeded: false,
+    vinesCleared: 0,
+    prestige,
+    totalClicks: 0,
+    totalSold: 0,
+    totalHarvested: 0,
+    totalWorkers: 0,
+    candyPurchases: 0,
+    autoSell: false,
+    autoSellPurchased: false,
+    autoSellProgressMs: 0,
+    progress: 0,
+    activeCandies: [],
+    clickUpgrades: { power: 0, bonus: 0, cash: 0 },
+    workers: {
+      monster: 0,
+      ghost: 0,
+      speeder: 0,
+      rusher: 0,
+      brute: 0,
+      wizard: 0,
+      debuffer: 0
+    },
+    farmCols: 6 + prestige,
+    farmRows: 4 + prestige,
+    farm: [],
+    lastSavedAt: Date.now()
+  };
+}
+
 function preload(){
  generators.forEach(g=>images[g.id]=loadImage(g.path,()=>{},()=>{}));
  workers.forEach(w=>images[w.id]=loadImage(w.path,()=>{},()=>{}));
@@ -49,14 +204,54 @@ function preload(){
  images.objective=loadImage("/assets/pumpkins/objective.png",()=>{},()=>{});
  images.vinesIcon=loadImage("/assets/abilities/vines/icon.png",()=>{},()=>{});
 }
-function setup(){
- createCanvas(500,500);pixelDensity(1);frameRate(60);imageMode(CENTER);textFont("Arial");
- resizeCanvasToContainer();
- for(let i=0;i<80;i++)backgroundSpecks.push({x:random(0,1400),y:random(0,1000),s:random(1,3),a:random(14,43)});
- loadGame();applyOfflineProgress();lastTick=millis();lastActivity=Date.now();window.addEventListener("beforeunload",saveGame);window.addEventListener("pagehide",saveGame);window.addEventListener("pointermove",markActivity,{passive:true});window.addEventListener("pointerdown",markActivity,{passive:true});window.addEventListener("keydown",markActivity);window.addEventListener("touchstart",markActivity,{passive:true});window.addEventListener("resize",resizeCanvasToContainer);
+function setup() {
+  createCanvas(500, 500);
+  pixelDensity(1);
+  frameRate(60);
+  imageMode(CENTER);
+  textFont("Arial");
+
+  resizeCanvasToContainer();
+
+  for (let i = 0; i < 80; i++) {
+    backgroundSpecks.push({
+      x: random(0, 1400),
+      y: random(0, 1000),
+      s: random(1, 3),
+      a: random(14, 43)
+    });
+  }
+
+  loadGame();
+  applyOfflineProgress();
+  lastTick = millis();
+  lastActivity = Date.now();
+
+  window.addEventListener("beforeunload", saveGame);
+  window.addEventListener("pagehide", saveGame);
+  window.addEventListener("pointermove", markActivity, { passive: true });
+  window.addEventListener("pointerdown", markActivity, { passive: true });
+  window.addEventListener("keydown", markActivity);
+  window.addEventListener("touchstart", markActivity, { passive: true });
+  window.addEventListener("resize", resizeCanvasToContainer);
 }
-function resizeCanvasToContainer(){const side=Math.max(1,Math.floor(Math.min(window.innerWidth,window.innerHeight)));const c=document.querySelector("canvas");if(c){c.style.width=side+"px";c.style.height=side+"px";c.style.imageRendering="pixelated";}}
-function windowResized(){resizeCanvasToContainer();shopScroll=0;}
+
+function resizeCanvasToContainer() {
+  const side = Math.max(1, Math.floor(Math.min(window.innerWidth, window.innerHeight)));
+  const canvas = document.querySelector("canvas");
+
+  if (canvas) {
+    canvas.style.width = side + "px";
+    canvas.style.height = side + "px";
+    canvas.style.imageRendering = "pixelated";
+  }
+}
+
+function windowResized() {
+  resizeCanvasToContainer();
+  shopScroll = 0;
+}
+
 function loadGame(){
  let d=null;try{d=JSON.parse(localStorage.getItem(saveKey)||"null");}catch(e){}
  if(d&&Array.isArray(d.farm)){
@@ -382,70 +577,423 @@ function placedCount(kind){const seen=new Set();(game.farm||[]).forEach(row=>(ro
 function ownedGeneratorCount(tier){const seen=new Set();let count=0;(game.farm||[]).forEach(row=>(row||[]).forEach(o=>{if(!o||o.kind!=="generator"||o.tier<tier||seen.has(o))return;seen.add(o);count+=generatorSize(o)**2;}));return count;}
 function generatorCost(tier){const g=generators[tier];if(!g)return Infinity;const scaledBase=Math.ceil(g.cost*Math.pow(g.growth,ownedGeneratorCount(tier)));if(tier<=0)return scaledBase;const previous=generatorCost(tier-1);return Math.max(scaledBase,previous+scaledBase);}
 function buildCost(d){if(!d)return Infinity;const kind=d.kind==="shield"?"multiplier":d.kind;if(kind==="generator")return generatorCost(d.tier);if(kind==="multiplier")return Math.ceil(d.cost*Math.pow(1.35,placedCount(kind)));if(kind==="vault")return Math.ceil(d.cost*Math.pow(1.15,placedCount(kind)));return d.cost;}
-function handleTileClick(r,c){
- let o=game.farm[r]&&game.farm[r][c];
- if(o&&o.kind==="vine"){const cost=vineClearCost();if(game.cash<cost){showToast("Removing vines costs $"+formatNumber(cost));return;}game.cash-=cost;game.vinesCleared=Math.max(0,Math.floor(Number(game.vinesCleared)||0))+1;game.farm[r][c]=null;showToast("Vines removed for $"+formatNumber(cost)+" — next clear costs $"+formatNumber(vineClearCost()));saveGame();return;}
- if(selectedBuild==="__sell"){if(!o){showToast("No building on this tile");return;}removeTile(r,c,o);return;}
- if(!selectedBuild&&(o&&(o.kind==="multiplier"||o.kind==="shield"))){showToast("Multipliers boost only directly adjacent generators");return;}
- if(!selectedBuild){
-  if(o&&o.kind==="vault"){let bought=0,lastCost=0;const limit=purchaseLimit();while(bought<limit){const cost=vaultUpgradeCost(Math.max(0,o.level||0));if(game.cash<cost){lastCost=cost;break;}game.cash-=cost;o.level=(o.level||0)+1;bought++;}if(!bought){showToast("Vault upgrade costs $"+formatNumber(lastCost||vaultUpgradeCost(Math.max(0,o.level||0))));return;}showToast("Vault upgraded "+bought+" level"+(bought===1?"":"s")+": "+formatNumber(vaultCapacity(o))+" capacity");saveGame();return;}
-  if(o&&o.kind==="generator"){
-   if(generatorSize(o)>1){const pieces=fragmentGenerator(o);showToast((o.hyper?"Hyper":o.ultra?"Ultra":"Mega")+" generator fragmented into "+pieces+" generators");saveGame();return;}
-   let bought=0,lastCost=0;const limit=purchaseLimit();
-   while(bought<limit){o=game.farm[r]&&game.farm[r][c];if(!o||o.kind!=="generator"||generatorSize(o)>1||o.tier>=3)break;const cost=Math.max(0,generatorCost(o.tier+1)-generatorCost(o.tier));if(game.cash<cost){lastCost=cost;break;}game.cash-=cost;game.farm[r][c]={kind:"generator",tier:o.tier+1,row:r,col:c,mega:false,ultra:false,hyper:false,progress:0,clogged:false};mergeGenerators();bought++;}
-   if(!bought){showToast(o&&o.tier>=3?"Diamond pumpkins are max tier":(o&&(o.mega||o.ultra))?"Fragment the large generator before upgrading":"Generator upgrade costs $"+formatNumber(lastCost||(o&&o.tier<3?generatorCost(o.tier+1):0)));return;}
-   showToast("Generator upgraded "+bought+" tier"+(bought===1?"":"s"));saveGame();
-  }else showToast(o&&o.kind==="vault"?"Vaults increase storage":"Choose a building from BUILD first");
-  return;
- }
- const b=buildings.find(v=>v.id===selectedBuild);
- if(!b)return;
- if(o){showToast("That tile is occupied");return;}
- const buildCost=buildCost(b);if(game.cash<buildCost){showToast(b.name+" costs $"+formatNumber(buildCost));selectedBuild=null;bulkPlaceRemaining=0;return;}
- if(b.kind==="upgrade"){toggleAutoSell();return;}
- const bulk=bulkPlaceRemaining>0||purchaseLimit()>1;if(bulk&&bulkPlaceRemaining===0)bulkPlaceRemaining=purchaseLimit();
- game.cash-=buildCost;
- const obj=b.kind==="generator"?{kind:"generator",tier:b.tier,row:r,col:c,mega:false,ultra:false,hyper:false,progress:0,clogged:false}:b.kind==="vault"?{kind:"vault",row:r,col:c,level:0,stored:0}:{kind:b.kind,row:r,col:c};
- game.farm[r][c]=obj;
- if(obj.kind==="generator")mergeGenerators();
- if(bulk){bulkPlaceRemaining=Math.max(0,bulkPlaceRemaining-1);const nextCost=buildCost(b);if(bulkPlaceRemaining>0&&game.cash>=nextCost){selectedBuild=b.id;showToast(b.name+" placed — "+bulkPlaceRemaining+" bulk placements remaining");}else{selectedBuild=null;const reason=bulkPlaceRemaining>0&&game.cash<nextCost?"Next costs $"+formatNumber(nextCost)+"; bulk placement stopped":"Bulk placement complete";bulkPlaceRemaining=0;showToast(b.name+" placed. "+reason);}}else{selectedBuild=null;bulkPlaceRemaining=0;showToast(b.name+" placed");}
- saveGame();
-}
-function tileValue(o){if(!o)return 0;if(o.kind==="generator")return generators[o.tier].cost*generatorSize(o)**2;if(o.kind==="multiplier"||o.kind==="shield")return 180;if(o.kind==="vault"){let value=100;for(let i=0;i<Math.max(0,o.level||0);i++)value+=vaultUpgradeCost(i);return value;}return 0;}
-function removeTile(r,c,o){if(o&&o.kind==="generator"&&generatorSize(o)>1){const pieces=fragmentGenerator(o);showToast((o.hyper?"Hyper":o.ultra?"Ultra":"Mega")+" fragmented into "+pieces+" individual generators");saveGame();return;}const value=tileValue(o),refund=Math.floor(value*.25),vaultStored=o.kind==="vault"?(Number(o.stored)||0):0,size=o.kind==="generator"?generatorSize(o):1,coords=[];for(let dy=0;dy<size;dy++)for(let dx=0;dx<size;dx++)coords.push([o.kind==="generator"?o.row+dy:r,o.kind==="generator"?o.col+dx:c]);const oldCells=coords.map(([y,x])=>({y,x,value:game.farm[y]&&game.farm[y][x]}));coords.forEach(([y,x])=>{if(game.farm[y])game.farm[y][x]=null;});syncStoredPumpkins();if(vaultStored>0){if(availableStorage()<vaultStored){oldCells.forEach(q=>{if(game.farm[q.y])game.farm[q.y][q.x]=q.value;});syncStoredPumpkins();showToast("Sell the vault contents or free storage before deleting it");return;}depositInStorage(vaultStored);}game.cash+=refund;selectedBuild="__sell";showToast("Tile removed • refunded $"+formatNumber(refund));saveGame();}
-function fragmentGenerator(o){const size=generatorSize(o);if(size===1)return 1;for(let dy=0;dy<size;dy++)for(let dx=0;dx<size;dx++){const r=o.row+dy,c=o.col+dx;if(game.farm[r])game.farm[r][c]={kind:"generator",tier:o.tier,row:r,col:c,mega:false,ultra:false,hyper:false,progress:0,clogged:false};}return size*size;}
-function mergeGenerators(){
- // Hyper merges first, allowing complete Mega/Ultra footprints within a matching 5×5 area.
- for(let r=0;r<=game.farmRows-5;r++)for(let c=0;c<=game.farmCols-5;c++){
-  const a=game.farm[r][c];if(!a||a.kind!=="generator"||a.hyper)continue;
-  let valid=true;
-  for(let dy=0;dy<5&&valid;dy++)for(let dx=0;dx<5;dx++){
-   const v=game.farm[r+dy][c+dx];
-   if(!v||v.kind!=="generator"||v.hyper||v.tier!==a.tier){valid=false;break;}
-   if(v.mega||v.ultra){
-    const size=generatorSize(v);
-    if(!Number.isInteger(v.row)||!Number.isInteger(v.col)||v.row<r||v.col<c||v.row+size>r+5||v.col+size>c+5){valid=false;break;}
-   }
+function handleTileClick(row, col) {
+  let building = game.farm[row] && game.farm[row][col];
+
+  if (building && building.kind === "vine") {
+    const cost = vineClearCost();
+
+    if (game.cash < cost) {
+      showToast("Removing vines costs $" + formatNumber(cost));
+      return;
+    }
+
+    game.cash -= cost;
+    game.vinesCleared = Math.max(0, Math.floor(Number(game.vinesCleared) || 0)) + 1;
+    game.farm[row][col] = null;
+
+    showToast("Vines removed for $" + formatNumber(cost) + " — next clear costs $" + formatNumber(vineClearCost()));
+    saveGame();
+    return;
   }
-  if(!valid)continue;
-  const h={kind:"generator",tier:a.tier,row:r,col:c,mega:false,ultra:false,hyper:true};
-  for(let dy=0;dy<5;dy++)for(let dx=0;dx<5;dx++)game.farm[r+dy][c+dx]=h;
-  showToast("Twenty-five pumpkins became a HYPER generator!");
- }
- // Ultra merges run after Hyper and before Mega, preserving the largest matching structure.
- for(let r=0;r<=game.farmRows-3;r++)for(let c=0;c<=game.farmCols-3;c++){
-  const a=game.farm[r][c];if(!a||a.kind!=="generator"||a.hyper||a.ultra)continue;
-  const cells=[];for(let dy=0;dy<3;dy++)for(let dx=0;dx<3;dx++)cells.push(game.farm[r+dy][c+dx]);
-  if(cells.some(v=>!v||v.kind!=="generator"||v.hyper||v.ultra||v.tier!==a.tier))continue;
-  const u={kind:"generator",tier:a.tier,row:r,col:c,mega:false,ultra:true,hyper:false};for(let dy=0;dy<3;dy++)for(let dx=0;dx<3;dx++)game.farm[r+dy][c+dx]=u;showToast("Nine pumpkins became an ULTRA generator!");
- }
- for(let r=0;r<game.farmRows-1;r++)for(let c=0;c<game.farmCols-1;c++){
-  const a=game.farm[r][c],b=game.farm[r][c+1],d=game.farm[r+1][c],e=game.farm[r+1][c+1];
-  if(!a||a.kind!=="generator"||a.hyper||a.mega||a.ultra||!b||!d||!e)continue;
-  if([b,d,e].some(v=>!v||v.kind!=="generator"||v.hyper||v.mega||v.ultra||v.tier!==a.tier))continue;
-  const m={kind:"generator",tier:a.tier,row:r,col:c,mega:true,ultra:false,hyper:false};game.farm[r][c]=m;game.farm[r][c+1]=m;game.farm[r+1][c]=m;game.farm[r+1][c+1]=m;showToast("Four pumpkins became a MEGA generator!");
- }
+
+  if (selectedBuild === "__sell") {
+    if (!building) {
+      showToast("No building on this tile");
+      return;
+    }
+
+    removeTile(row, col, building);
+    return;
+  }
+
+  if (!selectedBuild && building && (building.kind === "multiplier" || building.kind === "shield")) {
+    showToast("Multipliers boost only directly adjacent generators");
+    return;
+  }
+
+  if (!selectedBuild) {
+    if (building && building.kind === "vault") {
+      let bought = 0;
+      let lastCost = 0;
+      const limit = purchaseLimit();
+
+      while (bought < limit) {
+        const cost = vaultUpgradeCost(Math.max(0, building.level || 0));
+        if (game.cash < cost) {
+          lastCost = cost;
+          break;
+        }
+
+        game.cash -= cost;
+        building.level = (building.level || 0) + 1;
+        bought++;
+      }
+
+      if (!bought) {
+        showToast("Vault upgrade costs $" + formatNumber(lastCost || vaultUpgradeCost(Math.max(0, building.level || 0))));
+        return;
+      }
+
+      showToast("Vault upgraded " + bought + " level" + (bought === 1 ? "" : "s") + ": " + formatNumber(vaultCapacity(building)) + " capacity");
+      saveGame();
+      return;
+    }
+
+    if (building && building.kind === "generator") {
+      if (generatorSize(building) > 1) {
+        const pieces = fragmentGenerator(building);
+        showToast((building.hyper ? "Hyper" : building.ultra ? "Ultra" : "Mega") + " generator fragmented into " + pieces + " generators");
+        saveGame();
+        return;
+      }
+
+      let bought = 0;
+      let lastCost = 0;
+      const limit = purchaseLimit();
+
+      while (bought < limit) {
+        building = game.farm[row] && game.farm[row][col];
+
+        if (!building || building.kind !== "generator" || generatorSize(building) > 1 || building.tier >= 3) {
+          break;
+        }
+
+        const cost = Math.max(0, generatorCost(building.tier + 1) - generatorCost(building.tier));
+        if (game.cash < cost) {
+          lastCost = cost;
+          break;
+        }
+
+        game.cash -= cost;
+        game.farm[row][col] = {
+          kind: "generator",
+          tier: building.tier + 1,
+          row,
+          col,
+          mega: false,
+          ultra: false,
+          hyper: false,
+          progress: 0,
+          clogged: false
+        };
+        mergeGenerators();
+        bought++;
+      }
+
+      if (!bought) {
+        if (building && building.tier >= 3) {
+          showToast("Diamond pumpkins are max tier");
+        } else if (building && generatorSize(building) > 1) {
+          showToast("Fragment the large generator before upgrading");
+        } else {
+          const tier = building && building.tier < 3 ? building.tier + 1 : 0;
+          showToast("Generator upgrade costs $" + formatNumber(lastCost || generatorCost(tier)));
+        }
+        return;
+      }
+
+      showToast("Generator upgraded " + bought + " tier" + (bought === 1 ? "" : "s"));
+      saveGame();
+    } else {
+      showToast(building && building.kind === "vault" ? "Vaults increase storage" : "Choose a building from BUILD first");
+    }
+
+    return;
+  }
+
+  const selected = buildings.find(item => item.id === selectedBuild);
+  if (!selected) return;
+
+  if (building) {
+    showToast("That tile is occupied");
+    return;
+  }
+
+  const price = buildCost(selected);
+  if (game.cash < price) {
+    showToast(selected.name + " costs $" + formatNumber(price));
+    selectedBuild = null;
+    bulkPlaceRemaining = 0;
+    return;
+  }
+
+  if (selected.kind === "upgrade") {
+    toggleAutoSell();
+    return;
+  }
+
+  const bulk = bulkPlaceRemaining > 0 || purchaseLimit() > 1;
+  if (bulk && bulkPlaceRemaining === 0) {
+    bulkPlaceRemaining = purchaseLimit();
+  }
+
+  game.cash -= price;
+
+  let placed;
+  if (selected.kind === "generator") {
+    placed = {
+      kind: "generator",
+      tier: selected.tier,
+      row,
+      col,
+      mega: false,
+      ultra: false,
+      hyper: false,
+      progress: 0,
+      clogged: false
+    };
+  } else if (selected.kind === "vault") {
+    placed = { kind: "vault", row, col, level: 0, stored: 0 };
+  } else {
+    placed = { kind: selected.kind, row, col };
+  }
+
+  game.farm[row][col] = placed;
+
+  if (placed.kind === "generator") {
+    mergeGenerators();
+  }
+
+  if (bulk) {
+    bulkPlaceRemaining = Math.max(0, bulkPlaceRemaining - 1);
+    const nextCost = buildCost(selected);
+
+    if (bulkPlaceRemaining > 0 && game.cash >= nextCost) {
+      selectedBuild = selected.id;
+      showToast(selected.name + " placed — " + bulkPlaceRemaining + " bulk placements remaining");
+    } else {
+      selectedBuild = null;
+      const reason = bulkPlaceRemaining > 0 && game.cash < nextCost
+        ? "Next costs $" + formatNumber(nextCost) + "; bulk placement stopped"
+        : "Bulk placement complete";
+
+      bulkPlaceRemaining = 0;
+      showToast(selected.name + " placed. " + reason);
+    }
+  } else {
+    selectedBuild = null;
+    bulkPlaceRemaining = 0;
+    showToast(selected.name + " placed");
+  }
+
+  saveGame();
 }
+
+function tileValue(o){if(!o)return 0;if(o.kind==="generator")return generators[o.tier].cost*generatorSize(o)**2;if(o.kind==="multiplier"||o.kind==="shield")return 180;if(o.kind==="vault"){let value=100;for(let i=0;i<Math.max(0,o.level||0);i++)value+=vaultUpgradeCost(i);return value;}return 0;}
+function removeTile(row, col, building) {
+  if (building && building.kind === "generator" && generatorSize(building) > 1) {
+    const pieces = fragmentGenerator(building);
+    showToast((building.hyper ? "Hyper" : building.ultra ? "Ultra" : "Mega") + " fragmented into " + pieces + " individual generators");
+    saveGame();
+    return;
+  }
+
+  const value = tileValue(building);
+  const refund = Math.floor(value * 0.25);
+  const stored = building.kind === "vault" ? Number(building.stored) || 0 : 0;
+  const size = building.kind === "generator" ? generatorSize(building) : 1;
+  const cells = [];
+
+  for (let dy = 0; dy < size; dy++) {
+    for (let dx = 0; dx < size; dx++) {
+      cells.push([
+        building.kind === "generator" ? building.row + dy : row,
+        building.kind === "generator" ? building.col + dx : col
+      ]);
+    }
+  }
+
+  const oldCells = cells.map(([y, x]) => ({
+    y,
+    x,
+    value: game.farm[y] && game.farm[y][x]
+  }));
+
+  cells.forEach(([y, x]) => {
+    if (game.farm[y]) game.farm[y][x] = null;
+  });
+
+  syncStoredPumpkins();
+
+  if (stored > 0) {
+    if (availableStorage() < stored) {
+      oldCells.forEach(cell => {
+        if (game.farm[cell.y]) game.farm[cell.y][cell.x] = cell.value;
+      });
+      syncStoredPumpkins();
+      showToast("Sell the vault contents or free storage before deleting it");
+      return;
+    }
+
+    depositInStorage(stored);
+  }
+
+  game.cash += refund;
+  selectedBuild = "__sell";
+  showToast("Tile removed • refunded $" + formatNumber(refund));
+  saveGame();
+}
+
+function fragmentGenerator(building) {
+  const size = generatorSize(building);
+  if (size === 1) return 1;
+
+  for (let dy = 0; dy < size; dy++) {
+    for (let dx = 0; dx < size; dx++) {
+      const row = building.row + dy;
+      const col = building.col + dx;
+
+      if (game.farm[row]) {
+        game.farm[row][col] = {
+          kind: "generator",
+          tier: building.tier,
+          row,
+          col,
+          mega: false,
+          ultra: false,
+          hyper: false,
+          progress: 0,
+          clogged: false
+        };
+      }
+    }
+  }
+
+  return size * size;
+}
+
+
+function mergeGenerators() {
+  // Hyper merges first and can contain complete Mega/Ultra structures.
+  for (let row = 0; row <= game.farmRows - 5; row++) {
+    for (let col = 0; col <= game.farmCols - 5; col++) {
+      const first = game.farm[row][col];
+      if (!first || first.kind !== "generator" || first.hyper) continue;
+
+      let matches = true;
+
+      for (let dy = 0; dy < 5 && matches; dy++) {
+        for (let dx = 0; dx < 5; dx++) {
+          const building = game.farm[row + dy][col + dx];
+
+          if (!building || building.kind !== "generator" || building.hyper || building.tier !== first.tier) {
+            matches = false;
+            break;
+          }
+
+          if (building.mega || building.ultra) {
+            const size = generatorSize(building);
+            const fits = Number.isInteger(building.row) && Number.isInteger(building.col)
+              && building.row >= row && building.col >= col
+              && building.row + size <= row + 5 && building.col + size <= col + 5;
+
+            if (!fits) {
+              matches = false;
+              break;
+            }
+          }
+        }
+      }
+
+      if (!matches) continue;
+
+      const hyper = {
+        kind: "generator",
+        tier: first.tier,
+        row,
+        col,
+        mega: false,
+        ultra: false,
+        hyper: true
+      };
+
+      for (let dy = 0; dy < 5; dy++) {
+        for (let dx = 0; dx < 5; dx++) {
+          game.farm[row + dy][col + dx] = hyper;
+        }
+      }
+
+      showToast("Twenty-five pumpkins became a HYPER generator!");
+    }
+  }
+
+  // Ultra merges after Hyper and before Mega, preserving the largest matching structure.
+  for (let row = 0; row <= game.farmRows - 3; row++) {
+    for (let col = 0; col <= game.farmCols - 3; col++) {
+      const first = game.farm[row][col];
+      if (!first || first.kind !== "generator" || first.hyper || first.ultra) continue;
+
+      const cells = [];
+      for (let dy = 0; dy < 3; dy++) {
+        for (let dx = 0; dx < 3; dx++) {
+          cells.push(game.farm[row + dy][col + dx]);
+        }
+      }
+
+      const matches = cells.every(building =>
+        building && building.kind === "generator" && !building.hyper && !building.ultra && building.tier === first.tier
+      );
+      if (!matches) continue;
+
+      const ultra = {
+        kind: "generator",
+        tier: first.tier,
+        row,
+        col,
+        mega: false,
+        ultra: true,
+        hyper: false
+      };
+
+      for (let dy = 0; dy < 3; dy++) {
+        for (let dx = 0; dx < 3; dx++) {
+          game.farm[row + dy][col + dx] = ultra;
+        }
+      }
+
+      showToast("Nine pumpkins became an ULTRA generator!");
+    }
+  }
+
+  for (let row = 0; row < game.farmRows - 1; row++) {
+    for (let col = 0; col < game.farmCols - 1; col++) {
+      const first = game.farm[row][col];
+      const right = game.farm[row][col + 1];
+      const below = game.farm[row + 1][col];
+      const diagonal = game.farm[row + 1][col + 1];
+
+      if (!first || first.kind !== "generator" || first.hyper || first.mega || first.ultra
+        || !right || !below || !diagonal) {
+        continue;
+      }
+
+      const matches = [right, below, diagonal].every(building =>
+        building && building.kind === "generator" && !building.hyper && !building.mega
+        && !building.ultra && building.tier === first.tier
+      );
+      if (!matches) continue;
+
+      const mega = {
+        kind: "generator",
+        tier: first.tier,
+        row,
+        col,
+        mega: true,
+        ultra: false,
+        hyper: false
+      };
+
+      game.farm[row][col] = mega;
+      game.farm[row][col + 1] = mega;
+      game.farm[row + 1][col] = mega;
+      game.farm[row + 1][col + 1] = mega;
+
+      showToast("Four pumpkins became a MEGA generator!");
+    }
+  }
+}
+
 function workerCost(id){const w=workers.find(v=>v.id===id);if(!w)return Infinity;return Math.ceil(w.cost*Math.pow(1.4,Math.max(0,game.workers[id]||0)));}
 function buyWorker(id,quantity=1){const w=workers.find(v=>v.id===id);if(!w)return;let bought=0,total=0,lastCost=0;const limit=quantity===Infinity?Infinity:Math.max(1,Math.floor(Number(quantity)||1));while(bought<limit){const cost=workerCost(id);if(game.cash<cost){lastCost=cost;break;}game.cash-=cost;game.workers[id]=(game.workers[id]||0)+1;game.totalWorkers++;bought++;total+=cost;}if(!bought){showToast(w.name+" costs $"+formatNumber(lastCost||workerCost(id)));return;}showToast(w.name+" hired "+bought+" for $"+formatNumber(total));saveGame();}
 function toggleAutoSell(){if(!game.autoSellPurchased){if(game.cash<650){showToast("Auto-Sell costs $650");return;}game.cash-=650;game.autoSellPurchased=true;game.autoSell=true;game.autoSellProgressMs=0;selectedBuild=null;showToast("Auto-Sell purchased and enabled — sells every minute of active play");saveGame();return;}game.autoSell=!game.autoSell;game.autoSellProgressMs=0;showToast(game.autoSell?"Auto-Sell activated":"Auto-Sell paused");saveGame();}
