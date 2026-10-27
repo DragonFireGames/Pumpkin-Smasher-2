@@ -363,7 +363,7 @@ function pcClick(){pcPumpkinPressedAt=millis();const lucky=Math.random()<.001;pc
 function pcSell(){pcSyncPumpkins();const n=Math.floor(pcState.pumpkins);if(n<=0){pcSay("No pumpkins to sell");return;}pcState.baseStored=0;pcVaults().forEach(v=>v.stored=0);pcState.pumpkins=0;const earned=n*pcCandyMult("sell");pcState.cash+=earned;pcState.totalSold+=n;pcSay("Sold "+pcFmt(n)+" pumpkins for $"+pcFmt(earned));pcSave();}
 function pcCandyPurchaseTier(){return (pcState.activeCandies||[]).filter(v=>v&&v.expiresAt>Date.now()).length;}
 function pcCandyPrice(tier=pcCandyPurchaseTier()){tier=Math.max(0,Math.floor(Number(tier)||0));return Math.pow(10,3*Math.pow(2,tier));}
-function pcCandyPriceLabel(){const tier=pcCandyPurchaseTier(),exponent=3*Math.pow(2,tier);return exponent<=12?Math.pow(10,exponent).toLocaleString("en-US"):"1e"+exponent;}
+function pcCandyPriceLabel(){const tier=pcCandyPurchaseTier(),price=pcCandyPrice(tier),exponent=3*Math.pow(2,tier);return exponent<=12?pcFmt(price):"1e"+exponent;}
 function pcRandomCandy(){return PC_CANDIES[Math.floor(Math.random()*PC_CANDIES.length)];}
 function pcOpenCandy(source,candy){pcCandyOpening={source,candy:candy||pcRandomCandy(),started:millis(),activated:false};pcToast="";}
 function pcDailyCandy(){if(pcCandyOpening)return;if(pcClaimed){pcSay("Daily candy already claimed");return;}pcClaimed=true;try{localStorage.setItem(PC_DAILY,pcToday());}catch(e){}const reward=50+Math.min(100,pcState.prestige*10);pcState.cash+=reward;pcDepositGeneral(10);pcOpenCandy("daily");pcSave();}
