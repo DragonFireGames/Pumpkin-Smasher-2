@@ -243,15 +243,22 @@ function pcGridCellAt(L){
  if(c<0||c>=pcState.farmCols||r<0||r>=pcState.farmRows||ux%step>=L.tile||uy%step>=L.tile)return null;
  return {r,c};
 }
+function pcMultiplierBlobEdgeCells(startRow,startCol){
+ const key=(r,c)=>r+","+c,isMult=o=>!!o&&(o.kind==="multiplier"||o.kind==="shield"),queue=[[startRow,startCol]],cluster=new Set(),edge=new Map(),dirs=[[-1,0],[1,0],[0,-1],[0,1]];
+ while(queue.length){const [r,c]=queue.pop(),k=key(r,c);if(cluster.has(k)||r<0||c<0||r>=pcState.farmRows||c>=pcState.farmCols||!isMult(pcState.farm[r]&&pcState.farm[r][c]))continue;cluster.add(k);dirs.forEach(([dr,dc])=>{const nr=r+dr,nc=c+dc;if(nr>=0&&nc>=0&&nr<pcState.farmRows&&nc<pcState.farmCols&&isMult(pcState.farm[nr]&&pcState.farm[nr][nc])&&!cluster.has(key(nr,nc)))queue.push([nr,nc]);});}
+ cluster.forEach(k=>{const [r,c]=k.split(",").map(Number);dirs.forEach(([dr,dc])=>{const nr=r+dr,nc=c+dc;if(nr<0||nc<0||nr>=pcState.farmRows||nc>=pcState.farmCols)return;if(isMult(pcState.farm[nr]&&pcState.farm[nr][nc]))return;edge.set(key(nr,nc),{r:nr,c:nc,center:false});});});
+ return [...edge.values()];
+}
 function pcDrawGridEffectPreview(L){
  const cell=pcGridCellAt(L);if(!cell)return;
- const selected=pcSelected&&PC_BUILDS.find(v=>v.id===pcSelected);
+ const hovered=pcState.farm[cell.r]&&pcState.farm[cell.r][cell.c],hoveredMultiplier=!!hovered&&(hovered.kind==="multiplier"||hovered.kind==="shield"),selected=pcSelected&&PC_BUILDS.find(v=>v.id===pcSelected);
  let kind=null,ar=cell.r,ac=cell.c;
- if(selected&&(selected.kind==="multiplier"||selected.kind==="vault"))kind=selected.kind;
- else{const hovered=pcState.farm[cell.r]&&pcState.farm[cell.r][cell.c];if(hovered&&(hovered.kind==="multiplier"||hovered.kind==="shield"||hovered.kind==="vault")){kind=hovered.kind==="shield"?"multiplier":hovered.kind;ar=Number.isFinite(hovered.row)?hovered.row:cell.r;ac=Number.isFinite(hovered.col)?hovered.col:cell.c;}}
+ if(hoveredMultiplier){kind="multiplier";ar=Number.isFinite(hovered.row)?hovered.row:cell.r;ac=Number.isFinite(hovered.col)?hovered.col:cell.c;}
+ else if(selected&&(selected.kind==="multiplier"||selected.kind==="vault"))kind=selected.kind;
+ else if(hovered&&hovered.kind==="vault"){kind="vault";ar=Number.isFinite(hovered.row)?hovered.row:cell.r;ac=Number.isFinite(hovered.col)?hovered.col:cell.c;}
  if(!kind)return;
  const isMultiplier=kind==="multiplier"||kind==="shield",border=isMultiplier?"#c58aff":"#54e8cf",cells=[];
- if(isMultiplier){[[-1,0],[1,0],[0,-1],[0,1]].forEach(([dr,dc])=>{const r=ar+dr,c=ac+dc;if(r>=0&&r<pcState.farmRows&&c>=0&&c<pcState.farmCols)cells.push({r,c,center:false});});}
+ if(isMultiplier){if(hoveredMultiplier)cells.push(...pcMultiplierBlobEdgeCells(ar,ac));else [[-1,0],[1,0],[0,-1],[0,1]].forEach(([dr,dc])=>{const r=ar+dr,c=ac+dc;if(r>=0&&r<pcState.farmRows&&c>=0&&c<pcState.farmCols){const o=pcState.farm[r]&&pcState.farm[r][c];if(!o||(o.kind!=="multiplier"&&o.kind!=="shield"))cells.push({r,c,center:false});}});}
  else for(let r=Math.max(0,ar-1);r<=Math.min(pcState.farmRows-1,ar+1);r++)for(let c=Math.max(0,ac-1);c<=Math.min(pcState.farmCols-1,ac+1);c++)cells.push({r,c,center:r===ar&&c===ac});
  noStroke();cells.forEach(({r,c,center})=>{const x=L.gridX+c*(L.tile+L.gap),y=L.gridTop+r*(L.tile+L.gap)-pcGridScroll;if(y+L.tile<L.gridTop||y>L.gridTop+L.view)return;if(isMultiplier)fill(174,90,255,76);else if(center)fill(35,220,190,35);else fill(35,220,190,78);rect(x,y,L.tile,L.tile);noFill();stroke(border);strokeWeight(center?2:1);rect(x+1,y+1,L.tile-2,L.tile-2);noStroke();});
 }
