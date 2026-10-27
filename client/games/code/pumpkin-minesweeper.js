@@ -10,7 +10,6 @@ const mineColor = "#451b16";
 const explosionFrameCount = 24;
 const explosionFrameDuration = 40;
 const targetFrameRate = 10;
-const spinDuration = 520;
 const difficulties = [
   { id: "small", label: "SMALL", cols: 9, rows: 9, mines: 10 },
   { id: "medium", label: "MEDIUM", cols: 12, rows: 12, mines: 22 },
@@ -68,7 +67,7 @@ function draw() {
     drawTitleScreen();
     return;
   }
-  if (gameState === "exploding" && millis() - explosionStartedAt >= spinDuration + explosionFrameCount * explosionFrameDuration) {
+  if (gameState === "exploding" && millis() - explosionStartedAt >= explosionFrameCount * explosionFrameDuration) {
     finishGameOver();
   }
   drawBoard();
@@ -415,20 +414,10 @@ function drawExplosionAnimation(elapsed) {
   const cellSize = boardLayout.cellSize;
   const centerX = boardLayout.x + explodedCell.col * cellSize + cellSize / 2;
   const centerY = boardLayout.y + explodedCell.row * cellSize + cellSize / 2;
-  if (elapsed < spinDuration) {
-    const progress = constrain(elapsed / spinDuration, 0, 1);
-    const size = cellSize * (1 + Math.sin(progress * PI) * 0.22);
-    push();
-    translate(centerX, centerY);
-    rotate(progress * TWO_PI * 3.5);
-    if (images.pumpkin && images.pumpkin.width > 0) image(images.pumpkin, 0, 0, size, size);
-    pop();
-    return;
-  }
   const sheet = images.explosion;
   if (!sheet || sheet.width <= 0 || sheet.height <= 0) return;
   const frameWidth = sheet.width / explosionFrameCount;
-  const frame = Math.min(explosionFrameCount - 1, Math.floor((elapsed - spinDuration) / explosionFrameDuration));
+  const frame = Math.min(explosionFrameCount - 1, Math.floor(elapsed / explosionFrameDuration));
   const displayWidth = Math.max(36, Math.min(66, cellSize * 2.4));
   const displayHeight = displayWidth * sheet.height / frameWidth;
   image(sheet, centerX, centerY, displayWidth, displayHeight, frame * frameWidth, 0, frameWidth, sheet.height);
