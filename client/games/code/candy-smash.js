@@ -21,6 +21,9 @@ const CS_WHITE = "#ffffff";
 const CS_CLEAR_DELAY = 170;
 const CS_FALL_DELAY = 390;
 const CS_PEPPERMINT_TIME_BONUS = 1;
+const CS_HINT_IDLE_MS = 5000;
+const CS_HINT_FLASH_MS = 1500;
+const CS_HINT_REPEAT_MS = 7000;
 
 const CS_CANDY_TYPES = [
   { id: "blue", name: "Blue Candy", path: "/assets/candies/blue-candy.png", weight: 1 },
@@ -81,6 +84,10 @@ let csEndWon = false;
 let csResultSummary = "";
 let csShuffleCount = 0;
 let csVisualSwap = null;
+let csLastActivityAt = 0;
+let csLastHintAt = 0;
+let csHintCells = [];
+let csHintStartedAt = 0;
 
 function preload() {
   for (let i = 0; i < CS_CANDY_TYPES.length; i++) {
@@ -213,6 +220,10 @@ function csStartGame(modeIndex) {
   csTimeLeft = csMode.seconds || 0;
   csStartedAt = millis();
   csLastTickAt = millis();
+  csLastActivityAt = millis();
+  csLastHintAt = 0;
+  csHintCells = [];
+  csHintStartedAt = 0;
   csSelected = null;
   csKeyboardFocus = { row: 3, col: 3 };
   csPendingMatches = [];
@@ -224,6 +235,13 @@ function csStartGame(modeIndex) {
   csShuffleCount = 0;
   csBoard = csCreateInitialBoard();
   csState = "playing";
+}
+
+function csRegisterActivity() {
+  csLastActivityAt = millis();
+  csLastHintAt = 0;
+  csHintCells = [];
+  csHintStartedAt = 0;
 }
 
 function csCreateCandy(id) {
@@ -428,6 +446,55 @@ function csBoardHasLegalMove(board) {
   return false;
 }
 
+function csFindBasicHint() {
+  for (let row = 0; row < CS_ROWS; row++) {
+    for (let col = 0; col < CS_COLS; col++) {
+      const from = { row, col };
+      const neighbors = [{ row, col: col + 1 }, { row: row + 1, col }];
+
+      for (let i = 0; i < neighbors.length; i++) {
+        const to = neighbors[i];
+        if (to.row >= CS_ROWS || to.col >= CS_COLS) continue;
+
+        const first = csBoard[from.row][from.col];
+        const second = csBoard[to.row][to.col];
+        if (!first || !second) continue;
+
+        const firstInfo = CS_CANDY_TYPES.find(item => item.id === first.type);
+        const secondInfo = CS_CANDY_TYPES.find(item => item.id === second.type);
+        if (!firstInfo || !secondInfo || firstInfo.special || secondInfo.special) continue;
+
+        csSwapBoardCandies(csBoard, from, to);
+        const matches = csFindMatches(csBoard);
+        let hint = null;
+
+        // Only suggest a clean three-candy line, not a bomb, wildcard, or larger combo.
+        if (matches.length === 3) {
+          const types = matches.map(cell => csBoard[cell.row][cell.col].type);
+          const matchInfo = CS_CANDY_TYPES.find(item => item.id === types[0]);
+          const includesSwap = matches.some(cell =>
+            (cell.row === from.row && cell.col === from.col) ||
+            (cell.row === to.row && cell.col === to.col)
+          );
+
+          if (matchInfo && !matchInfo.special &&
+              types.every(type => type === types[0]) && includesSwap) {
+            hint = {
+              cells: matches.map(cell => ({ row: cell.row, col: cell.col })),
+              from: { row: from.row, col: from.col },
+              to: { row: to.row, col: to.col }
+            };
+          }
+        }
+
+        csSwapBoardCandies(csBoard, from, to);
+        if (hint) return hint;
+      }
+    }
+  }
+  return null;
+}
+
 function csGetCellAt(x, y) {
   if (x < CS_BOARD_X || y < CS_BOARD_Y ||
       x >= CS_BOARD_X + CS_COLS * CS_CELL || y >= CS_BOARD_Y + CS_ROWS * CS_CELL) return null;
@@ -576,6 +643,7 @@ function csUpdateGame() {
     } else {
       csState = "playing";
       csCombo = 1;
+      csRegisterActivity();
       csAfterBoardSettles();
     }
   }
@@ -665,10 +733,52 @@ function csFinishGame(won, reason) {
 }
 
 function csDrawGame() {
+  csUpdateIdleHint();
   csDrawHud();
   csDrawBoard();
 
   if (csState === "clearing") csDrawClearHighlights();
+  csDrawIdleHint();
+}
+
+function csUpdateIdleHint() {
+  const now = millis();
+  if (csState !== "playing") {
+    csHintCells = [];
+    return;
+  }
+
+  if (csVisualSwap && now - csVisualSwap.startedAt < csVisualSwap.duration) return;
+  if (now - csLastActivityAt < CS_HINT_IDLE_MS) return;
+  if (csHintCells.length && now - csHintStartedAt < CS_HINT_FLASH_MS) return;
+
+  csHintCells = [];
+  if (csLastHintAt && now - csLastHintAt < CS_HINT_REPEAT_MS) return;
+
+  const hint = csFindBasicHint();
+  csLastHintAt = now;
+  if (hint) {
+    csHintCells = hint.cells;
+    csHintStartedAt = now;
+  }
+}
+
+function csDrawIdleHint() {
+  if (!csHintCells.length || csState !== "playing") return;
+
+  const elapsed = millis() - csHintStartedAt;
+  if (elapsed >= CS_HINT_FLASH_MS) return;
+  const pulse = 0.5 + 0.5 * Math.sin(elapsed / 85);
+
+  noFill();
+  stroke(255, 165, 0, 75 + pulse * 180);
+  strokeWeight(1.5 + pulse * 1.5);
+  for (let i = 0; i < csHintCells.length; i++) {
+    const cell = csHintCells[i];
+    const x = CS_BOARD_X + cell.col * CS_CELL;
+    const y = CS_BOARD_Y + cell.row * CS_CELL;
+    rect(x + 3, y + 3, CS_CELL - 6, CS_CELL - 6);
+  }
 }
 
 function csDrawHud() {
@@ -935,6 +1045,7 @@ function mousePressed(event) {
 
   if (csState !== "playing") return false;
   if (csVisualSwap && millis() - csVisualSwap.startedAt < csVisualSwap.duration) return false;
+  csRegisterActivity();
   const cell = csGetCellAt(mouseX, mouseY);
   if (!cell) return false;
 
@@ -992,6 +1103,7 @@ function keyPressed(event) {
   }
   if (csState !== "playing") return;
   if (csVisualSwap && millis() - csVisualSwap.startedAt < csVisualSwap.duration) return false;
+  csRegisterActivity();
 
   const directions = {
     ArrowUp: { row: -1, col: 0 },
