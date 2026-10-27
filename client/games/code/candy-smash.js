@@ -78,8 +78,6 @@ let csPhaseEndsAt = 0;
 let csCombo = 1;
 let csEndReason = "";
 let csEndWon = false;
-let csLastInvalidSwap = null;
-let csLastInvalidAt = 0;
 let csResultSummary = "";
 let csShuffleCount = 0;
 let csVisualSwap = null;
@@ -222,7 +220,6 @@ function csStartGame(modeIndex) {
   csEndReason = "";
   csEndWon = false;
   csResultSummary = "";
-  csLastInvalidSwap = null;
   csVisualSwap = null;
   csShuffleCount = 0;
   csBoard = csCreateInitialBoard();
@@ -447,7 +444,6 @@ function csTrySwap(from, to) {
   if (!first || !second) return false;
 
   csSelected = null;
-  csLastInvalidSwap = null;
 
   // Hot Tamale is a swap-triggered universal bomb. Two bombs clear the whole board;
   // otherwise the bomb clears every candy matching the other candy's type.
@@ -477,8 +473,14 @@ function csTrySwap(from, to) {
   const matches = csFindMatches(csBoard);
   if (matches.length === 0) {
     csSwapBoardCandies(csBoard, from, to);
-    csLastInvalidSwap = { from: { row: from.row, col: from.col }, to: { row: to.row, col: to.col } };
-    csLastInvalidAt = millis();
+    // Show the attempted swap, then animate both candies back to their original cells.
+    csVisualSwap = {
+      from: { row: from.row, col: from.col },
+      to: { row: to.row, col: to.col },
+      startedAt: millis(),
+      duration: 260,
+      invalid: true
+    };
     return false;
   }
 
@@ -486,7 +488,8 @@ function csTrySwap(from, to) {
     from: { row: from.row, col: from.col },
     to: { row: to.row, col: to.col },
     startedAt: millis(),
-    duration: 130
+    duration: 130,
+    invalid: false
   };
   csMovesLeft = csMode.moves === null ? csMovesLeft : csMovesLeft - 1;
   csKeyboardFocus = { row: to.row, col: to.col };
@@ -666,17 +669,6 @@ function csDrawGame() {
   csDrawBoard();
 
   if (csState === "clearing") csDrawClearHighlights();
-  if (csLastInvalidSwap && millis() - csLastInvalidAt < 180) {
-    noFill();
-    stroke("#ffa500");
-    strokeWeight(2);
-    const a = csLastInvalidSwap.from;
-    const b = csLastInvalidSwap.to;
-    rect(CS_BOARD_X + a.col * CS_CELL + 2, CS_BOARD_Y + a.row * CS_CELL + 2, CS_CELL - 4, CS_CELL - 4);
-    rect(CS_BOARD_X + b.col * CS_CELL + 2, CS_BOARD_Y + b.row * CS_CELL + 2, CS_CELL - 4, CS_CELL - 4);
-  } else if (csLastInvalidSwap) {
-    csLastInvalidSwap = null;
-  }
 }
 
 function csDrawHud() {
@@ -707,7 +699,7 @@ function csDrawHud() {
   fill(CS_WHITE);
   textStyle(NORMAL);
   textSize(9);
-  if (csMode.id === "fast") text("PEPPERMINT +5 SEC EACH", width - 8, 31);
+  if (csMode.id === "fast") text("PEPPERMINT +1 SEC EACH", width - 8, 31);
   else if (csMode.id === "puzzle") text("HOT TAMALES ARE COMMON", width - 8, 31);
   else text("MATCH 3 OR MORE", width - 8, 31);
 }
@@ -732,6 +724,9 @@ function csDrawBoard() {
       const isSwapCell = csVisualSwap && millis() - csVisualSwap.startedAt < csVisualSwap.duration &&
         ((csVisualSwap.from.row === row && csVisualSwap.from.col === col) ||
          (csVisualSwap.to.row === row && csVisualSwap.to.col === col));
+      const isSelected = csSelected && csSelected.row === row && csSelected.col === col;
+      const isFocus = csKeyboardFocus && csKeyboardFocus.row === row && csKeyboardFocus.col === col &&
+        csState !== "gameover";
       if (candy && !isSwapCell) {
         const centerX = x + CS_CELL / 2;
         let centerY = y + CS_CELL / 2;
@@ -741,17 +736,11 @@ function csDrawBoard() {
           centerY = lerp(candy.fall.fromY, centerY, eased);
           if (t >= 1) candy.fall = null;
         }
-        csDrawCandy(candy, centerX, centerY, CS_CELL);
+        csDrawCandy(candy, centerX, centerY, CS_CELL * (isSelected ? 1.12 : 1));
       }
 
-      const isSelected = csSelected && csSelected.row === row && csSelected.col === col;
-      const isFocus = csKeyboardFocus && csKeyboardFocus.row === row && csKeyboardFocus.col === col &&
-        csState !== "gameover";
       if (isSelected) {
-        noFill();
-        stroke(CS_ORANGE);
-        strokeWeight(3);
-        rect(x + 2, y + 2, CS_CELL - 4, CS_CELL - 4);
+        csDrawSelectionCorners(x, y, CS_CELL);
       } else if (isFocus && csState === "playing" && !csSelected) {
         noFill();
         stroke("#ffffff");
@@ -771,16 +760,61 @@ function csDrawVisualSwap() {
     csVisualSwap = null;
     return;
   }
-  const eased = 1 - Math.pow(1 - t, 3);
+
   const ax = CS_BOARD_X + swap.from.col * CS_CELL + CS_CELL / 2;
   const ay = CS_BOARD_Y + swap.from.row * CS_CELL + CS_CELL / 2;
   const bx = CS_BOARD_X + swap.to.col * CS_CELL + CS_CELL / 2;
   const by = CS_BOARD_Y + swap.to.row * CS_CELL + CS_CELL / 2;
-  // Board values have already swapped; animate each new value from its old location.
+
+  if (swap.invalid) {
+    // Move toward the attempted destination, then spring back to the original cells.
+    const turnAt = 0.54;
+    let progress;
+    if (t < turnAt) {
+      const outbound = t / turnAt;
+      progress = 1 - Math.pow(1 - outbound, 3);
+    } else {
+      const returning = (t - turnAt) / (1 - turnAt);
+      const easedBack = 1 - Math.pow(1 - returning, 3);
+      // A tiny damped wobble sells the bounce without making the candies jitter.
+      progress = 1 - easedBack + Math.sin(returning * Math.PI * 2) * 0.07 * (1 - returning);
+    }
+
+    // The board is already back in its original order during an invalid swap.
+    const candyAtFrom = csBoard[swap.from.row][swap.from.col];
+    const candyAtTo = csBoard[swap.to.row][swap.to.col];
+    if (candyAtFrom) csDrawCandy(candyAtFrom, lerp(ax, bx, progress), lerp(ay, by, progress), CS_CELL);
+    if (candyAtTo) csDrawCandy(candyAtTo, lerp(bx, ax, progress), lerp(by, ay, progress), CS_CELL);
+    return;
+  }
+
+  const eased = 1 - Math.pow(1 - t, 3);
+  // The board values have already swapped; animate each new value from its old location.
   const candyAtFrom = csBoard[swap.from.row][swap.from.col];
   const candyAtTo = csBoard[swap.to.row][swap.to.col];
   if (candyAtFrom) csDrawCandy(candyAtFrom, lerp(bx, ax, eased), lerp(by, ay, eased), CS_CELL);
   if (candyAtTo) csDrawCandy(candyAtTo, lerp(ax, bx, eased), lerp(ay, by, eased), CS_CELL);
+}
+
+function csDrawSelectionCorners(x, y, cellSize) {
+  const inset = 3;
+  const length = 9;
+  const left = x + inset;
+  const right = x + cellSize - inset;
+  const top = y + inset;
+  const bottom = y + cellSize - inset;
+
+  noFill();
+  stroke(CS_ORANGE);
+  strokeWeight(3);
+  line(left, top, left + length, top);
+  line(left, top, left, top + length);
+  line(right, top, right - length, top);
+  line(right, top, right, top + length);
+  line(left, bottom, left + length, bottom);
+  line(left, bottom, left, bottom - length);
+  line(right, bottom, right - length, bottom);
+  line(right, bottom, right, bottom - length);
 }
 
 function csDrawCandy(candy, x, y, cellSize) {
@@ -900,6 +934,7 @@ function mousePressed(event) {
   }
 
   if (csState !== "playing") return false;
+  if (csVisualSwap && millis() - csVisualSwap.startedAt < csVisualSwap.duration) return false;
   const cell = csGetCellAt(mouseX, mouseY);
   if (!cell) return false;
 
@@ -956,6 +991,7 @@ function keyPressed(event) {
     return false;
   }
   if (csState !== "playing") return;
+  if (csVisualSwap && millis() - csVisualSwap.startedAt < csVisualSwap.duration) return false;
 
   const directions = {
     ArrowUp: { row: -1, col: 0 },
