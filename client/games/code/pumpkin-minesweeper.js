@@ -8,8 +8,8 @@ const revealedColor = "#2b5f1b";
 const revealedBorder = "#1b4b10";
 const mineColor = "#451b16";
 const explosionFrameCount = 24;
-const explosionFrameDuration = 40;
-const resultRevealDuration = 1000;
+const explosionFrameDuration = 50;
+const resultRevealDuration = 2000;
 const targetFrameRate = 10;
 const difficulties = [
   { id: "small", label: "SMALL", cols: 9, rows: 9, mines: 10 },
@@ -196,6 +196,13 @@ function drawCell(cell) {
   const y = layout.y + cell.row * layout.cellSize;
   const size = layout.cellSize;
   const hovered = gameState === "playing" && mouseX >= x && mouseX < x + size && mouseY >= y && mouseY < y + size;
+  if (explodedCell && explodedCell.row === cell.row && explodedCell.col === cell.col) {
+    fill(mineColor);
+    stroke(revealedBorder);
+    strokeWeight(1);
+    rect(x, y, size, size);
+    return;
+  }
   if (cell.revealed && cell.mine) {
     fill(mineColor);
     stroke(revealedBorder);
@@ -225,14 +232,12 @@ function drawCell(cell) {
   stroke(hovered ? orange : "#28541b");
   strokeWeight(hovered ? 1.5 : 1);
   rect(x, y, size, size);
-  const isExplodingCell = gameState === "exploding" && explodedCell && explodedCell.row === cell.row && explodedCell.col === cell.col;
-  if (!isExplodingCell && images.pumpkin && images.pumpkin.width > 0) {
+  if (images.pumpkin && images.pumpkin.width > 0) {
     noStroke();
     const pumpkinHeight = size * 46 / 50;
     const pumpkinWidth = images.pumpkin.width * pumpkinHeight / images.pumpkin.height;
     image(images.pumpkin, x + size / 2, y + size / 2, pumpkinWidth, pumpkinHeight);
   }
-
 }
 
 function drawTargetMarker(x, y, size) {
