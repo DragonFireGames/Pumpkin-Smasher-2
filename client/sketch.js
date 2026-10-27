@@ -40,6 +40,7 @@ socket.on("connect", () => {
   }
 });
 socket.on("disconnect", async () => {
+  closeArcade();
   console.log("Disconnected");
   for (var i = 0; i < 15; i++) {
     socket.connect();
@@ -2685,7 +2686,8 @@ function playArcadeGame() {
   document.getElementById("arcadeFrame").src = game.source;
 }
 function setDisplay(d, sd) {
-  if (d == "game" || d == "pmgame" || (d == "loading" && sd == "game")) closeArcade();
+  // The arcade is only valid in the lobby; close it on every transition away.
+  if (d != "lobby") closeArcade();
   display = d;
   subdisplay = sd ?? "";
   DiscordWidget.style.visibility = "hidden";
