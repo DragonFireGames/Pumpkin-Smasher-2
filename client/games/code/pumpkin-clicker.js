@@ -8,13 +8,13 @@ const PC_GENS=[
  {id:"diamond",name:"Diamond Pumpkin",cost:2200,rate:24,path:"/assets/pumpkins/diamond_pumpkin.png"}
 ];
 const PC_WORKERS=[
- {id:"monster",name:"Monster",cost:25,desc:"+0.10/sec per gen",path:"/assets/entities/monster/attack.png",frames:8,fps:12},
- {id:"ghost",name:"Ghost",cost:100,desc:"+5% all production",path:"/assets/entities/ghost/attack.png",frames:8,fps:12},
- {id:"speeder",name:"Speeder",cost:175,desc:"+10% all production",path:"/assets/entities/speeder/attack.png",frames:8,fps:16},
- {id:"rusher",name:"Rusher",cost:300,desc:"Burst every 10 seconds",path:"/assets/entities/rusher/idle.png",frames:14,fps:12},
- {id:"brute",name:"Brute",cost:450,desc:"+0.55/sec per gen",path:"/assets/entities/brute/attack.png",frames:8,fps:12},
- {id:"wizard",name:"Wizard",cost:850,desc:"+18% all production",path:"/assets/entities/wizard/idle.png",frames:14,fps:12},
- {id:"debuffer",name:"Debuffer",cost:1600,desc:"+8% worker bonuses",path:"/assets/entities/debuffer/idle.png",frames:14,fps:12}
+ {id:"monster",name:"Monster",cost:100,desc:"+0.10/sec per gen",path:"/assets/entities/monster/attack.png",frames:8,fps:12},
+ {id:"ghost",name:"Ghost",cost:400,desc:"+5% all production",path:"/assets/entities/ghost/attack.png",frames:8,fps:12},
+ {id:"speeder",name:"Speeder",cost:700,desc:"+10% all production",path:"/assets/entities/speeder/attack.png",frames:8,fps:16},
+ {id:"rusher",name:"Rusher",cost:1200,desc:"Burst every 10 seconds",path:"/assets/entities/rusher/idle.png",frames:14,fps:12},
+ {id:"brute",name:"Brute",cost:1800,desc:"+0.55/sec per gen",path:"/assets/entities/brute/attack.png",frames:8,fps:12},
+ {id:"wizard",name:"Wizard",cost:3400,desc:"+18% all production",path:"/assets/entities/wizard/idle.png",frames:14,fps:12},
+ {id:"debuffer",name:"Debuffer",cost:6400,desc:"+8% worker bonuses",path:"/assets/entities/debuffer/idle.png",frames:14,fps:12}
 ];
 const PC_BUILDS=[
  {id:"g0",name:"Green Pumpkin",cost:10,desc:"0.20 pumpkins/sec",kind:"generator",tier:0},
@@ -327,7 +327,7 @@ function pcMerge(){
   const m={kind:"generator",tier:a.tier,row:r,col:c,mega:true,ultra:false};pcState.farm[r][c]=m;pcState.farm[r][c+1]=m;pcState.farm[r+1][c]=m;pcState.farm[r+1][c+1]=m;pcSay("Four pumpkins became a MEGA generator!");
  }
 }
-function pcWorkerCost(id){const w=PC_WORKERS.find(v=>v.id===id);if(!w)return Infinity;return Math.ceil(w.cost*Math.pow(1.2,Math.max(0,pcState.workers[id]||0)));}
+function pcWorkerCost(id){const w=PC_WORKERS.find(v=>v.id===id);if(!w)return Infinity;return Math.ceil(w.cost*Math.pow(1.35,Math.max(0,pcState.workers[id]||0)));}
 function pcBuyWorker(id,quantity=1){const w=PC_WORKERS.find(v=>v.id===id);if(!w)return;let bought=0,total=0,lastCost=0;const limit=Math.max(1,Math.min(10,Math.floor(Number(quantity)||1)));while(bought<limit){const cost=pcWorkerCost(id);if(pcState.cash<cost){lastCost=cost;break;}pcState.cash-=cost;pcState.workers[id]=(pcState.workers[id]||0)+1;pcState.totalWorkers++;bought++;total+=cost;}if(!bought){pcSay(w.name+" costs $"+pcFmt(lastCost||pcWorkerCost(id)));return;}pcSay(w.name+" hired "+bought+" for $"+pcFmt(total));pcSave();}
 function pcToggleAuto(){if(!pcState.autoSellPurchased){if(pcState.cash<650){pcSay("Auto-Sell costs $650");return;}pcState.cash-=650;pcState.autoSellPurchased=true;pcState.autoSell=true;pcState.autoSellProgressMs=0;pcSelected=null;pcSay("Auto-Sell purchased and enabled — sells every minute of active play");pcSave();return;}pcState.autoSell=!pcState.autoSell;pcState.autoSellProgressMs=0;pcSay(pcState.autoSell?"Auto-Sell activated":"Auto-Sell paused");pcSave();}
 function pcClick(){pcPumpkinPressedAt=millis();const lucky=Math.random()<.001;pcSyncPumpkins();if(!pcState.autoSell&&pcAvailableStorage()<=0){if(lucky)pcOpenCandy("drop",pcRandomCandy());else pcSay("Storage full — sell pumpkins or add a vault");pcSave();return;}pcState.totalClicks++;pcState.totalHarvested++;if(pcState.autoSell){const earned=1+pcClickCashBonus();pcState.cash+=earned;pcSay("+$"+earned);}else{const n=pcClickPumpkinYield();const added=pcDepositGeneral(n);pcSay("+"+added+" pumpkins");const cashBonus=pcClickCashBonus();if(cashBonus>0){pcState.cash+=cashBonus;pcSay("+$"+cashBonus+" click bonus");}}if(pcHasCandy("chocolate")){pcState.cash+=5;pcSay("+$5 candy bonus");}if(lucky)pcOpenCandy("drop",pcRandomCandy());pcSave();}
@@ -364,7 +364,7 @@ function pcItemHoverInfo(it){
    wizard:["Each Wizard adds 18% total production.","Bonuses stack multiplicatively with other global workers."],
    debuffer:["Each Debuffer increases other worker bonuses by 8%.","This strengthens additive Monster/Brute bonuses and other worker multipliers."]
   };
-  return {id:"worker:"+d.id,title:d.name,kind:"worker",summary:d.desc,rules:["Next hire: $"+pcFmt(pcWorkerCost(d.id))+". Owned: "+count+".","Each additional worker of this type costs 20% more than the previous price.","Shift-click to hire up to 10, stopping when you cannot afford the next hire.",...(rules[d.id]||[]),"Workers never occupy farm tiles and have no recurring wages."]};
+  return {id:"worker:"+d.id,title:d.name,kind:"worker",summary:d.desc,rules:["Next hire: $"+pcFmt(pcWorkerCost(d.id))+". Owned: "+count+".","Each additional worker of this type costs 35% more than the previous price.","Shift-click to hire up to 10, stopping when you cannot afford the next hire.",...(rules[d.id]||[]),"Workers never occupy farm tiles and have no recurring wages."]};
  }
  if(it.type==="build"||it.type==="autosell"){
   if(d.kind==="generator")return {id:"build:"+d.id,title:d.name,kind:"build",summary:"Produces "+d.desc+".",rules:["Next cost: $"+pcFmt(pcBuildCost(d))+". Each generator increases the price of its own tier and all cheaper tiers by 1.5×; removing one lowers those prices. Choose this, then click an empty farm tile.","Click an existing generator to upgrade it. Higher-tier prices include the previous tier price plus that tier’s scaled base cost.","Four matching generators in a 2×2 square form a Mega; nine matching generators in a 3×3 square form an Ultra."]};
