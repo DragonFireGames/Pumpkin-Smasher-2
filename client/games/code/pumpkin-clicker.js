@@ -2590,7 +2590,7 @@ function drawCandyReveal(){
  drawCandyConfetti();
 }
 function prestigeCost() {
-  return Math.floor(10000000000 * Math.pow(4, game.prestige));
+  return Math.floor(1000000000 * Math.pow(5, game.prestige));
 }
 function performPrestige(){
   const cost=prestigeCost();
