@@ -506,7 +506,7 @@ function pcFinishHover(){
 function pcDrawHoverPanel(info){
  const panelW=Math.min(270,width-20),pad=9,innerW=panelW-pad*2,maxH=Math.max(40,height-20);
  const wrap=(value,size,maxWidth=innerW)=>{
-  const words=String(value||"").split(/\\s+/).filter(Boolean),out=[];let line="";
+  const words=String(value||"").split(/\s+/).filter(Boolean),out=[];let line="";
   textSize(size);
   for(const word of words){const next=line?line+" "+word:word;if(line&&textWidth(next)>maxWidth){out.push(line);line=word;}else line=next;}
   if(line)out.push(line);
