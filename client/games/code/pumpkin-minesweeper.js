@@ -357,7 +357,6 @@ function revealCell(row, col) {
   if (cell.mine) {
     explodedCell = cell;
     explosionStartedAt = millis();
-    revealAllMines();
     gameState = "exploding";
     return;
   }
@@ -404,6 +403,7 @@ function revealAllMines() {
 
 function finishGameOver() {
   gameEndedAt = millis();
+  revealAllMines();
   resultRevealStartedAt = millis();
   gameState = "gameoverPending";
 }
@@ -423,7 +423,7 @@ function drawExplosionAnimation(elapsed) {
   if (!sheet || sheet.width <= 0 || sheet.height <= 0) return;
   const frameWidth = sheet.width / explosionFrameCount;
   const frame = Math.min(explosionFrameCount - 1, Math.floor(elapsed / explosionFrameDuration));
-  const displayWidth = Math.max(36, Math.min(66, cellSize * 2.4));
+  const displayWidth = cellSize * (46 / 50) * 3;
   const displayHeight = displayWidth * sheet.height / frameWidth;
   image(sheet, centerX, centerY, displayWidth, displayHeight, frame * frameWidth, 0, frameWidth, sheet.height);
 }
