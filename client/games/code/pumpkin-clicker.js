@@ -492,13 +492,24 @@ function seedVines() {
   game.vinesSeeded = true;
 }
 
-function saveGame(){if(!game)return;game.lastSavedAt=Date.now();try{localStorage.setItem(saveKey,JSON.stringify(game));}catch(e){}}
+function saveGame() {
+  if (!game) return;
+  game.lastSavedAt = Date.now();
+
+  try {
+    localStorage.setItem(saveKey, JSON.stringify(game));
+  } catch (e) {}
+}
 function todayKey(){
   const d=new Date();
   return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
   }
-function markActivity(){if(typeof document!=="undefined"&&document.visibilityState!=="hidden")lastActivity=Date.now();}
-function userIsActive(){return typeof document!=="undefined"&&document.visibilityState==="visible"&&document.hasFocus();}
+function markActivity() {
+  if (typeof document !== "undefined" && document.visibilityState !== "hidden") lastActivity = Date.now();
+}
+function userIsActive() {
+  return typeof document !== "undefined" && document.visibilityState === "visible" && document.hasFocus();
+}
 function applyOfflineProgress(){
  const secs=Math.max(0,Math.min(2592000,(Date.now()-(game.lastSavedAt||Date.now()))/1000));if(secs<1)return;
  forEachUniqueBuilding(o=>{if(o.kind==="generator")advanceGenerator(o,generatorRate(o)*secs);});
@@ -808,7 +819,15 @@ function productionRate() {
   return total;
 }
 
-function productionRate(){let total=0;forEachUniqueBuilding(o=>{if(o.kind==="generator")total+=generatorRate(o);});return total;}
+function productionRate() {
+  let total = 0;
+
+  forEachUniqueBuilding(o => {
+    if (o.kind === "generator") total += generatorRate(o);
+  });
+
+  return total;
+}
 function updateGame() {
   const now = millis();
   const dt = Math.max(0, Math.min(0.25, (now - lastTick) / 1000));
@@ -1909,7 +1928,9 @@ function drawSprite(id,x,y,s,frames=8,fps=12){
     fill(id==="ghost"?"#b6cce0":id==="brute"?"#9d5b45":id==="wizard"?"#6a65bd":orange);
     ellipse(x,y,s*.65,s*.75);
     }}
-function vineClearCost(){return Math.ceil(50*Math.pow(10,Math.max(0,Math.floor(Number(game.vinesCleared)||0))));}
+function vineClearCost() {
+  return Math.ceil(50 * Math.pow(10, Math.max(0, Math.floor(Number(game.vinesCleared) || 0))));
+}
 function placedCount(kind){
   const seen=new Set();
   (game.farm||[]).forEach(row=>(row||[]).forEach(o=>{if(o&&o.kind===kind)seen.add(o);
@@ -2443,14 +2464,24 @@ function sellPumpkins(){
   showToast("Sold "+formatNumber(n)+" pumpkins for $"+formatNumber(earned));
   saveGame();
   }
-function candyPurchaseTier(){return (game.activeCandies||[]).filter(v=>v&&v.expiresAt>Date.now()).length;}
-function candyPrice(tier=candyPurchaseTier()){tier=Math.max(0,Math.floor(Number(tier)||0));return Math.pow(10,3*Math.pow(2,tier));}
+function candyPurchaseTier() {
+  return (game.activeCandies || []).filter(v => v && v.expiresAt > Date.now()).length;
+}
+function candyPrice(tier = candyPurchaseTier()) {
+  tier = Math.max(0, Math.floor(Number(tier) || 0));
+  return Math.pow(10, 3 * Math.pow(2, tier));
+}
 function candyPriceLabel(){
   const tier=candyPurchaseTier(),price=candyPrice(tier),exponent=3*Math.pow(2,tier);
   return exponent<=12?formatNumber(price):"1e"+exponent;
   }
-function randomCandy(){return candies[Math.floor(Math.random()*candies.length)];}
-function openCandy(source,candy){candyOpening={source,candy:candy||randomCandy(),started:millis(),activated:false};toastMessage="";}
+function randomCandy() {
+  return candies[Math.floor(Math.random() * candies.length)];
+}
+function openCandy(source, candy) {
+  candyOpening = { source, candy: candy || randomCandy(), started: millis(), activated: false };
+  toastMessage = "";
+}
 function claimDailyCandy(){
   if(candyOpening)return;
   if(dailyClaimed){showToast("Daily candy already claimed");
@@ -2558,7 +2589,9 @@ function drawCandyReveal(){
    },true);
  drawCandyConfetti();
 }
-function prestigeCost(){return Math.floor(10000000000*Math.pow(4,game.prestige));}
+function prestigeCost() {
+  return Math.floor(10000000000 * Math.pow(4, game.prestige));
+}
 function performPrestige(){
   const cost=prestigeCost();
   if(game.cash<cost){showToast("Need $"+formatNumber(cost)+" to prestige");
@@ -2678,7 +2711,10 @@ function drawHoverPanel(info){
  ruleLines.forEach(line=>{text(line,x+pad,ly);ly+=ruleLineH;});
 }
 
-function showToast(s){toastMessage=s;toastEnd=millis()+2500;}
+function showToast(s) {
+  toastMessage = s;
+  toastEnd = millis() + 2500;
+}
 function drawToast(L){
   const y=L.H-23,w=Math.min(L.W-20,Math.max(150,toastMessage.length*6.5+26)),x=(L.W-w)/2;
   fill(black);
@@ -2691,8 +2727,12 @@ function drawToast(L){
   textSize(10);
   text(toastMessage,x+w/2,y+9.5);
   }
-function isShiftClick(){return shiftHeld||keyIsDown(16);}
-function purchaseLimit(){return isShiftClick()?10:clickBuyMode==="MAX"?Infinity:Math.max(1,Math.floor(Number(clickBuyMode)||1));}
+function isShiftClick() {
+  return shiftHeld || keyIsDown(16);
+}
+function purchaseLimit() {
+  return isShiftClick() ? 10 : clickBuyMode === "MAX" ? Infinity : Math.max(1, Math.floor(Number(clickBuyMode) || 1));
+}
 function mousePressed(event){
   shiftHeld=!!(event&&event.shiftKey)||keyIsDown(16);
   for(let i=targets.length-1;i>=0;i--){const t=targets[i];
