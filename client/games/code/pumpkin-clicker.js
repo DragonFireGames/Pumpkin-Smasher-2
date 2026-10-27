@@ -402,7 +402,7 @@ function pcFinishHover(){
  if(!found||!found.hover){pcHoverId="";pcHoverTarget=null;return;}
  if(pcHoverId!==found.id){pcHoverId=found.id;pcHoverSince=millis();}
  pcHoverTarget=found;
- if(found.hover.id!=="main-pumpkin"){noStroke();fill(255,165,0,22);rect(found.x,found.y,found.w,found.h);stroke(PC_ORANGE);strokeWeight(found.hover.kind==="tile"?2:1.5);noFill();rect(found.x,found.y,found.w,found.h);}
+ if(found.hover.id!=="main-pumpkin"){noStroke();fill(255,165,0,22);rect(found.x,found.y,found.w,found.h);if(found.hover.kind==="tile"){stroke(PC_ORANGE);strokeWeight(2);noFill();rect(found.x,found.y,found.w,found.h);}}
  if(millis()-pcHoverSince>=480)pcDrawHoverPanel(found.hover);
 }
 function pcDrawHoverPanel(info){
