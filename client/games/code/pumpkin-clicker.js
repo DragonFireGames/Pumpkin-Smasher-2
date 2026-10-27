@@ -203,7 +203,7 @@ function pcGrid(L){
    if(!o.mega||(r===o.row&&c===o.col)){const s=o.mega?t*1.9:t*.78;pcDrawGrowGenerator(o.tier,x+t/2+(o.mega?t/2:0),y+t/2+(o.mega?t/2:0),s,false);if(o.mega){noFill();stroke(PC_ORANGE);strokeWeight(2);rect(x,y,t*2+g,t*2+g);noStroke();fill(PC_BLACK);rect(x+t*.08,y+t*.08,t*.65,t*.3);fill(PC_ORANGE);textAlign(CENTER,CENTER);textSize(Math.max(8,t*.2));text("MEGA",x+t*.4,y+t*.23);}}
    if(!o.mega){fill(PC_WHITE);noStroke();textAlign(CENTER,BOTTOM);textSize(Math.max(7,t*.17));text(pcFmt(PC_GENS[o.tier].rate)+"/s",x+t/2,y+t-1);}
   }else if(o.kind==="multiplier"||o.kind==="shield"){const si=pcImgs.multiplier;if(si&&si.width)pcSheet(si,x+t/2,y+t/2,t*.92,3,Math.floor(frameCount/7)%3);else pcDrawShieldFallback(x+t/2,y+t/2,t);}
-  else if(o.kind==="vault"){pcDrawGrowGenerator(1,x+t/2,y+t/2,t*.88,false);}
+  else if(o.kind==="vault"){const pumpkin=pcImgs.objective||pcImgs.regular;if(pumpkin&&pumpkin.width)pcSheet(pumpkin,x+t/2,y+t/2,t*.96,1);else pcGen(1,x+t/2,y+t/2,t*.96);}
   pcTarget(x,y,t,t,()=>pcTile(r,c),false,pcFarmHoverInfo(o,r,c));
  }
  drawingContext.restore();
