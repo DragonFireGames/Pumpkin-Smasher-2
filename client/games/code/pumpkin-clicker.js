@@ -255,6 +255,7 @@ function pcGrid(L){
  pcDrawGridEffectPreview(L);
 
 
+  drawingContext.restore();
  if(L.content>L.view){fill("#35492c");noStroke();rect(L.mainX+L.mainW-3,clipY,2,L.view);fill(PC_ORANGE);rect(L.mainX+L.mainW-3,clipY+pcGridScroll/Math.max(1,L.content)*L.view,2,Math.max(8,L.view*L.view/L.content));}
 }
 function pcGridCellAt(L){
