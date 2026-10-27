@@ -145,7 +145,7 @@ function pcTop(L){
 function pcSidebar(L){
  const x=4,y=L.top+4,w=L.side+4,h=L.H-y-4;fill(PC_BLACK);stroke(PC_ORANGE);strokeWeight(1.5);rect(x,y,w,h);
  const tabs=[["workers","WORK"],["build","BUILD"],["candy","MISC"]],th=Math.max(20,Math.min(28,(L.H-L.top)*.075)),tw=(w-8)/3,ty=y+4;
- tabs.forEach((t,i)=>{const tx=x+4+i*tw,hovered=mouseX>=tx&&mouseX<=tx+tw-2&&mouseY>=ty&&mouseY<=ty+th;fill(pcTab===t[0]?PC_ORANGE:hovered?(mouseIsPressed?"#2b2213":"#3a2b12"):"#17210f");stroke(pcTab===t[0]||hovered?PC_ORANGE:"#50623f");strokeWeight(pcTab===t[0]||hovered?2:1);rect(tx,ty,tw-2,th);noStroke();fill(pcTab===t[0]||hovered?PC_BLACK:PC_WHITE);textAlign(CENTER,CENTER);textSize(Math.max(7,Math.min(10,w*.075)));text(t[1],tx+(tw-2)/2,ty+th/2);pcTarget(tx,ty,tw-2,th,()=>{pcTab=t[0];pcSideScroll=0;});});
+ tabs.forEach((t,i)=>{const tx=x+4+i*tw,hovered=mouseX>=tx&&mouseX<=tx+tw-2&&mouseY>=ty&&mouseY<=ty+th;fill(pcTab===t[0]?PC_ORANGE:hovered?(mouseIsPressed?"#2b2213":"#3a2b12"):"#17210f");stroke(pcTab===t[0]||hovered?PC_ORANGE:"#50623f");strokeWeight(pcTab===t[0]||hovered?2:1);rect(tx,ty,tw-2,th);noStroke();fill(pcTab===t[0]?PC_BLACK:PC_WHITE);textAlign(CENTER,CENTER);textSize(Math.max(7,Math.min(10,w*.075)));text(t[1],tx+(tw-2)/2,ty+th/2);pcTarget(tx,ty,tw-2,th,()=>{pcTab=t[0];pcSideScroll=0;});});
  const ly=ty+th+5,lh=Math.max(0,y+h-ly),items=pcItems(),rh=Math.max(40,Math.min(54,(L.H-L.top)*.13)),total=items.length*rh;
  pcSideScroll=constrain(pcSideScroll,0,Math.max(0,total-lh));drawingContext.save();drawingContext.beginPath();drawingContext.rect(x+2,ly,w-4,lh);drawingContext.clip();
  items.forEach((it,i)=>{const yy=ly+i*rh-pcSideScroll;if(yy+rh>ly&&yy<ly+lh)pcItem(it,x+4,yy,w-10,rh);});drawingContext.restore();
