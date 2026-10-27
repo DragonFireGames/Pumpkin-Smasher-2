@@ -75,6 +75,7 @@ let csStartedAt = 0;
 let csLastTickAt = 0;
 let csSelected = null;
 let csKeyboardFocus = { row: 0, col: 0 };
+let csKeyboardNavigationActive = false;
 let csPendingMatches = [];
 let csPhaseStartedAt = 0;
 let csPhaseEndsAt = 0;
@@ -170,7 +171,7 @@ function csDrawTitle() {
   text(mode.name, width / 2, 249);
   fill(CS_WHITE);
   textStyle(NORMAL);
-  textSize(8);
+  textSize(10);
   text(mode.description, width / 2, 270);
 
   // A single, clear Play button sits below the carousel.
@@ -224,6 +225,7 @@ function csStartGame(modeIndex) {
   csLastHintAt = 0;
   csHintCells = [];
   csHintStartedAt = 0;
+  csKeyboardNavigationActive = false;
   csSelected = null;
   csKeyboardFocus = { row: 3, col: 3 };
   csPendingMatches = [];
@@ -835,8 +837,8 @@ function csDrawBoard() {
         ((csVisualSwap.from.row === row && csVisualSwap.from.col === col) ||
          (csVisualSwap.to.row === row && csVisualSwap.to.col === col));
       const isSelected = csSelected && csSelected.row === row && csSelected.col === col;
-      const isFocus = csKeyboardFocus && csKeyboardFocus.row === row && csKeyboardFocus.col === col &&
-        csState !== "gameover";
+      const isFocus = csKeyboardNavigationActive && csKeyboardFocus &&
+        csKeyboardFocus.row === row && csKeyboardFocus.col === col && csState !== "gameover";
       if (candy && !isSwapCell) {
         const centerX = x + CS_CELL / 2;
         let centerY = y + CS_CELL / 2;
@@ -1045,6 +1047,7 @@ function mousePressed(event) {
 
   if (csState !== "playing") return false;
   if (csVisualSwap && millis() - csVisualSwap.startedAt < csVisualSwap.duration) return false;
+  csKeyboardNavigationActive = false;
   csRegisterActivity();
   const cell = csGetCellAt(mouseX, mouseY);
   if (!cell) return false;
@@ -1113,6 +1116,7 @@ function keyPressed(event) {
   };
   const direction = directions[key];
   if (direction) {
+    csKeyboardNavigationActive = true;
     if (csSelected) {
       const to = {
         row: csSelected.row + direction.row,
@@ -1132,6 +1136,7 @@ function keyPressed(event) {
   }
 
   if (key === "Enter" || key === " ") {
+    csKeyboardNavigationActive = true;
     if (csSelected) {
       if (csSelected.row === csKeyboardFocus.row && csSelected.col === csKeyboardFocus.col) {
         csSelected = null;
