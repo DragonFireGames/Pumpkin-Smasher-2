@@ -432,7 +432,7 @@ function pcMerge(){
   for(let dy=0;dy<5;dy++)for(let dx=0;dx<5;dx++)pcState.farm[r+dy][c+dx]=h;
   pcSay("Twenty-five pumpkins became a HYPER generator!");
  }
- // A full matching 3×3 takes priority, even if its first four tiles already formed a Mega.
+ // Ultra merges run after Hyper and before Mega, preserving the largest matching structure.
  for(let r=0;r<=pcState.farmRows-3;r++)for(let c=0;c<=pcState.farmCols-3;c++){
   const a=pcState.farm[r][c];if(!a||a.kind!=="generator"||a.hyper||a.ultra)continue;
   const cells=[];for(let dy=0;dy<3;dy++)for(let dx=0;dx<3;dx++)cells.push(pcState.farm[r+dy][c+dx]);
