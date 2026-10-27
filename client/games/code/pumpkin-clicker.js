@@ -205,8 +205,8 @@ const candies = [
     id: "chocolate",
     name: "Chocolate",
     path: "/assets/candies/chocolate.png",
-    desc: "+$5 per manual click",
-    clickCash: 5
+    desc: "2× click yield",
+    clickMultiplier: 2
   },
   {
     id: "candied_apple",
@@ -2440,18 +2440,16 @@ function clickPumpkin(){
     return;
     }game.totalClicks++;
   game.totalHarvested++;
-  if(game.autoSell){const earned=1+clickCashBonus()*cashMultiplier();
+  if(game.autoSell){const earned=(1+clickCashBonus()*cashMultiplier())*(hasCandy("chocolate")?2:1);
     game.cash+=earned;
     showToast("+$"+earned);
-    }else{const n=clickPumpkinYield();
+    }else{const n=clickPumpkinYield()*(hasCandy("chocolate")?2:1);
     const added=depositInStorage(n);
     showToast("+"+added+" pumpkins");
     const cashBonus=clickCashBonus();
-    if(cashBonus>0){game.cash+=cashBonus*cashMultiplier();
+    if(cashBonus>0){game.cash+=cashBonus*cashMultiplier()*(hasCandy("chocolate")?2:1);
       showToast("+$"+cashBonus+" click bonus");
-      }}if(hasCandy("chocolate")){game.cash+=5;
-    showToast("+$5 candy bonus");
-    }if(lucky)openCandy("drop",randomCandy());
+      }}if(lucky)openCandy("drop",randomCandy());
   saveGame();
   }
 function sellPumpkins(){
