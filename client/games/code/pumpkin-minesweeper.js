@@ -225,7 +225,9 @@ function drawCell(cell) {
   const isExplodingCell = gameState === "exploding" && explodedCell && explodedCell.row === cell.row && explodedCell.col === cell.col;
   if (!isExplodingCell && images.pumpkin && images.pumpkin.width > 0) {
     noStroke();
-    image(images.pumpkin, x + size / 2, y + size / 2, size * 0.96, size * 0.96);
+    const pumpkinWidth = size * 0.96;
+    const pumpkinHeight = pumpkinWidth * images.pumpkin.height / images.pumpkin.width;
+    image(images.pumpkin, x + size / 2, y + size / 2, pumpkinWidth, pumpkinHeight);
   }
 
 }
@@ -245,11 +247,11 @@ function drawTargetMarker(x, y, size) {
   }
   const frameCount = 12;
   const frameWidth = sheet.width / frameCount;
-  // The main game draws this 12-frame target animation at 72x72 over a 36-unit tile.
-  // Keep that 2:1 sprite-to-cell scale here so its artwork matches a pumpkin's visual size.
-  const displaySize = size * 2;
+  // The main game draws the 72px target beside 60px pumpkins, so preserve that 1.2x size ratio here.
+  const displayWidth = size * 1.2;
+  const displayHeight = displayWidth * sheet.height / frameWidth;
   const frame = Math.floor(millis() * targetFrameRate / 1000) % frameCount;
-  image(sheet, x + size / 2, y + size / 2, displaySize, displaySize, frame * frameWidth, 0, frameWidth, sheet.height);
+  image(sheet, x + size / 2, y + size / 2, displayWidth, displayHeight, frame * frameWidth, 0, frameWidth, sheet.height);
 }
 
 function drawMineMarker(cx, cy, size) {
