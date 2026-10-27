@@ -2632,6 +2632,10 @@ var GameList = [
     source: "/game/pumpkin-clicker"
   },
   {
+    name: "Candy Smash",
+    source: "/game/candy-smash"
+  },
+  {
     name: "Pumpkin Minesweeper",
     source: "/game/pumpkin-minesweeper"
   }
