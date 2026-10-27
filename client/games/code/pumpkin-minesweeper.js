@@ -94,7 +94,7 @@ function drawTitleScreen() {
   fill(white);
   textStyle(NORMAL);
   textSize(10);
-  text("FIND THE PATCH WITHOUT HITTING A MINE", width / 2, 74);
+  text("EMPTY THE PATCH WITHOUT HITTING A MINE", width / 2, 74);
   fill(orange);
   textStyle(BOLD);
   textSize(12);
