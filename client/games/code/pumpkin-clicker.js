@@ -151,7 +151,7 @@ function pcItem(it,x,y,w,h){
  const d=it.d,isB=it.type==="build",sel=isB&&pcSelected===d.id;fill(sel?"#263d16":"#172414");stroke(sel?PC_ORANGE:"#50623f");strokeWeight(sel?2:1);rect(x,y+1,w,h-3);
  const sz=Math.min(28,h*.46),ix=x+sz/2+4,iy=y+sz/2+5;
  if(it.type==="worker")pcSprite(d.id,ix,iy,sz,d.frames,d.fps);
- else if(isB&&d.kind==="generator")pcGen(d.tier,ix,iy,sz);
+ else if(isB&&d.kind==="generator")pcDrawGrowGenerator(d.tier,ix,iy,sz*1.2,false);
  else if(isB&&d.kind==="multiplier"){const si=pcImgs.multiplier;if(si&&si.width)pcSheet(si,ix,iy,sz,3,Math.floor(frameCount/7)%3);else pcDrawShieldFallback(ix,iy,sz);}
  else if(isB&&d.kind==="vault"){const pumpkin=pcImgs.objective||pcImgs.regular;if(pumpkin&&pumpkin.width)pcSheet(pumpkin,ix,iy,sz,1);else pcGen(1,ix,iy,sz);}
  else if(it.type==="daily"||it.type==="buyCandy"){const img=pcImgs.candyBag;if(img?.width)pcSheet(img,ix,iy,sz,1);else{noStroke();fill(PC_ORANGE);rect(ix-5,iy-8,10,16);}}
@@ -214,7 +214,7 @@ function pcGen(t,x,y,s){const img=pcImgs[PC_GENS[t].id];if(img?.width)pcSheet(im
 function pcDrawGrowGenerator(t,x,y,s,isVault=false){
  const pot=pcImgs.generatorPot,fruit=pcImgs[t>=3?"diamond":t>=2?"gold":"regular"],rate=PC_GENS[t].rate,cycle=Math.max(1300,1000/Math.max(.01,rate));
  const phase=((Date.now()+Math.round(x*13+y*7))%cycle)/cycle,growth=phase<.84?Math.max(.12,phase/.84):1;
- if(pot&&pot.width&&pot.height)image(pot,x,y+s*.17,pot.width*(s*.84/pot.height),s*.84);else{noStroke();fill("#79502c");stroke("#b87a35");rect(x-s*.36,y+s*.07,s*.72,s*.46);}
+ if(pot&&pot.width&&pot.height)image(pot,x,y+s*.17,pot.width*(s*1.02/pot.height),s*1.02);else{noStroke();fill("#79502c");stroke("#b87a35");rect(x-s*.36,y+s*.07,s*.72,s*.46);}
  const img=phase<.84?pcImgs.green:fruit;
  if(img&&img.width&&img.height){const fw=img.width>img.height*1.4?img.width/8:img.width,fy=y+s*.04-(s*.22*phase),h=(isVault?s*.40:s*.46)*growth;pcSheet(img,x,fy,h,img.width>img.height*1.4?8:1,Math.floor(frameCount/8)%8);}
  
