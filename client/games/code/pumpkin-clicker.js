@@ -234,7 +234,7 @@ function pcGrid(L){
   pcTarget(x,y,t,t,()=>pcTile(r,c),false,pcFarmHoverInfo(o,r,c));
  }
  // Draw multi-tile generators after all cell backgrounds so their sprites stay visible.
- const largeGenerators=new Set();for(let r=0;r<pcState.farmRows;r++)for(let c=0;c<pcState.farmCols;c++){const o=pcState.farm[r]&&pcState.farm[r][c];if(!o||o.kind!=="generator"||(!o.mega&&!o.ultra)||o.row!==r||o.col!==c||largeGenerators.has(o))continue;largeGenerators.add(o);const x=L.gridX+c*(t+g),y=clipY+r*(t+g)-pcGridScroll,size=o.ultra?3:2,foot=size*t+(size-1)*g;if(y+foot<clipY||y>clipY+L.view)continue;pcDrawGrowGenerator(o.tier,x+foot/2,y+foot/2,t*(size-.1),false,false,!!o.clogged);noFill();stroke(PC_ORANGE);strokeWeight(2);rect(x,y,foot,foot);noStroke();fill(PC_BLACK);rect(x+t*.08,y+t*.08,t*(o.ultra?1.05:.65),t*.3);fill(PC_ORANGE);textAlign(CENTER,CENTER);textSize(Math.max(8,t*(o.ultra?.17:.2)));text(o.ultra?"ULTRA":"MEGA",x+t*(o.ultra?.55:.4),y+t*.23);}
+ const largeGenerators=new Set();for(let r=0;r<pcState.farmRows;r++)for(let c=0;c<pcState.farmCols;c++){const o=pcState.farm[r]&&pcState.farm[r][c];if(!o||o.kind!=="generator"||(!o.mega&&!o.ultra)||o.row!==r||o.col!==c||largeGenerators.has(o))continue;largeGenerators.add(o);const x=L.gridX+c*(t+g),y=clipY+r*(t+g)-pcGridScroll,size=o.ultra?3:2,foot=size*t+(size-1)*g;if(y+foot<clipY||y>clipY+L.view)continue;pcDrawGrowGenerator(o.tier,x+foot/2,y+foot/2,t*(size-.1),false,false,!!o.clogged);noFill();stroke(PC_ORANGE);strokeWeight(2);rect(x+2,y+2,foot-4,foot-4);noStroke();fill(PC_BLACK);rect(x+t*.08,y+t*.08,t*(o.ultra?1.05:.65),t*.3);fill(PC_ORANGE);textAlign(CENTER,CENTER);textSize(Math.max(8,t*(o.ultra?.17:.2)));text(o.ultra?"ULTRA":"MEGA",x+t*(o.ultra?.55:.4),y+t*.23);}
  pcDrawGridEffectPreview(L);
  // Keep the affordability outline on top of tile art: orange means affordable, red means not.
  const hoverCell=pcGridCellAt(L);
@@ -249,7 +249,7 @@ function pcGrid(L){
   }
   if(outline){
    const x=L.gridX+c*(t+g),y=clipY+r*(t+g)-pcGridScroll;
-   noFill();stroke(outline);strokeWeight(2);rect(x+1,y+1,t-2,t-2);noStroke();
+   noFill();stroke(outline);strokeWeight(2);rect(x+2,y+2,t-4,t-4);noStroke();
   }
  }
  pcDrawGridEffectPreview(L);
