@@ -24,7 +24,7 @@ let board = [];
 let boardCols = 0;
 let boardRows = 0;
 let mineCount = 0;
-let flagsPlaced = 0;
+let marksPlaced = 0;
 let minesPlaced = false;
 let gameStartedAt = 0;
 let gameEndedAt = null;
@@ -34,6 +34,7 @@ let boardLayout = { x: 0, y: 0, cellSize: 0 };
 
 function preload() {
   images.pumpkin = loadImage("/assets/pumpkins/pumpkin.png", () => {}, () => {});
+  images.target = loadImage("/assets/entities/nuke/target.png", () => {}, () => {});
   images.explosion = loadImage("/assets/entities/mine/explode.png", () => {}, () => {});
 }
 
@@ -133,7 +134,7 @@ function startGame(difficultyIndex) {
   boardCols = currentDifficulty.cols;
   boardRows = currentDifficulty.rows;
   mineCount = currentDifficulty.mines;
-  flagsPlaced = 0;
+  marksPlaced = 0;
   minesPlaced = false;
   gameStartedAt = millis();
   gameEndedAt = null;
@@ -143,7 +144,7 @@ function startGame(difficultyIndex) {
   for (let row = 0; row < boardRows; row++) {
     const cells = [];
     for (let col = 0; col < boardCols; col++) {
-      cells.push({ row, col, mine: false, revealed: false, flagged: false, adjacent: 0 });
+      cells.push({ row, col, mine: false, revealed: false, marked: false, adjacent: 0 });
     }
     board.push(cells);
   }
@@ -216,19 +217,29 @@ function drawCell(cell) {
     noStroke();
     image(images.pumpkin, x + size / 2, y + size / 2, size * 0.96, size * 0.96);
   }
-  if (cell.flagged) drawFlag(x, y, size);
+  if (cell.marked) drawTargetMarker(x, y, size);
 }
 
-function drawFlag(x, y, size) {
-  const poleX = x + size * 0.38;
-  const topY = y + size * 0.2;
-  stroke(black);
-  strokeWeight(Math.max(1, size * 0.055));
-  line(poleX, topY, poleX, y + size * 0.8);
-  line(poleX - size * 0.13, y + size * 0.8, poleX + size * 0.17, y + size * 0.8);
-  noStroke();
-  fill(orange);
-  triangle(poleX, topY, x + size * 0.78, y + size * 0.34, poleX, y + size * 0.49);
+function drawTargetMarker(x, y, size) {
+  const sheet = images.target;
+  if (!sheet || !sheet.width || !sheet.height) {
+    noFill();
+    stroke(orange);
+    strokeWeight(Math.max(1, size * 0.06));
+    ellipse(x + size / 2, y + size / 2, size * 0.72, size * 0.72);
+    line(x + size * 0.5, y + size * 0.12, x + size * 0.5, y + size * 0.31);
+    line(x + size * 0.5, y + size * 0.69, x + size * 0.5, y + size * 0.88);
+    line(x + size * 0.12, y + size * 0.5, x + size * 0.31, y + size * 0.5);
+    line(x + size * 0.69, y + size * 0.5, x + size * 0.88, y + size * 0.5);
+    return;
+  }
+  const frameCount = 12;
+  const frameWidth = sheet.width / frameCount;
+  const scaleFactor = Math.min(size * 0.92 / frameWidth, size * 0.92 / sheet.height);
+  const displayWidth = frameWidth * scaleFactor;
+  const displayHeight = sheet.height * scaleFactor;
+  const frame = Math.floor(millis() / (1000 / 12)) % frameCount;
+  image(sheet, x + size / 2, y + size / 2, displayWidth, displayHeight, frame * frameWidth, 0, frameWidth, sheet.height);
 }
 
 function drawMineMarker(cx, cy, size) {
@@ -270,11 +281,11 @@ function drawHUD() {
   textStyle(NORMAL);
   textSize(8);
   fill(white);
-  text("LEFT CLICK: REVEAL  ·  RIGHT CLICK: FLAG", width - 8, 32);
+  text("LEFT CLICK: REVEAL  ·  RIGHT CLICK: MARK", width - 8, 32);
 }
 
 function formatMineCounter() {
-  const remaining = mineCount - flagsPlaced;
+  const remaining = mineCount - marksPlaced;
   return remaining < 0 ? String(remaining) : String(remaining).padStart(2, "0");
 }
 
@@ -332,7 +343,7 @@ function placeMines(safeRow, safeCol) {
 
 function revealCell(row, col) {
   const cell = board[row][col];
-  if (gameState !== "playing" || cell.revealed || cell.flagged) return;
+  if (gameState !== "playing" || cell.revealed || cell.marked) return;
   if (!minesPlaced) placeMines(row, col);
   if (cell.mine) {
     explodedCell = cell;
@@ -343,23 +354,23 @@ function revealCell(row, col) {
   const stack = [cell];
   while (stack.length) {
     const current = stack.pop();
-    if (current.revealed || current.flagged || current.mine) continue;
+    if (current.revealed || current.marked || current.mine) continue;
     current.revealed = true;
     if (current.adjacent !== 0) continue;
     const neighbors = getNeighbors(current.row, current.col);
     for (let i = 0; i < neighbors.length; i++) {
       const neighbor = neighbors[i];
-      if (!neighbor.revealed && !neighbor.flagged && !neighbor.mine) stack.push(neighbor);
+      if (!neighbor.revealed && !neighbor.marked && !neighbor.mine) stack.push(neighbor);
     }
   }
   checkVictory();
 }
 
-function toggleFlag(row, col) {
+function toggleMark(row, col) {
   const cell = board[row][col];
   if (gameState !== "playing" || cell.revealed) return;
-  cell.flagged = !cell.flagged;
-  flagsPlaced += cell.flagged ? 1 : -1;
+  cell.marked = !cell.marked;
+  marksPlaced += cell.marked ? 1 : -1;
 }
 
 function checkVictory() {
@@ -487,7 +498,7 @@ function mousePressed(event) {
   if (gameState !== "playing") return false;
   const selected = getCellAt(mouseX, mouseY);
   if (!selected) return false;
-  if (mouseButton === RIGHT || (event && event.shiftKey)) toggleFlag(selected.row, selected.col);
+  if (mouseButton === RIGHT || (event && event.shiftKey)) toggleMark(selected.row, selected.col);
   else revealCell(selected.row, selected.col);
   return false;
 }
