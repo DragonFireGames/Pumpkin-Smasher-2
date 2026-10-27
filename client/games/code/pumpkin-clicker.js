@@ -126,8 +126,8 @@ function pcTick(){
 function draw(){pcTick();pcTargets=[];background(PC_BG);noStroke();pcSpecks.forEach(p=>{fill(123,150,65,p.a);rect(p.x%width,p.y%height,p.s,p.s);});const L=pcLayout();pcTop(L);pcSidebar(L);pcMain(L);if(pcToast&&millis()<pcToastEnd)pcDrawToast(L);if(pcCandyOpening)pcDrawCandyReveal();pcFinishHover();}
 function pcLayout(){
  const W=width,H=height,top=Math.max(68,Math.min(88,H*.15)),side=Math.max(112,Math.min(205,W*.245)),mainX=side+11,mainW=Math.max(120,W-mainX-6);
- const gridStart=Math.max(top+146,H*.535),gridTop=gridStart+25,gap=3,tile=Math.max(1,Math.min(54,Math.floor((mainW-(pcState.farmCols-1)*gap)/pcState.farmCols)));
- const gridW=pcState.farmCols*tile+(pcState.farmCols-1)*gap,gridX=mainX+Math.max(0,(mainW-gridW)/2),content=pcState.farmRows*(tile+gap)-gap,view=Math.max(0,H-5-gridTop);
+ const gridStart=Math.max(top+146,H*.535),gridTop=gridStart+25,gap=3,panelInset=3,gridInnerW=Math.max(1,mainW-panelInset*2),tile=Math.max(1,Math.min(54,Math.floor((gridInnerW-(pcState.farmCols-1)*gap)/pcState.farmCols)));
+ const gridW=pcState.farmCols*tile+(pcState.farmCols-1)*gap,gridX=mainX+panelInset+Math.max(0,(gridInnerW-gridW)/2),content=pcState.farmRows*(tile+gap)-gap,view=Math.max(0,H-5-gridTop);
  pcGridScroll=constrain(pcGridScroll,0,Math.max(0,content-view));
  return {W,H,top,side,mainX,mainW,gridStart,gridTop,gridBottom:H-5,tile,gap,gridX,content,view};
 }
@@ -191,7 +191,7 @@ function pcItem(it,x,y,w,h){
 }
 function pcMain(L){
  const x=L.mainX,w=L.mainW,upgradeW=Math.min(110,Math.max(64,w*.30)),leftW=Math.max(70,w-upgradeW-12),px=x+4+leftW/2,py=L.top+Math.max(44,(L.gridStart-L.top)*.42),sz=Math.min(leftW*.70,(L.gridStart-L.top)*.54,118);
- noStroke();fill("#0d190b");rect(x,L.top+3,w,L.gridStart-L.top-4);stroke(PC_ORANGE);strokeWeight(1.5);noFill();rect(x,L.top+3,w,L.gridStart-L.top-4);
+ noStroke();fill("#0d190b");rect(x+3,L.top+3,w-6,L.gridStart-L.top-4);stroke(PC_ORANGE);strokeWeight(1.5);noFill();rect(x+3,L.top+3,w-6,L.gridStart-L.top-4);
  const hovered=mouseX>=px-sz*.65&&mouseX<=px+sz*.65&&mouseY>=py-sz*.65&&mouseY<=py+sz*.65;
  pcPumpkinScale+=( (hovered?1.075:1)-pcPumpkinScale)*.24;
  const pressAge=millis()-pcPumpkinPressedAt,press=pressAge<430?Math.exp(-pressAge/105)*Math.cos(pressAge/34):0;
@@ -203,7 +203,7 @@ function pcMain(L){
  pcDrawClickUpgrades(L,x,w);
  const by=L.gridStart-29,bw=Math.max(70,(w-16)/2),sellHovered=mouseX>=x+4&&mouseX<=x+4+bw&&mouseY>=by&&mouseY<=by+23,sellColor=mouseIsPressed&&sellHovered?"#8f5300":sellHovered?"#d18400":PC_ORANGE;pcButton(x+4,by,bw,23,"SELL HARVEST",sellColor,PC_BLACK);pcTarget(x+4,by,bw,23,pcSell);
  const cost=pcPrestigeCost(),ready=pcState.cash>=cost,prestigeHovered=mouseX>=x+8+bw&&mouseX<=x+8+2*bw&&mouseY>=by&&mouseY<=by+23,prestigeColor=!ready?"#4a553e":mouseIsPressed&&prestigeHovered?"#8f5300":prestigeHovered?"#d18400":PC_ORANGE,prestigeBorder=ready?PC_ORANGE:"#707a68";pcButton(x+8+bw,by,bw,23,"PRESTIGE $"+pcFmt(cost),prestigeColor,ready?PC_BLACK:"#9aa38e",prestigeBorder);pcTarget(x+8+bw,by,bw,23,pcPrestige);
- fill("#0d190b");noStroke();rect(x,L.gridStart,w,L.H-L.gridStart);stroke(PC_ORANGE);strokeWeight(1);noFill();rect(x,L.gridStart,w,L.H-L.gridStart);
+ fill("#0d190b");noStroke();rect(x+3,L.gridStart+2,w-6,L.H-L.gridStart-5);stroke(PC_ORANGE);strokeWeight(1);noFill();rect(x+3,L.gridStart+2,w-6,L.H-L.gridStart-5);
  noStroke();fill(PC_ORANGE);textAlign(LEFT,CENTER);textSize(Math.max(9,Math.min(12,w*.038)));text("FARM GRID • CLICK TO PLACE",x+5,L.gridStart+12);
  if(pcSelected){const b=PC_BUILDS.find(v=>v.id===pcSelected);fill(PC_WHITE);textAlign(RIGHT,CENTER);textSize(Math.max(8,Math.min(10,w*.032)));text(pcSelected==="__sell"?"DELETE / SELL":b?b.name:"",x+w-4,L.gridStart+12);}
  pcGrid(L);
@@ -223,7 +223,7 @@ function pcDrawClickUpgrades(L,panelX,panelW){
 }
 function pcButton(x,y,w,h,label,col,tc,border=PC_ORANGE){fill(col);stroke(border);strokeWeight(1);rect(x,y,w,h);noStroke();fill(tc);textAlign(CENTER,CENTER);textSize(Math.max(8,Math.min(11,h*.48)));text(label,x+w/2,y+h/2);}
 function pcGrid(L){
- const t=L.tile,g=L.gap,clipY=L.gridTop;drawingContext.save();drawingContext.beginPath();drawingContext.rect(L.mainX+1,clipY,L.mainW-2,L.view);drawingContext.clip();
+ const t=L.tile,g=L.gap,clipY=L.gridTop;drawingContext.save();drawingContext.beginPath();drawingContext.rect(L.mainX+4,clipY,L.mainW-8,L.view);drawingContext.clip();
  for(let r=0;r<pcState.farmRows;r++)for(let c=0;c<pcState.farmCols;c++){
   const x=L.gridX+c*(t+g),y=clipY+r*(t+g)-pcGridScroll;if(y+t<clipY||y>clipY+L.view)continue;
   fill((r+c)%2?"#1b3b13":"#214318");stroke("#65813a");strokeWeight(1);rect(x,y,t,t);
@@ -263,7 +263,7 @@ function pcGrid(L){
 
 
   drawingContext.restore();
- if(L.content>L.view){fill("#35492c");noStroke();rect(L.mainX+L.mainW-3,clipY,2,L.view);fill(PC_ORANGE);rect(L.mainX+L.mainW-3,clipY+pcGridScroll/Math.max(1,L.content)*L.view,2,Math.max(8,L.view*L.view/L.content));}
+ if(L.content>L.view){fill("#35492c");noStroke();rect(L.mainX+L.mainW-5,clipY,2,L.view);fill(PC_ORANGE);rect(L.mainX+L.mainW-5,clipY+pcGridScroll/Math.max(1,L.content)*L.view,2,Math.max(8,L.view*L.view/L.content));}
 }
 // Render the complete farm into an off-screen graphics buffer and download it as a PNG.
 // The live canvas only draws the visible, clipped rows for scrolling; it is not a full-grid buffer.
