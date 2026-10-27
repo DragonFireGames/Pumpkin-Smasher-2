@@ -3,9 +3,9 @@ const PC_SAVE="pumpkin-clicker-save-v1", PC_DAILY="pumpkin-clicker-daily-v1";
 const PC_ORANGE="#ffa500", PC_BLACK="#10180b", PC_BG="#123904", PC_WHITE="#f6f2dd";
 const PC_GENS=[
  {id:"green",name:"Green Pumpkin",cost:10,rate:.2,path:"/assets/pumpkins/new_pumpkin.png"},
- {id:"regular",name:"Pumpkin",cost:60,rate:1,path:"/assets/pumpkins/pumpkin.png"},
- {id:"gold",name:"Gold Pumpkin",cost:350,rate:5,path:"/assets/pumpkins/gold_pumpkin.png"},
- {id:"diamond",name:"Diamond Pumpkin",cost:2200,rate:24,path:"/assets/pumpkins/diamond_pumpkin.png"}
+ {id:"regular",name:"Pumpkin",cost:1000,rate:1,path:"/assets/pumpkins/pumpkin.png"},
+ {id:"gold",name:"Gold Pumpkin",cost:100000,rate:5,path:"/assets/pumpkins/gold_pumpkin.png"},
+ {id:"diamond",name:"Diamond Pumpkin",cost:1000000,rate:24,path:"/assets/pumpkins/diamond_pumpkin.png"}
 ];
 const PC_WORKERS=[
  {id:"monster",name:"Monster",cost:25,desc:"+0.10/sec per gen",path:"/assets/entities/monster/attack.png",frames:8,fps:12},
@@ -18,9 +18,9 @@ const PC_WORKERS=[
 ];
 const PC_BUILDS=[
  {id:"g0",name:"Green Pumpkin",cost:10,desc:"0.20 pumpkins/sec",kind:"generator",tier:0},
- {id:"g1",name:"Pumpkin",cost:60,desc:"1 pumpkin/sec",kind:"generator",tier:1},
- {id:"g2",name:"Gold Pumpkin",cost:350,desc:"5 pumpkins/sec",kind:"generator",tier:2},
- {id:"g3",name:"Diamond Pumpkin",cost:2200,desc:"24 pumpkins/sec",kind:"generator",tier:3},
+ {id:"g1",name:"Pumpkin",cost:1000,desc:"1 pumpkin/sec",kind:"generator",tier:1},
+ {id:"g2",name:"Gold Pumpkin",cost:100000,desc:"5 pumpkins/sec",kind:"generator",tier:2},
+ {id:"g3",name:"Diamond Pumpkin",cost:1000000,desc:"24 pumpkins/sec",kind:"generator",tier:3},
  {id:"shield",name:"Multiplier",cost:180,desc:"Boosts directly adjacent generators",kind:"multiplier"},
  {id:"vault",name:"Vault",cost:100,desc:"50 base storage; scales per level",kind:"vault"}
 ];
@@ -277,8 +277,8 @@ function pcTile(r,c){
   if(o&&o.kind==="generator"){
    if(o.mega||o.ultra){const pieces=pcFragmentGenerator(o);pcSay((o.ultra?"Ultra":"Mega")+" generator fragmented into "+pieces+" generators");pcSave();return;}
    let bought=0,lastCost=0;const limit=(keyIsDown(16)||keyIsDown(SHIFT))?10:1;
-   while(bought<limit){o=pcState.farm[r]&&pcState.farm[r][c];if(!o||o.kind!=="generator"||o.mega||o.ultra||o.tier>=3)break;const cost=Math.ceil(PC_GENS[o.tier].cost*.6);if(pcState.cash<cost){lastCost=cost;break;}pcState.cash-=cost;pcState.farm[r][c]={kind:"generator",tier:o.tier+1,row:r,col:c,mega:false,ultra:false,progress:0,clogged:false};pcMerge();bought++;}
-   if(!bought){pcSay(o&&o.tier>=3?"Diamond pumpkins are max tier":(o&&(o.mega||o.ultra))?"Fragment the large generator before upgrading":"Generator upgrade costs $"+pcFmt(lastCost||(o?Math.ceil(PC_GENS[o.tier].cost*.6):0)));return;}
+   while(bought<limit){o=pcState.farm[r]&&pcState.farm[r][c];if(!o||o.kind!=="generator"||o.mega||o.ultra||o.tier>=3)break;const cost=Math.ceil(PC_GENS[o.tier+1].cost*.6);if(pcState.cash<cost){lastCost=cost;break;}pcState.cash-=cost;pcState.farm[r][c]={kind:"generator",tier:o.tier+1,row:r,col:c,mega:false,ultra:false,progress:0,clogged:false};pcMerge();bought++;}
+   if(!bought){pcSay(o&&o.tier>=3?"Diamond pumpkins are max tier":(o&&(o.mega||o.ultra))?"Fragment the large generator before upgrading":"Generator upgrade costs $"+pcFmt(lastCost||(o&&o.tier<3?Math.ceil(PC_GENS[o.tier+1].cost*.6):0)));return;}
    pcSay("Generator upgraded "+bought+" tier"+(bought===1?"":"s"));pcSave();
   }else pcSay(o&&o.kind==="vault"?"Vaults increase storage":"Choose a building from BUILD first");
   return;
@@ -352,7 +352,7 @@ function pcItemHoverInfo(it){
   return {id:"worker:"+d.id,title:d.name,kind:"worker",summary:d.desc,rules:["Next hire: $"+pcFmt(pcWorkerCost(d.id))+". Owned: "+count+".","Each additional worker of this type costs 20% more than the previous price.","Shift-click to hire up to 10, stopping when you cannot afford the next hire.",...(rules[d.id]||[]),"Workers never occupy farm tiles and have no recurring wages."]};
  }
  if(it.type==="build"||it.type==="autosell"){
-  if(d.kind==="generator")return {id:"build:"+d.id,title:d.name,kind:"build",summary:"Produces "+d.desc+".",rules:["Cost: $"+pcFmt(d.cost)+". Choose this, then click an empty farm tile.","Click an existing generator to upgrade it for 60% of the current tier’s base cost.","Four matching generators in a 2×2 square form a Mega; nine matching generators in a 3×3 square form an Ultra."]};
+  if(d.kind==="generator")return {id:"build:"+d.id,title:d.name,kind:"build",summary:"Produces "+d.desc+".",rules:["Cost: $"+pcFmt(d.cost)+". Choose this, then click an empty farm tile.","Click an existing generator to upgrade it for 60% of the next tier’s base cost.","Four matching generators in a 2×2 square form a Mega; nine matching generators in a 3×3 square form an Ultra."]};
   if(d.kind==="multiplier")return {id:"build:"+d.id,title:"Multiplier",kind:"build",summary:"Boosts adjacent generators; neighboring multipliers amplify one another.",rules:["Cost: $"+pcFmt(d.cost)+". Place it on an empty tile.","Only the four orthogonally adjacent tiles count; diagonals do not.","Each neighboring multiplier boosts the other multiplier’s strength by 1.5×."]};
   if(d.kind==="vault")return {id:"build:"+d.id,title:"Vault",kind:"build",summary:"Dedicated storage grows nonlinearly with each level.",rules:["Cost: $"+pcFmt(d.cost)+". Place it on an empty tile.","Its storage zone is a 3×3 area centered on the vault.","Generators in overlapping vault zones fill vaults top-to-bottom, then left-to-right, and finally base storage.","Click a placed vault to upgrade it; capacity grows by 1.5× per level, and upgrade cost doubles.","Monster and Brute workers increase the base storage capacity, which starts at 50."]};
   return {id:"build:"+d.id,title:d.name,kind:"build",summary:"Automatically sells generated pumpkins for cash.",rules:["One-time purchase: $650.","After purchase, click the Auto-Sell card in Misc to switch it on or off without paying again.","Auto-Sell empties stored pumpkins every 60 seconds of active play. Its on/off setting is saved, but prestige resets the purchase. While inactive, production accumulates as pumpkins instead of cash."]};
