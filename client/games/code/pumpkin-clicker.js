@@ -125,7 +125,7 @@ function pcTick(){
 }
 function draw(){pcTick();pcTargets=[];background(PC_BG);noStroke();pcSpecks.forEach(p=>{fill(123,150,65,p.a);rect(p.x%width,p.y%height,p.s,p.s);});const L=pcLayout();pcTop(L);pcSidebar(L);pcMain(L);if(pcToast&&millis()<pcToastEnd)pcDrawToast(L);if(pcCandyOpening)pcDrawCandyReveal();pcFinishHover();}
 function pcLayout(){
- const W=width,H=height,top=Math.max(68,Math.min(88,H*.15)),side=Math.max(112,Math.min(205,W*.245)),mainX=side+11,mainW=Math.max(120,W-mainX-6);
+ const W=width,H=height,top=Math.max(68,Math.min(88,H*.15)),side=Math.max(112,Math.min(205,W*.245)),mainX=side+10,mainW=Math.max(120,W-mainX-6);
  const gridStart=Math.max(top+146,H*.535),gridTop=gridStart+25,tile=Math.max(24,Math.min(54,Math.floor((mainW-(pcState.farmCols-1)*3)/pcState.farmCols))),gap=3;
  const gridW=pcState.farmCols*tile+(pcState.farmCols-1)*gap,gridX=mainX+Math.max(0,(mainW-gridW)/2),content=pcState.farmRows*(tile+gap)-gap,view=Math.max(0,H-5-gridTop);
  pcGridScroll=constrain(pcGridScroll,0,Math.max(0,content-view));
@@ -158,8 +158,10 @@ function pcItems(){
 }
 function pcItem(it,x,y,w,h){
  const d=it.d,isB=it.type==="build"||it.type==="autosell",sel=(isB&&d.kind!=="upgrade"&&pcSelected===d.id)||(it.type==="delete"&&pcSelected==="__sell");
- const hovered=mouseX>=x&&mouseX<=x+w&&mouseY>=y&&mouseY<=y+h;let itemCost=0,hasCost=false;if(it.type==="worker"){itemCost=pcWorkerCost(d.id);hasCost=true;}else if(it.type==="build"&&d.kind!=="upgrade"){itemCost=pcBuildCost(d);hasCost=true;}else if(it.type==="autosell"||it.type==="build"&&d.kind==="upgrade"&&!pcState.autoSellPurchased){itemCost=650;hasCost=true;}else if(it.type==="buyCandy"){itemCost=pcCandyPrice();hasCost=true;}const unaffordable=hovered&&hasCost&&(!Number.isFinite(itemCost)||pcState.cash<itemCost);
- fill(sel?"#263d16":"#172414");stroke(unaffordable?"#ff3030":sel?PC_ORANGE:"#50623f");strokeWeight(unaffordable?2.5:sel?2:1);rect(x,y+1,w,h-3);
+ const hovered=mouseX>=x&&mouseX<=x+w&&mouseY>=y&&mouseY<=y+h;let itemCost=0,hasCost=false;if(it.type==="worker"){itemCost=pcWorkerCost(d.id);hasCost=true;}else if(it.type==="build"&&d.kind!=="upgrade"){itemCost=pcBuildCost(d);hasCost=true;}else if(it.type==="autosell"||it.type==="build"&&d.kind==="upgrade"&&!pcState.autoSellPurchased){itemCost=650;hasCost=true;}else if(it.type==="buyCandy"){itemCost=pcCandyPrice();hasCost=true;}const unaffordable=hovered&&hasCost&&(!Number.isFinite(itemCost)||pcState.cash<itemCost),shopHover=hovered&&!unaffordable;
+ fill(unaffordable?"#451b16":shopHover?"#3a2b12":sel?"#263d16":"#172414");
+ if(shopHover){drawingContext.shadowColor="rgba(255,165,0,0.95)";drawingContext.shadowBlur=8;}
+ stroke(unaffordable?"#ff3030":shopHover||sel?PC_ORANGE:"#50623f");strokeWeight(unaffordable?2.5:shopHover||sel?2:1);rect(x,y+1,w,h-3);drawingContext.shadowBlur=0;drawingContext.shadowColor="transparent";
  const sz=Math.min(34,h*.62),ix=x+sz/2+4,iy=y+sz/2+5;
  if(it.type==="worker")pcSprite(d.id,ix,iy,sz,d.frames,d.fps);
  else if(isB&&d.kind==="generator")pcDrawGrowGenerator(d.tier,ix+sz*.06,iy+sz*.08,sz*1.18,false,true);
@@ -198,7 +200,7 @@ function pcMain(L){
  pcTarget(px-harvestW/2-3,harvestY-10,harvestW+6,20,()=>{},false,{id:"main-pumpkin-label",title:"Pumpkin Harvest",kind:"button",summary:"Click the pumpkin to harvest.",rules:["Click upgrades are arranged around the pumpkin.","Pumpkins collect in storage until it fills.","Sell stored pumpkins for cash.","Active candy may improve clicks or cash rewards."]});
  pcTarget(px-sz*.55,py-sz*.55,sz*1.1,sz*1.1,pcClick);
  pcDrawClickUpgrades(L,x,w);
- const by=L.gridStart-29,bw=Math.max(70,(w-16)/2);pcButton(x+4,by,bw,23,"SELL HARVEST",PC_ORANGE,PC_BLACK);pcTarget(x+4,by,bw,23,pcSell);
+ const by=L.gridStart-29,bw=Math.max(70,(w-16)/2),sellHovered=mouseX>=x+4&&mouseX<=x+4+bw&&mouseY>=by&&mouseY<=by+23,sellColor=mouseIsPressed&&sellHovered?"#8f5300":sellHovered?"#d18400":PC_ORANGE;pcButton(x+4,by,bw,23,"SELL HARVEST",sellColor,PC_BLACK);pcTarget(x+4,by,bw,23,pcSell);
  const cost=pcPrestigeCost(),ready=pcState.cash>=cost;pcButton(x+8+bw,by,bw,23,"PRESTIGE $"+pcFmt(cost),ready?PC_ORANGE:"#4a553e",ready?PC_BLACK:"#9aa38e");pcTarget(x+8+bw,by,bw,23,pcPrestige);
  fill("#0d190b");noStroke();rect(x,L.gridStart,w,L.H-L.gridStart);stroke(PC_ORANGE);strokeWeight(1);noFill();rect(x,L.gridStart,w,L.H-L.gridStart);
  noStroke();fill(PC_ORANGE);textAlign(LEFT,CENTER);textSize(Math.max(9,Math.min(12,w*.038)));text("FARM GRID • CLICK TO PLACE",x+5,L.gridStart+12);
@@ -249,7 +251,7 @@ function pcGrid(L){
   }
   if(outline){
    const x=L.gridX+c*(t+g),y=clipY+r*(t+g)-pcGridScroll;
-   noFill();stroke(outline);strokeWeight(2);rect(x+1,y+1,t-2,t-2);noStroke();
+   noFill();stroke(outline);strokeWeight(2);rect(x,y,t,t);noStroke();
   }
  }
  pcDrawGridEffectPreview(L);
@@ -421,7 +423,7 @@ function pcFinishHover(){
  if(!found||!found.hover){pcHoverId="";pcHoverTarget=null;return;}
  if(pcHoverId!==found.id){pcHoverId=found.id;pcHoverSince=millis();}
  pcHoverTarget=found;
- if(found.hover.id!=="main-pumpkin"){noStroke();fill(255,165,0,22);rect(found.x,found.y,found.w,found.h);if(found.hover.kind==="tile"){stroke(PC_ORANGE);strokeWeight(2);noFill();rect(found.x,found.y,found.w,found.h);}}
+ const isShopItem=found.x<width*.45&&found.hover.kind!=="tile";if(found.hover.id!=="main-pumpkin"&&!isShopItem){noStroke();fill(255,165,0,22);rect(found.x,found.y,found.w,found.h);if(found.hover.kind==="tile"){stroke(PC_ORANGE);strokeWeight(2);noFill();rect(found.x,found.y,found.w,found.h);}}
  if(millis()-pcHoverSince>=480)pcDrawHoverPanel(found.hover);
 }
 function pcDrawHoverPanel(info){
