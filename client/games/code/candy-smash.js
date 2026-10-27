@@ -264,7 +264,7 @@ function csRandomCandyId() {
   const weighted = candidates.map(type => {
     let weight = type.weight;
     if (type.id === "hot_tamale") {
-      if (csMode.id === "puzzle") weight = 0.85;
+      if (csMode.id === "puzzle") weight = 0.65;
       else if (csMode.id === "fast") weight = 0.045;
       else weight = 0.06;
     }
