@@ -38,7 +38,7 @@ const PC_CANDIES=[
 let pcImgs={},pcState,pcTargets=[],pcTab="workers",pcSideScroll=0,pcGridScroll=0,pcSelected=null,pcToast="",pcToastEnd=0,pcLast=0,pcSaveTicks=0,pcClaimed=false,pcSpecks=[],pcCandyOpening=null,pcClickBuyMode=1;
 let pcHoverId="",pcHoverSince=0,pcHoverTarget=null,pcPumpkinScale=1,pcPumpkinPressedAt=-10000,pcLastActivity=Date.now();
 
-function pcFresh(p=0){return {cash:25,pumpkins:0,baseStored:0,storageVersion:2,vinesSeeded:false,prestige:p,totalClicks:0,totalSold:0,totalHarvested:0,totalWorkers:0,autoSell:false,autoSellPurchased:false,autoSellProgressMs:0,progress:0,activeCandies:[],clickUpgrades:{power:0,bonus:0,cash:0},workers:{monster:0,ghost:0,speeder:0,rusher:0,brute:0,wizard:0,debuffer:0},farmCols:6+p,farmRows:4+p,farm:[],lastSavedAt:Date.now()};}
+function pcFresh(p=0){return {cash:25,pumpkins:0,baseStored:0,storageVersion:2,vinesSeeded:false,prestige:p,totalClicks:0,totalSold:0,totalHarvested:0,totalWorkers:0,candyPurchases:0,autoSell:false,autoSellPurchased:false,autoSellProgressMs:0,progress:0,activeCandies:[],clickUpgrades:{power:0,bonus:0,cash:0},workers:{monster:0,ghost:0,speeder:0,rusher:0,brute:0,wizard:0,debuffer:0},farmCols:6+p,farmRows:4+p,farm:[],lastSavedAt:Date.now()};}
 function preload(){
  PC_GENS.forEach(g=>pcImgs[g.id]=loadImage(g.path,()=>{},()=>{}));
  PC_WORKERS.forEach(w=>pcImgs[w.id]=loadImage(w.path,()=>{},()=>{}));
@@ -71,7 +71,7 @@ function pcLoad(){
   }
  }else{pcState=pcFresh();pcState.farm=Array.from({length:4},()=>Array(6).fill(null));pcSeedVines();}
  pcState.cash=Math.max(0,+pcState.cash||0);pcState.pumpkins=Math.max(0,+pcState.pumpkins||0);pcState.progress=Math.max(0,+pcState.progress||0);
- pcState.activeCandies=Array.isArray(pcState.activeCandies)?pcState.activeCandies.filter(v=>v&&v.expiresAt>Date.now()):[];
+ pcState.activeCandies=Array.isArray(pcState.activeCandies)?pcState.activeCandies.filter(v=>v&&v.expiresAt>Date.now()):[];pcState.candyPurchases=Math.max(Math.max(0,Math.floor(Number(pcState.candyPurchases)||0)),pcState.activeCandies.length);
  pcState.farm.forEach(row=>row.forEach(o=>{if(o&&o.kind==="shield")o.kind="multiplier";}));pcState.autoSellProgressMs=Math.max(0,Math.min(59999,Number(pcState.autoSellProgressMs)||0));
  if(d.storageVersion!==2||!Number.isFinite(Number(d.baseStored))){let remaining=Math.max(0,Number(pcState.pumpkins)||0);pcState.baseStored=0;const baseTake=Math.min(remaining,pcBaseCap());pcState.baseStored=baseTake;remaining-=baseTake;pcVaults().forEach(v=>{v.stored=0;const take=Math.min(remaining,pcVaultCap(v));v.stored=take;remaining-=take;});}else{pcState.baseStored=Math.max(0,Number(pcState.baseStored)||0);pcVaults().forEach(v=>{v.stored=Math.max(0,Number(v.stored)||0);});}pcState.storageVersion=2;pcSyncPumpkins();
  try{pcClaimed=localStorage.getItem(PC_DAILY)===pcToday();}catch(e){pcClaimed=false;}
@@ -173,12 +173,12 @@ function pcItem(it,x,y,w,h){
  if(it.type==="worker")text("$"+pcFmt(pcWorkerCost(d.id)),x+w-5,y+h*.5);
  else if(isB)text(d.kind==="upgrade"?(pcState.autoSellPurchased?(pcState.autoSell?"ON":"OFF"):"$"+pcFmt(d.cost)):"$"+pcFmt(d.cost),x+w-5,y+h*.5);
  else if(it.type==="daily")text(pcClaimed?"DONE":"OPEN",x+w-5,y+h*.5);
- else if(it.type==="buyCandy")text("$"+pcFmt(pcCandyPrice()),x+w-5,y+h*.5);
+ else if(it.type==="buyCandy")text("$"+pcCandyPriceLabel(),x+w-5,y+h*.5);
  else if(it.type==="sell")text("$"+pcFmt(Math.floor(pcState.pumpkins)),x+w-5,y+h*.5);
  if(it.type==="worker")pcTarget(x,y,w,h,()=>pcBuyWorker(d.id),false,pcItemHoverInfo(it));
  if(isB)pcTarget(x,y,w,h,()=>{if(d.kind==="upgrade"){pcToggleAuto();return;}pcSelected=pcSelected===d.id?null:d.id;pcSay(pcSelected?"Click an empty farm tile":"Build selection cleared");},false,pcItemHoverInfo(it));
  if(it.type==="daily")pcTarget(x,y,w,h,pcDailyCandy,false,{id:"daily-candy",title:"Daily Candy",kind:"candy",summary:"Claim a free random candy once each local day.",rules:["Opens with a shake and pop animation.","Also grants a cash reward and up to 10 pumpkins.","The candy bonus lasts one hour.","A new claim is available after the local date changes."]});
- if(it.type==="buyCandy")pcTarget(x,y,w,h,pcBuyCandy,false,{id:"buy-candy",title:"Buy Random Candy",kind:"candy",summary:"Spend $"+pcFmt(pcCandyPrice())+" for a random one-hour bonus.",rules:["Each purchase reveals one random candy.","Its effect begins after the reveal animation.","Multiple different candies can be active at once.","Duplicate candy refreshes that candy’s timer."]});
+ if(it.type==="buyCandy")pcTarget(x,y,w,h,pcBuyCandy,false,{id:"buy-candy",title:"Buy Random Candy",kind:"candy",summary:"Spend $"+pcCandyPriceLabel()+" for a random one-hour bonus.",rules:["Each purchase reveals one random candy.","Its effect begins after the reveal animation.","Multiple different candies can be active at once.","Duplicate candy refreshes that candy’s timer."]});
  if(it.type==="sell")pcTarget(x,y,w,h,pcSell);
  if(it.type==="delete")pcTarget(x,y,w,h,()=>{pcSelected=pcSelected==="__sell"?null:"__sell";pcSay(pcSelected==="__sell"?"Click a farm tile to delete it for a 25% refund":"Delete / Sell cancelled");},false,{id:"delete-tool",title:"Delete / Sell",kind:"action",summary:"Clear a building and recover 25% of its value.",rules:["Select this tool, then click a placed building.","The building is removed and 25% of its value is refunded.","Vault contents must fit in other storage before deleting the vault.","Vines cost $500 to remove and do not give a refund."]});
  if(it.type==="info")pcTarget(x,y,w,h,()=>pcSay("Click BUILD, choose a building, then click an empty tile."));
@@ -318,11 +318,13 @@ function pcBuyWorker(id){const w=PC_WORKERS.find(v=>v.id===id);if(!w)return;cons
 function pcToggleAuto(){if(!pcState.autoSellPurchased){if(pcState.cash<650){pcSay("Auto-Sell costs $650");return;}pcState.cash-=650;pcState.autoSellPurchased=true;pcState.autoSell=true;pcState.autoSellProgressMs=0;pcSelected=null;pcSay("Auto-Sell purchased and enabled — sells every minute of active play");pcSave();return;}pcState.autoSell=!pcState.autoSell;pcState.autoSellProgressMs=0;pcSay(pcState.autoSell?"Auto-Sell activated":"Auto-Sell paused");pcSave();}
 function pcClick(){pcPumpkinPressedAt=millis();const u=pcState.clickUpgrades||{power:0,bonus:0,cash:0},lucky=Math.random()<.001;pcSyncPumpkins();if(!pcState.autoSell&&pcAvailableStorage()<=0){if(lucky)pcOpenCandy("drop",pcRandomCandy());else pcSay("Storage full — sell pumpkins or add a vault");pcSave();return;}pcState.totalClicks++;pcState.totalHarvested++;if(pcState.autoSell){const earned=1+(u.cash||0);pcState.cash+=earned;pcSay("+$"+earned);}else{const n=Math.max(1,Math.floor((1+(u.power||0))*(1+(u.bonus||0)*.25)*pcCandyMult("click")));const added=pcDepositGeneral(n);pcSay("+"+added+" pumpkins");if(u.cash>0){pcState.cash+=u.cash;pcSay("+$"+u.cash+" click bonus");}}if(pcHasCandy("chocolate")){pcState.cash+=5;pcSay("+$5 candy bonus");}if(lucky)pcOpenCandy("drop",pcRandomCandy());pcSave();}
 function pcSell(){pcSyncPumpkins();const n=Math.floor(pcState.pumpkins);if(n<=0){pcSay("No pumpkins to sell");return;}pcState.baseStored=0;pcVaults().forEach(v=>v.stored=0);pcState.pumpkins=0;const earned=n*pcCandyMult("sell");pcState.cash+=earned;pcState.totalSold+=n;pcSay("Sold "+pcFmt(n)+" pumpkins for $"+pcFmt(earned));pcSave();}
-function pcCandyPrice(){return 250+Math.min(1750,pcState.prestige*100);}
+function pcCandyPurchaseTier(){return Math.max(Math.max(0,Math.floor(Number(pcState.candyPurchases)||0)),(pcState.activeCandies||[]).filter(v=>v&&v.expiresAt>Date.now()).length);}
+function pcCandyPrice(){const tier=pcCandyPurchaseTier();if(tier===0)return 550;if(tier===1)return 5000000;if(tier===2)return 1e15;return Infinity;}
+function pcCandyPriceLabel(){const tier=pcCandyPurchaseTier();if(tier===0)return "550";if(tier===1)return "5.00M";if(tier===2)return "1.00Qa";return "10^^"+(tier+1);}
 function pcRandomCandy(){return PC_CANDIES[Math.floor(Math.random()*PC_CANDIES.length)];}
 function pcOpenCandy(source,candy){pcCandyOpening={source,candy:candy||pcRandomCandy(),started:millis(),activated:false};pcToast="";}
 function pcDailyCandy(){if(pcCandyOpening)return;if(pcClaimed){pcSay("Daily candy already claimed");return;}pcClaimed=true;try{localStorage.setItem(PC_DAILY,pcToday());}catch(e){}const reward=50+Math.min(100,pcState.prestige*10);pcState.cash+=reward;pcDepositGeneral(10);pcOpenCandy("daily");pcSave();}
-function pcBuyCandy(){if(pcCandyOpening)return;const price=pcCandyPrice();if(pcState.cash<price){pcSay("Random candy costs $"+pcFmt(price));return;}pcState.cash-=price;pcOpenCandy("shop");pcSave();}
+function pcBuyCandy(){if(pcCandyOpening)return;const price=pcCandyPrice();if(!Number.isFinite(price)||pcState.cash<price){pcSay("Random candy costs $"+pcCandyPriceLabel());return;}pcState.cash-=price;pcState.candyPurchases=pcCandyPurchaseTier()+1;pcOpenCandy("shop");pcSave();}
 function pcActivateCandy(candy){const expiry=Date.now()+60*60*1000,existing=pcState.activeCandies.find(v=>v.id===candy.id);if(existing)existing.expiresAt=expiry;else pcState.activeCandies.push({id:candy.id,expiresAt:expiry});pcSave();}
 function pcDrawWrappedCentered(value,cx,cy,maxWidth,lineHeight,maxLines=3){
  const words=String(value||"").split(/\s+/).filter(Boolean),lines=[];let line="";
@@ -357,7 +359,7 @@ function pcItemHoverInfo(it){
   return {id:"build:"+d.id,title:d.name,kind:"build",summary:"Automatically sells generated pumpkins for cash.",rules:["One-time purchase: $650.","After purchase, click the Auto-Sell card in Misc to switch it on or off without paying again.","Auto-Sell empties stored pumpkins every 60 seconds of active play. Its on/off setting is saved, but prestige resets the purchase. While inactive, production accumulates as pumpkins instead of cash."]};
  }
  if(it.type==="daily")return {id:"daily-candy",title:"Daily Candy",kind:"candy",summary:"Claim a free random candy once per local day.",rules:["Opens with a shake and pop animation.","Also grants a cash reward and up to 10 pumpkins.","The candy bonus lasts one hour.","A new claim becomes available when the local date changes."]};
- if(it.type==="buyCandy")return {id:"buy-candy",title:"Buy Random Candy",kind:"candy",summary:"Spend $"+pcFmt(pcCandyPrice())+" for a random one-hour bonus.",rules:["Each purchase reveals a random candy.","The effect starts after the reveal animation.","Different candies can be active together.","Getting the same candy again refreshes its timer."]};
+ if(it.type==="buyCandy")return {id:"buy-candy",title:"Buy Random Candy",kind:"candy",summary:"Spend $"+pcCandyPriceLabel()+" for a random one-hour bonus.",rules:["Each purchase reveals a random candy.","The effect starts after the reveal animation.","Different candies can be active together.","Getting the same candy again refreshes its timer."]};
  if(it.type==="sell")return {id:"sell-pumpkins",title:"Sell Pumpkins",kind:"action",summary:"Convert stored pumpkins into cash.",rules:["Standard price is $1 per pumpkin.","Peppermint doubles sale value while active.","Selling creates room for more production."]};
  return {id:"farm-guide",title:"Farm Guide",kind:"help",summary:d.desc,rules:["Choose a building from the Build tab.","Then click an empty farm tile to place it.","Hover a tile for its specific rules."]};
 }
