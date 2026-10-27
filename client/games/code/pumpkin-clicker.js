@@ -35,7 +35,7 @@ const PC_CANDIES=[
  {id:"candied_apple",name:"Candied Apple",path:"/assets/candies/candied-apple.png",desc:"+25% generator production",production:1.25},
  {id:"blue_candy",name:"Blue Candy",path:"/assets/candies/blue-candy.png",desc:"Doubles additive worker bonuses",workers:2}
 ];
-let pcImgs={},pcState,pcTargets=[],pcTab="workers",pcSideScroll=0,pcGridScroll=0,pcSelected=null,pcBulkPlaceRemaining=0,pcShiftHeld=false,pcToast="",pcToastEnd=0,pcLast=0,pcSaveTicks=0,pcClaimed=false,pcSpecks=[],pcCandyOpening=null,pcCandyQueue=[],pcClickBuyMode=1;
+let pcImgs={},pcState,pcTargets=[],pcTab="workers",pcSideScroll=0,pcGridScroll=0,pcSelected=null,pcBulkPlaceRemaining=0,pcShiftHeld=false,pcToast="",pcToastEnd=0,pcLast=0,pcSaveTicks=0,pcClaimed=false,pcSpecks=[],pcCandyOpening=null,pcCandyQueue=[],pcCandyConfetti=[],pcCandyConfettiLast=0,pcClickBuyMode=1;
 let pcHoverId="",pcHoverSince=0,pcHoverTarget=null,pcPumpkinScale=1,pcPumpkinPressedAt=-10000,pcLastActivity=Date.now();
 
 function pcFresh(p=0){return {cash:25,pumpkins:0,baseStored:0,storageVersion:2,vinesSeeded:false,vinesCleared:0,prestige:p,totalClicks:0,totalSold:0,totalHarvested:0,totalWorkers:0,candyPurchases:0,autoSell:false,autoSellPurchased:false,autoSellProgressMs:0,progress:0,activeCandies:[],clickUpgrades:{power:0,bonus:0,cash:0},workers:{monster:0,ghost:0,speeder:0,rusher:0,brute:0,wizard:0,debuffer:0},farmCols:6+p,farmRows:4+p,farm:[],lastSavedAt:Date.now()};}
@@ -448,7 +448,61 @@ function pcDrawWrappedCentered(value,cx,cy,maxWidth,lineHeight,maxLines=3){
  if(lines.length>maxLines){lines.length=maxLines;let last=lines[maxLines-1];while(last.length&&textWidth(last+"…")>maxWidth)last=last.slice(0,-1);lines[maxLines-1]=last.replace(/\s+$/,"")+"…";}
  const startY=cy-((lines.length-1)*lineHeight)/2;lines.forEach((s,i)=>text(s,cx,startY+i*lineHeight));
 }
-function pcDrawCandyReveal(){if(!pcCandyOpening)return;const o=pcCandyOpening,elapsed=millis()-o.started;pcLayout();if(elapsed>=1050&&!o.activated){pcActivateCandy(o.candy);o.activated=true;}noStroke();fill(0,0,0,175);rect(0,0,width,height);const w=Math.min(width*.78,420),h=Math.min(height*.66,390),x=(width-w)/2,y=(height-h)/2;fill("#14230e");stroke(PC_ORANGE);strokeWeight(3);rect(x,y,w,h);fill(PC_WHITE);noStroke();textAlign(CENTER,CENTER);textSize(Math.max(16,Math.min(24,w*.065)));text(elapsed<1050?(o.source==="daily"?"OPENING DAILY CANDY":o.source==="drop"?"RARE CANDY DROP!":"OPENING RANDOM CANDY"):"CANDY BONUS UNLOCKED",x+w/2,y+h*.16);if(elapsed<1050){const shake=elapsed<750?Math.sin(elapsed*.065)*Math.max(1,12-elapsed*.012):0,pop=elapsed>=750?1+Math.sin((elapsed-750)/300*Math.PI)*.24:1,img=pcImgs.candyBag;if(img&&img.width)pcSheet(img,x+w/2+shake,y+h*.47,Math.min(w*.34,h*.3)*pop,1);else{fill(PC_ORANGE);rect(x+w*.42,y+h*.35,w*.16,h*.2);}fill("#c8d6b9");textSize(12);text(elapsed<750?"SHAKING...":"POP!",x+w/2,y+h*.76);return;}const d=o.candy,img=pcImgs[d.id],icon=Math.min(w*.28,h*.25);if(img&&img.width)pcSheet(img,x+w/2,y+h*.40,icon,1);fill(PC_ORANGE);textSize(Math.max(15,Math.min(22,w*.06)));text(d.name,x+w/2,y+h*.62);fill(PC_WHITE);textSize(Math.max(11,Math.min(15,w*.042)));pcDrawWrappedCentered(d.desc,x+w/2,y+h*.71,w-30,Math.max(12,Math.min(15,w*.042)),3);fill("#9fb58a");textSize(11);text("ACTIVE FOR 1 HOUR",x+w/2,y+h*.83);pcButton(x+w*.25,y+h*.88,w*.5,28,"CONTINUE",PC_ORANGE,PC_BLACK);pcTarget(x+w*.25,y+h*.88,w*.5,28,()=>{if(pcCandyQueue.length){pcOpenCandy("shop",pcCandyQueue.shift());}else pcCandyOpening=null;pcSave();},true);}
+function pcSpawnCandyConfetti(cx,cy){
+ const count=160;
+ for(let i=0;i<count;i++){
+  const angle=-HALF_PI+Math.pow(Math.random(),1.2)*(Math.random()<.5?-1:1)*1.25;
+  const speed=3.5+Math.random()*4.5;
+  pcCandyConfetti.push({
+   x:cx+(Math.random()-.5)*18,y:cy+(Math.random()-.5)*10,
+   vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,
+   size:2.5+Math.random()*3.5,
+   r:Math.floor(Math.random()*256),g:Math.floor(Math.random()*256),b:Math.floor(Math.random()*256),
+   angle:Math.random()*Math.PI*2,spin:(Math.random()-.5)*.18,
+   age:0,life:1800+Math.random()*900
+  });
+ }
+ pcCandyConfettiLast=millis();
+}
+function pcDrawCandyConfetti(){
+ if(!pcCandyConfetti.length)return;
+ const now=millis(),dt=pcCandyConfettiLast?Math.max(0,Math.min(2.5,(now-pcCandyConfettiLast)/16.667)):1;
+ pcCandyConfettiLast=now;
+ for(let i=pcCandyConfetti.length-1;i>=0;i--){
+  const p=pcCandyConfetti[i];p.age+=dt*16.667;p.vy+=.22*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.angle+=p.spin*dt;
+  if(p.x<0){p.x=0;p.vx=Math.abs(p.vx);}else if(p.x>width){p.x=width;p.vx=-Math.abs(p.vx);}
+  if(p.age>=p.life||p.y>height+16){pcCandyConfetti.splice(i,1);continue;}
+  const alpha=255*Math.min(1,(p.life-p.age)/420);
+  push();translate(p.x,p.y);rotate(p.angle);noStroke();fill(p.r,p.g,p.b,alpha);rectMode(CENTER);rect(0,0,p.size*1.45,p.size);pop();
+ }
+}
+function pcDrawCandyReveal(){
+ if(!pcCandyOpening)return;
+ const o=pcCandyOpening,elapsed=millis()-o.started,L=pcLayout(),w=Math.min(width*.78,420),h=Math.min(height*.66,390),x=(width-w)/2,y=(height-h)/2,cx=x+w/2,bagY=y+h*.47;
+ if(elapsed>=1050&&!o.activated){pcActivateCandy(o.candy);o.activated=true;pcSpawnCandyConfetti(cx,y+h*.40);}
+ noStroke();fill(0,0,0,175);rect(0,0,width,height);
+ fill("#14230e");stroke(PC_ORANGE);strokeWeight(3);rect(x,y,w,h);
+ fill(PC_WHITE);noStroke();textAlign(CENTER,CENTER);textSize(Math.max(16,Math.min(24,w*.065)));
+ text(elapsed<1050?(o.source==="daily"?"OPENING DAILY CANDY":o.source==="drop"?"RARE CANDY DROP!":"OPENING RANDOM CANDY"):"CANDY BONUS UNLOCKED",cx,y+h*.16);
+ if(elapsed<1050){
+  const shake=elapsed<800?Math.sin(elapsed*.065)*Math.max(1,12-elapsed*.012):0;
+  const fade=elapsed<850?255:Math.max(0,255*(1050-elapsed)/200);
+  const img=pcImgs.candyBag,bagSize=Math.min(w*.34,h*.3);
+  if(img&&img.width){push();tint(255,fade);pcSheet(img,cx+shake,bagY,bagSize,1);noTint();pop();}
+  else{fill(PC_ORANGE,fade);rect(cx+shake-w*.08,bagY-h*.10,w*.16,h*.2);}
+  fill("#c8d6b9");textSize(12);text(elapsed<800?"SHAKING...":"OPENING...",cx,y+h*.76);
+  pcDrawCandyConfetti();
+  return;
+ }
+ const d=o.candy,img=pcImgs[d.id],icon=Math.min(w*.28,h*.25);
+ if(img&&img.width)pcSheet(img,cx,y+h*.40,icon,1);
+ fill(PC_ORANGE);textSize(Math.max(15,Math.min(22,w*.06)));text(d.name,cx,y+h*.62);
+ fill(PC_WHITE);textSize(Math.max(11,Math.min(15,w*.042)));pcDrawWrappedCentered(d.desc,cx,y+h*.71,w-30,Math.max(12,Math.min(15,w*.042)),3);
+ fill("#9fb58a");textSize(11);text("ACTIVE FOR 1 HOUR",cx,y+h*.83);
+ pcButton(x+w*.25,y+h*.88,w*.5,28,"CONTINUE",PC_ORANGE,PC_BLACK);
+ pcTarget(x+w*.25,y+h*.88,w*.5,28,()=>{if(pcCandyQueue.length){pcOpenCandy("shop",pcCandyQueue.shift());}else pcCandyOpening=null;pcSave();},true);
+ pcDrawCandyConfetti();
+}
 function pcPrestigeCost(){return Math.floor(10000000000*Math.pow(4,pcState.prestige));}
 function pcPrestige(){const cost=pcPrestigeCost();if(pcState.cash<cost){pcSay("Need $"+pcFmt(cost)+" to prestige");return;}const p=pcState.prestige+1,buffs=pcState.activeCandies.filter(v=>v.expiresAt>Date.now());pcState=pcFresh(p);pcState.activeCandies=buffs;pcState.farmCols=6+p;pcState.farmRows=4+p;pcState.farm=Array.from({length:pcState.farmRows},()=>Array(pcState.farmCols).fill(null));pcSeedVines();pcGridScroll=0;pcSideScroll=0;pcSelected=null;pcSay("Prestige "+p+"! Farm expanded; permanent production increased.");pcSave();}
 
