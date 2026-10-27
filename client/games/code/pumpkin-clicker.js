@@ -876,37 +876,202 @@ function draw() {
   finishHover();
 }
 
-function getLayout(){
- const W=width,H=height,top=Math.max(68,Math.min(88,H*.15)),side=Math.max(112,Math.min(205,W*.255)),mainX=side+8,mainW=Math.max(120,W-mainX);
- const gridStart=Math.max(top+146,H*.535),gridTop=gridStart+25,gap=3,panelInset=3,gridInnerW=Math.max(1,mainW-panelInset*2),tile=Math.max(1,Math.min(54,Math.floor((gridInnerW-(game.farmCols-1)*gap)/game.farmCols)));
- const gridW=game.farmCols*tile+(game.farmCols-1)*gap,gridX=mainX+panelInset+Math.max(0,(gridInnerW-gridW)/2),content=game.farmRows*(tile+gap)-gap,view=Math.max(0,H-5-gridTop);
- gridScroll=constrain(gridScroll,0,Math.max(0,content-view));
- return {W,H,top,side,mainX,mainW,gridStart,gridTop,gridBottom:H-5,tile,gap,gridX,content,view};
+function getLayout() {
+  const W = width;
+  const H = height;
+  const top = Math.max(68, Math.min(88, H * 0.15));
+  const side = Math.max(112, Math.min(205, W * 0.255));
+  const mainX = side + 8;
+  const mainW = Math.max(120, W - mainX);
+  const gridStart = Math.max(top + 146, H * 0.535);
+  const gridTop = gridStart + 25;
+  const gap = 3;
+  const panelInset = 3;
+  const gridInnerW = Math.max(1, mainW - panelInset * 2);
+  const tile = Math.max(1, Math.min(54,
+    Math.floor((gridInnerW - (game.farmCols - 1) * gap) / game.farmCols)
+  ));
+  const gridW = game.farmCols * tile + (game.farmCols - 1) * gap;
+  const gridX = mainX + panelInset + Math.max(0, (gridInnerW - gridW) / 2);
+  const content = game.farmRows * (tile + gap) - gap;
+  const view = Math.max(0, H - 5 - gridTop);
+
+  gridScroll = constrain(gridScroll, 0, Math.max(0, content - view));
+
+  return {
+    W, H, top, side, mainX, mainW, gridStart, gridTop,
+    gridBottom: H - 5, tile, gap, gridX, content, view
+  };
 }
-function addTarget(x,y,w,h,fn,modal=false,hover=null){targets.push({x,y,w,h,fn,modal,hover,id:hover&&hover.id?hover.id:("target:"+targets.length)});}
-function drawTopBar(L){
- noStroke();fill(black);rect(0,0,L.W,L.top);stroke(orange);strokeWeight(2);line(0,L.top-1,L.W,L.top-1);
- const f=Math.max(9,Math.min(14,L.W*.031));noStroke();fill(white);textAlign(LEFT,CENTER);textSize(f);
- text("PUMPKINS "+formatNumber(game.pumpkins)+"/"+formatNumber(storageCapacity()),7,L.top*.22);text("CASH $"+formatNumber(game.cash),7,L.top*.53);
- textAlign(RIGHT,CENTER);fill(orange);textSize(Math.max(8,f*.82));text("PRESTIGE "+game.prestige+"  ×"+(1+game.prestige*.5).toFixed(2),L.W-8,L.top*.22);
- fill(white);text("FARM "+game.farmCols+"×"+game.farmRows,L.W-8,L.top*.53);
- const live=game.activeCandies.filter(v=>v.expiresAt>Date.now());let cx=8;const cy=L.top*.84;fill("#a9bf94");textAlign(LEFT,CENTER);textSize(Math.max(7,Math.min(10,f*.7)));text(live.length?"ACTIVE CANDY":"NO ACTIVE CANDY",cx,cy);cx+=Math.max(82,f*5.8);
- live.slice(0,5).forEach(v=>{const candy=candies.find(q=>q.id===v.id);if(!candy)return;const img=images[v.id];if(img&&img.width)drawSpriteSheet(img,cx+7,cy,14,1);cx+=17;fill(white);textAlign(LEFT,CENTER);textSize(Math.max(7,Math.min(9,f*.65)));const mins=Math.max(0,Math.ceil((v.expiresAt-Date.now())/60000));const label=candy.name+" "+mins+"m";text(label,cx,cy);const labelWidth=textWidth(label);addTarget(cx-18,cy-9,labelWidth+30,18,()=>{},false,{id:"active-candy:"+candy.id,title:candy.name,kind:"candy",summary:candy.desc,rules:["Bonus lasts for one hour from activation.","Stacks multiplicatively with other applicable candy bonuses.","Remaining time: "+mins+" minute"+(mins===1?"":"s")+"."]});cx+=labelWidth+12;});
- if(live.length>5){fill(orange);textAlign(LEFT,CENTER);text("+"+(live.length-5),cx,cy);}
+function addTarget(x, y, w, h, fn, modal = false, hover = null) {
+  targets.push({
+    x, y, w, h, fn, modal, hover,
+    id: hover && hover.id ? hover.id : "target:" + targets.length
+  });
 }
-function drawSidebar(L){
- const x=4,y=L.top+4,w=L.side+4,h=L.H-y-4;fill(black);stroke(orange);strokeWeight(1.5);rect(x,y,w,h);
- const tabs=[["workers","WORK"],["build","BUILD"],["candy","MISC"]],th=Math.max(20,Math.min(28,(L.H-L.top)*.075)),tw=(w-8)/3,ty=y+4;
- tabs.forEach((t,i)=>{const tx=x+4+i*tw,hovered=mouseX>=tx&&mouseX<=tx+tw-2&&mouseY>=ty&&mouseY<=ty+th;fill(shopTab===t[0]?orange:hovered?(mouseIsPressed?"#2b2213":"#3a2b12"):"#17210f");stroke(shopTab===t[0]||hovered?orange:"#50623f");strokeWeight(shopTab===t[0]||hovered?2:1);rect(tx,ty,tw-2,th);noStroke();fill(shopTab===t[0]?black:white);textAlign(CENTER,CENTER);textSize(Math.max(7,Math.min(10,w*.075)));text(t[1],tx+(tw-2)/2,ty+th/2);addTarget(tx,ty,tw-2,th,()=>{shopTab=t[0];shopScroll=0;});});
- const ly=ty+th+5,lh=Math.max(0,y+h-ly),items=getShopItems(),rh=Math.max(40,Math.min(54,(L.H-L.top)*.13)),total=items.length*rh;
- shopScroll=constrain(shopScroll,0,Math.max(0,total-lh));drawingContext.save();drawingContext.beginPath();drawingContext.rect(x+2,ly,w-4,lh);drawingContext.clip();
- items.forEach((it,i)=>{const yy=ly+i*rh-shopScroll;if(yy+rh>ly&&yy<ly+lh)drawShopItem(it,x+4,yy,w-10,rh);});drawingContext.restore();
- if(total>lh){fill("#35492c");noStroke();rect(x+w-4,ly,2,lh);fill(orange);rect(x+w-4,ly+shopScroll/total*lh,2,Math.max(8,lh*lh/total));}
+function drawTopBar(L) {
+  noStroke();
+  fill(black);
+  rect(0, 0, L.W, L.top);
+  stroke(orange);
+  strokeWeight(2);
+  line(0, L.top - 1, L.W, L.top - 1);
+
+  const fontSize = Math.max(9, Math.min(14, L.W * 0.031));
+  noStroke();
+  fill(white);
+  textAlign(LEFT, CENTER);
+  textSize(fontSize);
+  text("PUMPKINS " + formatNumber(game.pumpkins) + "/" + formatNumber(storageCapacity()), 7, L.top * 0.22);
+  text("CASH $" + formatNumber(game.cash), 7, L.top * 0.53);
+
+  textAlign(RIGHT, CENTER);
+  fill(orange);
+  textSize(Math.max(8, fontSize * 0.82));
+  text("PRESTIGE " + game.prestige + "  ×" + (1 + game.prestige * 0.5).toFixed(2), L.W - 8, L.top * 0.22);
+
+  fill(white);
+  text("FARM " + game.farmCols + "×" + game.farmRows, L.W - 8, L.top * 0.53);
+
+  const activeCandies = game.activeCandies.filter(candy => candy.expiresAt > Date.now());
+  let x = 8;
+  const y = L.top * 0.84;
+
+  fill("#a9bf94");
+  textAlign(LEFT, CENTER);
+  textSize(Math.max(7, Math.min(10, fontSize * 0.7)));
+  text(activeCandies.length ? "ACTIVE CANDY" : "NO ACTIVE CANDY", x, y);
+  x += Math.max(82, fontSize * 5.8);
+
+  activeCandies.slice(0, 5).forEach(active => {
+    const candy = candies.find(item => item.id === active.id);
+    if (!candy) return;
+
+    const img = images[active.id];
+    if (img && img.width) drawSpriteSheet(img, x + 7, y, 14, 1);
+    x += 17;
+
+    fill(white);
+    textAlign(LEFT, CENTER);
+    textSize(Math.max(7, Math.min(9, fontSize * 0.65)));
+
+    const mins = Math.max(0, Math.ceil((active.expiresAt - Date.now()) / 60000));
+    const label = candy.name + " " + mins + "m";
+    text(label, x, y);
+
+    const labelWidth = textWidth(label);
+    addTarget(x - 18, y - 9, labelWidth + 30, 18, () => {}, false, {
+      id: "active-candy:" + candy.id,
+      title: candy.name,
+      kind: "candy",
+      summary: candy.desc,
+      rules: [
+        "Bonus lasts for one hour from activation.",
+        "Stacks multiplicatively with other applicable candy bonuses.",
+        "Remaining time: " + mins + " minute" + (mins === 1 ? "" : "s") + "."
+      ]
+    });
+
+    x += labelWidth + 12;
+  });
+
+  if (activeCandies.length > 5) {
+    fill(orange);
+    textAlign(LEFT, CENTER);
+    text("+" + (activeCandies.length - 5), x, y);
+  }
 }
-function getShopItems(){
- if(shopTab==="workers")return workers.map(d=>({type:"worker",d}));
- if(shopTab==="build")return buildings.map(d=>({type:"build",d}));
- return [{type:"autosell",d:{id:"autosell",name:"Auto-Sell",cost:650,desc:"Sell stored pumpkins every 60s",kind:"upgrade"}},{type:"daily",d:{name:"Daily Candy",desc:"Free one-hour candy"}},{type:"buyCandy",d:{name:"Buy Random Candy",desc:"One-hour random bonus"}},{type:"sell",d:{name:"Sell Pumpkins",desc:"Trade stored harvest"}},{type:"delete",d:{name:"Delete / Sell",desc:"Clear tile • 25% refund"}},{type:"info",d:{name:"Farm Guide",desc:"Build → click an empty tile"}}];
+function drawSidebar(L) {
+  const x = 4;
+  const y = L.top + 4;
+  const w = L.side + 4;
+  const h = L.H - y - 4;
+
+  fill(black);
+  stroke(orange);
+  strokeWeight(1.5);
+  rect(x, y, w, h);
+
+  const tabs = [["workers", "WORK"], ["build", "BUILD"], ["candy", "MISC"]];
+  const th = Math.max(20, Math.min(28, (L.H - L.top) * 0.075));
+  const tw = (w - 8) / 3;
+  const ty = y + 4;
+
+  tabs.forEach((tab, i) => {
+    const tx = x + 4 + i * tw;
+    const hovered = mouseX >= tx && mouseX <= tx + tw - 2
+      && mouseY >= ty && mouseY <= ty + th;
+
+    fill(shopTab === tab[0]
+      ? orange
+      : hovered ? (mouseIsPressed ? "#2b2213" : "#3a2b12") : "#17210f");
+    stroke(shopTab === tab[0] || hovered ? orange : "#50623f");
+    strokeWeight(shopTab === tab[0] || hovered ? 2 : 1);
+    rect(tx, ty, tw - 2, th);
+
+    noStroke();
+    fill(shopTab === tab[0] ? black : white);
+    textAlign(CENTER, CENTER);
+    textSize(Math.max(7, Math.min(10, w * 0.075)));
+    text(tab[1], tx + (tw - 2) / 2, ty + th / 2);
+
+    addTarget(tx, ty, tw - 2, th, () => {
+      shopTab = tab[0];
+      shopScroll = 0;
+    });
+  });
+
+  const listY = ty + th + 5;
+  const listHeight = Math.max(0, y + h - listY);
+  const items = getShopItems();
+  const rowHeight = Math.max(40, Math.min(54, (L.H - L.top) * 0.13));
+  const totalHeight = items.length * rowHeight;
+
+  shopScroll = constrain(shopScroll, 0, Math.max(0, totalHeight - listHeight));
+  drawingContext.save();
+  drawingContext.beginPath();
+  drawingContext.rect(x + 2, listY, w - 4, listHeight);
+  drawingContext.clip();
+
+  items.forEach((item, i) => {
+    const itemY = listY + i * rowHeight - shopScroll;
+    if (itemY + rowHeight > listY && itemY < listY + listHeight) {
+      drawShopItem(item, x + 4, itemY, w - 10, rowHeight);
+    }
+  });
+
+  drawingContext.restore();
+
+  if (totalHeight > listHeight) {
+    fill("#35492c");
+    noStroke();
+    rect(x + w - 4, listY, 2, listHeight);
+
+    fill(orange);
+    rect(
+      x + w - 4,
+      listY + shopScroll / totalHeight * listHeight,
+      2,
+      Math.max(8, listHeight * listHeight / totalHeight)
+    );
+  }
+}
+function getShopItems() {
+  if (shopTab === "workers") {
+    return workers.map(d => ({ type: "worker", d }));
+  }
+  if (shopTab === "build") {
+    return buildings.map(d => ({ type: "build", d }));
+  }
+
+  return [
+    { type: "autosell", d: { id: "autosell", name: "Auto-Sell", cost: 650, desc: "Sell stored pumpkins every 60s", kind: "upgrade" } },
+    { type: "daily", d: { name: "Daily Candy", desc: "Free one-hour candy" } },
+    { type: "buyCandy", d: { name: "Buy Random Candy", desc: "One-hour random bonus" } },
+    { type: "sell", d: { name: "Sell Pumpkins", desc: "Trade stored harvest" } },
+    { type: "delete", d: { name: "Delete / Sell", desc: "Clear tile • 25% refund" } },
+    { type: "info", d: { name: "Farm Guide", desc: "Build → click an empty tile" } }
+  ];
 }
 function drawShopItem(it,x,y,w,h){
  const d=it.d,isB=it.type==="build"||it.type==="autosell",sel=(isB&&d.kind!=="upgrade"&&selectedBuild===d.id)||(it.type==="delete"&&selectedBuild==="__sell");
@@ -941,24 +1106,130 @@ function drawShopItem(it,x,y,w,h){
  if(it.type==="delete")addTarget(x,y,w,h,()=>{selectedBuild=selectedBuild==="__sell"?null:"__sell";showToast(selectedBuild==="__sell"?"Click a farm tile to delete it for a 25% refund":"Delete / Sell cancelled");},false,{id:"delete-tool",title:"Delete / Sell",kind:"action",summary:"Clear a building and recover 25% of its value.",rules:["Select this tool, then click a placed building.","The building is removed and 25% of its value is refunded.","Vault contents must fit in other storage before deleting the vault.","Vines cost $"+formatNumber(vineClearCost())+" to remove and do not give a refund; each removal makes the next one 10× more expensive."]});
  if(it.type==="info")addTarget(x,y,w,h,()=>showToast("Click BUILD, choose a building, then click an empty tile."));
 }
-function drawMainPanel(L){
- const x=L.mainX,w=L.mainW,upgradeW=Math.min(110,Math.max(64,w*.30)),leftW=Math.max(70,w-upgradeW-12),px=x+4+leftW/2,py=L.top+Math.max(44,(L.gridStart-L.top)*.42),sz=Math.min(leftW*.70,(L.gridStart-L.top)*.54,118);
- noStroke();fill("#0d190b");rect(x+3,L.top+3,w-6,L.gridStart-L.top-4);stroke(orange);strokeWeight(1.5);noFill();rect(x+3,L.top+3,w-6,L.gridStart-L.top-4);
- const hovered=mouseX>=px-sz*.65&&mouseX<=px+sz*.65&&mouseY>=py-sz*.65&&mouseY<=py+sz*.65;
- pumpkinScale+=( (hovered?1.075:1)-pumpkinScale)*.24;
- const pressAge=millis()-pumpkinPressedAt,press=pressAge<430?Math.exp(-pressAge/105)*Math.cos(pressAge/34):0;
- push();translate(px,py);scale(pumpkinScale-.13*press,pumpkinScale-.08*press);
- const img=images.regular;if(img?.width)drawSpriteSheet(img,0,0,sz,1);else{noStroke();fill("#ed8d20");ellipse(0,0,sz*.78,sz*.82);fill("#bd5c11");ellipse(-sz*.18,0,sz*.23,sz*.8);ellipse(sz*.18,0,sz*.23,sz*.8);fill("#4d7b20");rect(-sz*.05,-sz*.52,sz*.1,sz*.22);}pop();
- textAlign(CENTER,CENTER);noStroke();fill(white);const harvestText="PUMPKIN HARVEST",harvestY=py-sz*.58,harvestSize=Math.max(12,Math.min(18,w*.055));textSize(harvestSize);text(harvestText,px,harvestY);const harvestW=textWidth(harvestText);fill("#b8caa4");textSize(Math.max(9,Math.min(12,w*.038)));text("CLICK TO COLLECT",px,py+sz*.70);
- addTarget(px-harvestW/2-3,harvestY-10,harvestW+6,20,()=>{},false,{id:"main-pumpkin-label",title:"Pumpkin Harvest",kind:"button",summary:"Click the pumpkin to harvest.",rules:["Click upgrades are arranged around the pumpkin.","Pumpkins collect in storage until it fills.","Sell stored pumpkins for cash.","Active candy may improve clicks or cash rewards."]});
- addTarget(px-sz*.55,py-sz*.55,sz*1.1,sz*1.1,clickPumpkin);
- drawClickUpgrades(L,x,w);
- const by=L.gridStart-29,buttonInset=6,buttonGap=3,bw=Math.max(1,(w-buttonInset*2-buttonGap)/2),sellX=x+buttonInset,prestigeX=sellX+bw+buttonGap,sellHovered=mouseX>=sellX&&mouseX<=sellX+bw&&mouseY>=by&&mouseY<=by+23,sellColor=mouseIsPressed&&sellHovered?"#8f5300":sellHovered?"#d18400":orange;drawButton(sellX,by,bw,23,"SELL HARVEST",sellColor,black);addTarget(sellX,by,bw,23,sellPumpkins);
- const cost=prestigeCost(),ready=game.cash>=cost,prestigeHovered=mouseX>=prestigeX&&mouseX<=prestigeX+bw&&mouseY>=by&&mouseY<=by+23,prestigeColor=!ready?"#4a553e":mouseIsPressed&&prestigeHovered?"#8f5300":prestigeHovered?"#d18400":orange,prestigeBorder=ready?orange:"#707a68";drawButton(prestigeX,by,bw,23,"PRESTIGE $"+formatNumber(cost),prestigeColor,ready?black:"#9aa38e",prestigeBorder);addTarget(prestigeX,by,bw,23,performPrestige);
- fill("#0d190b");noStroke();rect(x+3,L.gridStart+2,w-6,L.H-L.gridStart-5);stroke(orange);strokeWeight(1);noFill();rect(x+3,L.gridStart+2,w-6,L.H-L.gridStart-5);
- noStroke();fill(orange);textAlign(LEFT,CENTER);textSize(Math.max(9,Math.min(12,w*.038)));text("FARM GRID • CLICK TO PLACE",x+5,L.gridStart+12);
- if(selectedBuild){const b=buildings.find(v=>v.id===selectedBuild);fill(white);textAlign(RIGHT,CENTER);textSize(Math.max(8,Math.min(10,w*.032)));text(selectedBuild==="__sell"?"DELETE / SELL":b?b.name:"",x+w-4,L.gridStart+12);}
- drawFarmGrid(L);
+function drawMainPanel(L) {
+  const x = L.mainX;
+  const w = L.mainW;
+  const upgradeW = Math.min(110, Math.max(64, w * 0.30));
+  const leftW = Math.max(70, w - upgradeW - 12);
+  const pumpkinX = x + 4 + leftW / 2;
+  const pumpkinY = L.top + Math.max(44, (L.gridStart - L.top) * 0.42);
+  const size = Math.min(leftW * 0.70, (L.gridStart - L.top) * 0.54, 118);
+
+  fill("#0d190b");
+  noStroke();
+  rect(x + 3, L.top + 3, w - 6, L.gridStart - L.top - 4);
+  stroke(orange);
+  strokeWeight(1.5);
+  noFill();
+  rect(x + 3, L.top + 3, w - 6, L.gridStart - L.top - 4);
+
+  const hovered = mouseX >= pumpkinX - size * 0.65 && mouseX <= pumpkinX + size * 0.65
+    && mouseY >= pumpkinY - size * 0.65 && mouseY <= pumpkinY + size * 0.65;
+  pumpkinScale += ((hovered ? 1.075 : 1) - pumpkinScale) * 0.24;
+
+  const pressAge = millis() - pumpkinPressedAt;
+  const press = pressAge < 430 ? Math.exp(-pressAge / 105) * Math.cos(pressAge / 34) : 0;
+
+  push();
+  translate(pumpkinX, pumpkinY);
+  scale(pumpkinScale - 0.13 * press, pumpkinScale - 0.08 * press);
+
+  const img = images.regular;
+  if (img?.width) {
+    drawSpriteSheet(img, 0, 0, size, 1);
+  } else {
+    noStroke();
+    fill("#ed8d20");
+    ellipse(0, 0, size * 0.78, size * 0.82);
+    fill("#bd5c11");
+    ellipse(-size * 0.18, 0, size * 0.23, size * 0.8);
+    ellipse(size * 0.18, 0, size * 0.23, size * 0.8);
+    fill("#4d7b20");
+    rect(-size * 0.05, -size * 0.52, size * 0.1, size * 0.22);
+  }
+  pop();
+
+  textAlign(CENTER, CENTER);
+  noStroke();
+  fill(white);
+
+  const harvestText = "PUMPKIN HARVEST";
+  const harvestY = pumpkinY - size * 0.58;
+  const harvestSize = Math.max(12, Math.min(18, w * 0.055));
+
+  textSize(harvestSize);
+  text(harvestText, pumpkinX, harvestY);
+
+  const harvestW = textWidth(harvestText);
+  fill("#b8caa4");
+  textSize(Math.max(9, Math.min(12, w * 0.038)));
+  text("CLICK TO COLLECT", pumpkinX, pumpkinY + size * 0.70);
+
+  addTarget(pumpkinX - harvestW / 2 - 3, harvestY - 10, harvestW + 6, 20, () => {}, false, {
+    id: "main-pumpkin-label",
+    title: "Pumpkin Harvest",
+    kind: "button",
+    summary: "Click the pumpkin to harvest.",
+    rules: [
+      "Click upgrades are arranged around the pumpkin.",
+      "Pumpkins collect in storage until it fills.",
+      "Sell stored pumpkins for cash.",
+      "Active candy may improve clicks or cash rewards."
+    ]
+  });
+  addTarget(pumpkinX - size * 0.55, pumpkinY - size * 0.55, size * 1.1, size * 1.1, clickPumpkin);
+
+  drawClickUpgrades(L, x, w);
+
+  const buttonY = L.gridStart - 29;
+  const buttonInset = 6;
+  const buttonGap = 3;
+  const buttonW = Math.max(1, (w - buttonInset * 2 - buttonGap) / 2);
+  const sellX = x + buttonInset;
+  const prestigeX = sellX + buttonW + buttonGap;
+  const sellHovered = mouseX >= sellX && mouseX <= sellX + buttonW
+    && mouseY >= buttonY && mouseY <= buttonY + 23;
+  const sellColor = mouseIsPressed && sellHovered ? "#8f5300" : sellHovered ? "#d18400" : orange;
+
+  drawButton(sellX, buttonY, buttonW, 23, "SELL HARVEST", sellColor, black);
+  addTarget(sellX, buttonY, buttonW, 23, sellPumpkins);
+
+  const cost = prestigeCost();
+  const ready = game.cash >= cost;
+  const prestigeHovered = mouseX >= prestigeX && mouseX <= prestigeX + buttonW
+    && mouseY >= buttonY && mouseY <= buttonY + 23;
+  const prestigeColor = !ready ? "#4a553e"
+    : mouseIsPressed && prestigeHovered ? "#8f5300"
+      : prestigeHovered ? "#d18400" : orange;
+  const prestigeBorder = ready ? orange : "#707a68";
+
+  drawButton(prestigeX, buttonY, buttonW, 23, "PRESTIGE $" + formatNumber(cost),
+    prestigeColor, ready ? black : "#9aa38e", prestigeBorder);
+  addTarget(prestigeX, buttonY, buttonW, 23, performPrestige);
+
+  fill("#0d190b");
+  noStroke();
+  rect(x + 3, L.gridStart + 2, w - 6, L.H - L.gridStart - 5);
+  stroke(orange);
+  strokeWeight(1);
+  noFill();
+  rect(x + 3, L.gridStart + 2, w - 6, L.H - L.gridStart - 5);
+
+  noStroke();
+  fill(orange);
+  textAlign(LEFT, CENTER);
+  textSize(Math.max(9, Math.min(12, w * 0.038)));
+  text("FARM GRID • CLICK TO PLACE", x + 5, L.gridStart + 12);
+
+  if (selectedBuild) {
+    const building = buildings.find(item => item.id === selectedBuild);
+    fill(white);
+    textAlign(RIGHT, CENTER);
+    textSize(Math.max(8, Math.min(10, w * 0.032)));
+    text(selectedBuild === "__sell" ? "DELETE / SELL" : building ? building.name : "", x + w - 4, L.gridStart + 12);
+  }
+
+  drawFarmGrid(L);
 }
 function clickPumpkinYield(){const u=game.clickUpgrades||{power:0,bonus:0,cash:0},power=Math.max(0,Math.floor(Number(u.power)||0)),bonus=Math.max(0,Math.floor(Number(u.bonus)||0));return Math.max(1,Math.ceil((1+Math.pow(power,1.35))*Math.pow(1.08,bonus)*candyMultiplier("click")));}
 function clickCashBonus(){const level=Math.max(0,Math.floor(Number((game.clickUpgrades||{}).cash)||0));return Math.max(0,Math.floor(Math.pow(level,1.25)));}
