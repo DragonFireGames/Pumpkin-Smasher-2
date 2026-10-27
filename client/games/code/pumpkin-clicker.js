@@ -2,9 +2,9 @@
 const PC_SAVE="pumpkin-clicker-save-v1", PC_DAILY="pumpkin-clicker-daily-v1";
 const PC_ORANGE="#ffa500", PC_BLACK="#10180b", PC_BG="#123904", PC_WHITE="#f6f2dd";
 const PC_GENS=[
- {id:"green",name:"Green Pumpkin",cost:10,rate:.2,growth:1.5,path:"/assets/pumpkins/new_pumpkin.png"},
- {id:"regular",name:"Pumpkin",cost:60,rate:1,growth:1.57,path:"/assets/pumpkins/pumpkin.png"},
- {id:"gold",name:"Gold Pumpkin",cost:500,rate:5,growth:1.59,path:"/assets/pumpkins/gold_pumpkin.png"},
+ {id:"green",name:"Green Pumpkin",cost:10,rate:.2,growth:1.3,path:"/assets/pumpkins/new_pumpkin.png"},
+ {id:"regular",name:"Pumpkin",cost:60,rate:1,growth:1.4,path:"/assets/pumpkins/pumpkin.png"},
+ {id:"gold",name:"Gold Pumpkin",cost:500,rate:5,growth:1.5,path:"/assets/pumpkins/gold_pumpkin.png"},
  {id:"diamond",name:"Diamond Pumpkin",cost:2200,rate:24,growth:1.6,path:"/assets/pumpkins/diamond_pumpkin.png"}
 ];
 const PC_WORKERS=[
