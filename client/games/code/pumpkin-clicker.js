@@ -1073,38 +1073,282 @@ function getShopItems() {
     { type: "info", d: { name: "Farm Guide", desc: "Build → click an empty tile" } }
   ];
 }
-function drawShopItem(it,x,y,w,h){
- const d=it.d,isB=it.type==="build"||it.type==="autosell",sel=(isB&&d.kind!=="upgrade"&&selectedBuild===d.id)||(it.type==="delete"&&selectedBuild==="__sell");
- const hovered=mouseX>=x&&mouseX<=x+w&&mouseY>=y&&mouseY<=y+h;let itemCost=0,hasCost=false;if(it.type==="worker"){itemCost=workerCost(d.id);hasCost=true;}else if(it.type==="build"&&d.kind!=="upgrade"){itemCost=buildCost(d);hasCost=true;}else if(it.type==="autosell"||it.type==="build"&&d.kind==="upgrade"&&!game.autoSellPurchased){itemCost=650;hasCost=true;}else if(it.type==="buyCandy"){itemCost=candyPrice();hasCost=true;}const unaffordable=hovered&&hasCost&&(!Number.isFinite(itemCost)||game.cash<itemCost),shopHover=hovered&&!unaffordable;
- fill(unaffordable?"#451b16":shopHover?"#3a2b12":sel?"#263d16":"#172414");
- // Shop glow intentionally commented out; keep the orange hover border without a glow.
- // if(shopHover){drawingContext.shadowColor="rgba(255,165,0,0.95)";drawingContext.shadowBlur=8;}
- stroke(unaffordable?"#ff3030":shopHover||sel?orange:"#50623f");strokeWeight(unaffordable?2.5:shopHover||sel?2:1);rect(x,y+1,w,h-3);drawingContext.shadowBlur=0;drawingContext.shadowColor="transparent";
- const sz=Math.min(34,h*.62),ix=x+sz/2+4,iy=y+sz/2+5;
- if(it.type==="worker")drawSprite(d.id,ix,iy,sz,d.frames,d.fps);
- else if(isB&&d.kind==="generator")drawGrowingGenerator(d.tier,ix+sz*.06,iy+sz*.08,sz*1.18,false,true);
- else if(isB&&d.kind==="multiplier"){const si=images.multiplier;if(si&&si.width)drawSpriteSheet(si,ix,iy,sz,3,Math.floor(frameCount/7)%3);else drawShieldFallback(ix,iy,sz);}
- else if(isB&&d.kind==="vault"){const pumpkin=images.objective||images.regular;if(pumpkin&&pumpkin.width)drawSpriteSheet(pumpkin,ix,iy,sz,1);else drawGeneratorSprite(1,ix,iy,sz);}
- else if(it.type==="delete")drawTrashIcon(ix,iy,sz);
- else if(it.type==="daily"||it.type==="buyCandy"){const img=images.candyBag;if(img?.width)drawSpriteSheet(img,ix,iy,sz,1);else{noStroke();fill(orange);rect(ix-5,iy-8,10,16);}}
- else{noStroke();fill(orange);textAlign(CENTER,CENTER);textSize(Math.max(11,sz*.75));text(isB?(d.kind==="shield"?"S":d.kind==="vault"?"V":"$"):(it.type==="sell"?"$":"i"),ix,iy);}
- const tx=x+sz+12,tw=Math.max(26,w-sz-22-w*.28);noStroke();fill(white);textAlign(LEFT,TOP);textSize(Math.max(8,Math.min(11,w*.082)));text(d.name,tx,y+4,tw,h*.40);
- fill("#bdc9a9");textSize(Math.max(7,Math.min(9,w*.073)));
- const sub=it.type==="worker"?d.desc:isB&&d.kind==="upgrade"?(game.autoSellPurchased?(game.autoSell?(userIsActive()?"SELL IN "+Math.ceil((60000-(Number(game.autoSellProgressMs)||0))/1000)+"s":"AUTO-SELL PAUSED"):"OWNED • OFF"):"BUY AUTO-SELL"):it.type==="delete"&&sel?"SELECT A TILE":isB&&sel?"SELECTED":it.type==="daily"?(dailyClaimed?"CLAIMED TODAY":"READY TO OPEN"):it.type==="buyCandy"?"ONE-HOUR RANDOM BONUS":d.desc;
- text(sub,tx,y+h*.43,tw,h*.29);if(it.type==="autosell"&&game.autoSellPurchased&&game.autoSell){const progress=constrain((Number(game.autoSellProgressMs)||0)/60000,0,1),barX=x+4,barY=y+h-5,barW=w-8;noStroke();fill("#263b1b");rect(barX,barY,barW,2);fill(orange);rect(barX,barY,barW*progress,2);}if(it.type==="worker"){fill("#8fa27a");textSize(Math.max(6,Math.min(8,w*.065)));text("OWNED "+(game.workers[d.id]||0),tx,y+h*.77);}
- textAlign(RIGHT,CENTER);fill(orange);textSize(Math.max(8,Math.min(11,w*.09)));
- if(it.type==="worker")text("$"+formatNumber(workerCost(d.id)),x+w-5,y+h*.5);
- else if(isB)text(d.kind==="upgrade"?(game.autoSellPurchased?(game.autoSell?"ON":"OFF"):"$"+formatNumber(d.cost)):"$"+formatNumber(buildCost(d)),x+w-5,y+h*.5);
- else if(it.type==="daily")text(dailyClaimed?"DONE":"OPEN",x+w-5,y+h*.5);
- else if(it.type==="buyCandy")text("$"+candyPriceLabel(),x+w-5,y+h*.5);
- else if(it.type==="sell")text("$"+formatNumber(Math.floor(game.pumpkins)),x+w-5,y+h*.5);
- if(it.type==="worker")addTarget(x,y,w,h,()=>buyWorker(d.id,purchaseLimit()),false,getItemHoverInfo(it));
- if(isB)addTarget(x,y,w,h,()=>{if(d.kind==="upgrade"){toggleAutoSell();return;}if(d.kind==="generator"||d.kind==="multiplier"||d.kind==="vault"){const cost=buildCost(d);if(game.cash<cost){selectedBuild=null;bulkPlaceRemaining=0;showToast(d.name+" costs $"+formatNumber(cost));return;}}const next=selectedBuild===d.id?null:d.id;if(!next){selectedBuild=null;bulkPlaceRemaining=0;showToast("Build selection cleared");return;}selectedBuild=next;if(d.kind==="generator"||d.kind==="multiplier"||d.kind==="vault"){const limit=purchaseLimit();if(limit>1){const cost=buildCost(d);if(game.cash<cost){showToast(d.name+" costs $"+formatNumber(cost));selectedBuild=null;bulkPlaceRemaining=0;return;}bulkPlaceRemaining=limit;showToast("Bulk placement armed for "+d.name+" — "+(limit===Infinity?"place as many as you can afford":"up to "+limit+" empty farm tiles"));}else{bulkPlaceRemaining=0;showToast("Click an empty farm tile");}}else{bulkPlaceRemaining=0;showToast("Click an empty farm tile");}},false,getItemHoverInfo(it));
- if(it.type==="daily")addTarget(x,y,w,h,claimDailyCandy,false,{id:"daily-candy",title:"Daily Candy",kind:"candy",summary:"Claim a free random candy once each local day.",rules:["Opens with a shake and pop animation.","Also grants a cash reward and up to 10 pumpkins.","The candy bonus lasts one hour.","A new claim is available after the local date changes."]});
- if(it.type==="buyCandy")addTarget(x,y,w,h,()=>buyCandy(purchaseLimit()),false,{id:"buy-candy",title:"Buy Random Candy",kind:"candy",summary:"Spend $"+candyPriceLabel()+" for a random one-hour bonus.",rules:["Uses the global ×1, ×10 or MAX purchase mode; Shift-click forces ×10. Purchases stop when cash runs out or the next candy is unaffordable.","Each candy has its own reveal; press Continue to advance through the queue.","Multiple different candies can be active at once.","Duplicate candy refreshes that candy’s timer."]});
- if(it.type==="sell")addTarget(x,y,w,h,sellPumpkins);
- if(it.type==="delete")addTarget(x,y,w,h,()=>{selectedBuild=selectedBuild==="__sell"?null:"__sell";showToast(selectedBuild==="__sell"?"Click a farm tile to delete it for a 25% refund":"Delete / Sell cancelled");},false,{id:"delete-tool",title:"Delete / Sell",kind:"action",summary:"Clear a building and recover 25% of its value.",rules:["Select this tool, then click a placed building.","The building is removed and 25% of its value is refunded.","Vault contents must fit in other storage before deleting the vault.","Vines cost $"+formatNumber(vineClearCost())+" to remove and do not give a refund; each removal makes the next one 10× more expensive."]});
- if(it.type==="info")addTarget(x,y,w,h,()=>showToast("Click BUILD, choose a building, then click an empty tile."));
+function drawShopItem(item, x, y, w, h) {
+  const d = item.d;
+  const isBuildItem = item.type === "build" || item.type === "autosell";
+  const selected = (
+    isBuildItem && d.kind !== "upgrade" && selectedBuild === d.id
+  ) || (item.type === "delete" && selectedBuild === "__sell");
+
+  const hovered = mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + h;
+  let itemCost = 0;
+  let hasCost = false;
+
+  if (item.type === "worker") {
+    itemCost = workerCost(d.id);
+    hasCost = true;
+  } else if (item.type === "build" && d.kind !== "upgrade") {
+    itemCost = buildCost(d);
+    hasCost = true;
+  } else if (item.type === "autosell" || (item.type === "build" && d.kind === "upgrade" && !game.autoSellPurchased)) {
+    itemCost = 650;
+    hasCost = true;
+  } else if (item.type === "buyCandy") {
+    itemCost = candyPrice();
+    hasCost = true;
+  }
+
+  const unaffordable = hovered && hasCost
+    && (!Number.isFinite(itemCost) || game.cash < itemCost);
+  const shopHover = hovered && !unaffordable;
+
+  fill(unaffordable ? "#451b16" : shopHover ? "#3a2b12" : selected ? "#263d16" : "#172414");
+
+  // Keep the orange hover border; no glow.
+  // if (shopHover) {
+  //   drawingContext.shadowColor = "rgba(255,165,0,0.95)";
+  //   drawingContext.shadowBlur = 8;
+  // }
+
+  stroke(unaffordable ? "#ff3030" : shopHover || selected ? orange : "#50623f");
+  strokeWeight(unaffordable ? 2.5 : shopHover || selected ? 2 : 1);
+  rect(x, y + 1, w, h - 3);
+  drawingContext.shadowBlur = 0;
+  drawingContext.shadowColor = "transparent";
+
+  const size = Math.min(34, h * 0.62);
+  const iconX = x + size / 2 + 4;
+  const iconY = y + size / 2 + 5;
+
+  if (item.type === "worker") {
+    drawSprite(d.id, iconX, iconY, size, d.frames, d.fps);
+  } else if (isBuildItem && d.kind === "generator") {
+    drawGrowingGenerator(d.tier, iconX + size * 0.06, iconY + size * 0.08, size * 1.18, false, true);
+  } else if (isBuildItem && d.kind === "multiplier") {
+    const img = images.multiplier;
+    if (img && img.width) {
+      drawSpriteSheet(img, iconX, iconY, size, 3, Math.floor(frameCount / 7) % 3);
+    } else {
+      drawShieldFallback(iconX, iconY, size);
+    }
+  } else if (isBuildItem && d.kind === "vault") {
+    const pumpkin = images.objective || images.regular;
+    if (pumpkin && pumpkin.width) {
+      drawSpriteSheet(pumpkin, iconX, iconY, size, 1);
+    } else {
+      drawGeneratorSprite(1, iconX, iconY, size);
+    }
+  } else if (item.type === "delete") {
+    drawTrashIcon(iconX, iconY, size);
+  } else if (item.type === "daily" || item.type === "buyCandy") {
+    const img = images.candyBag;
+    if (img && img.width) {
+      drawSpriteSheet(img, iconX, iconY, size, 1);
+    } else {
+      noStroke();
+      fill(orange);
+      rect(iconX - 5, iconY - 8, 10, 16);
+    }
+  } else {
+    noStroke();
+    fill(orange);
+    textAlign(CENTER, CENTER);
+    textSize(Math.max(11, size * 0.75));
+    text(isBuildItem
+      ? d.kind === "shield" ? "S" : d.kind === "vault" ? "V" : "$"
+      : item.type === "sell" ? "$" : "i", iconX, iconY);
+  }
+
+  const textX = x + size + 12;
+  const textW = Math.max(26, w - size - 22 - w * 0.28);
+
+  noStroke();
+  fill(white);
+  textAlign(LEFT, TOP);
+  textSize(Math.max(8, Math.min(11, w * 0.082)));
+  text(d.name, textX, y + 4, textW, h * 0.40);
+
+  fill("#bdc9a9");
+  textSize(Math.max(7, Math.min(9, w * 0.073)));
+
+  let subtitle = d.desc;
+  if (item.type === "worker") {
+    subtitle = d.desc;
+  } else if (isBuildItem && d.kind === "upgrade") {
+    if (!game.autoSellPurchased) {
+      subtitle = "BUY AUTO-SELL";
+    } else if (!game.autoSell) {
+      subtitle = "OWNED • OFF";
+    } else {
+      subtitle = userIsActive()
+        ? "SELL IN " + Math.ceil((60000 - (Number(game.autoSellProgressMs) || 0)) / 1000) + "s"
+        : "AUTO-SELL PAUSED";
+    }
+  } else if (item.type === "delete" && selected) {
+    subtitle = "SELECT A TILE";
+  } else if (isBuildItem && selected) {
+    subtitle = "SELECTED";
+  } else if (item.type === "daily") {
+    subtitle = dailyClaimed ? "CLAIMED TODAY" : "READY TO OPEN";
+  } else if (item.type === "buyCandy") {
+    subtitle = "ONE-HOUR RANDOM BONUS";
+  }
+
+  text(subtitle, textX, y + h * 0.43, textW, h * 0.29);
+
+  if (item.type === "autosell" && game.autoSellPurchased && game.autoSell) {
+    const progress = constrain((Number(game.autoSellProgressMs) || 0) / 60000, 0, 1);
+    const barX = x + 4;
+    const barY = y + h - 5;
+    const barW = w - 8;
+
+    noStroke();
+    fill("#263b1b");
+    rect(barX, barY, barW, 2);
+    fill(orange);
+    rect(barX, barY, barW * progress, 2);
+  }
+
+  if (item.type === "worker") {
+    fill("#8fa27a");
+    textSize(Math.max(6, Math.min(8, w * 0.065)));
+    text("OWNED " + (game.workers[d.id] || 0), textX, y + h * 0.77);
+  }
+
+  textAlign(RIGHT, CENTER);
+  fill(orange);
+  textSize(Math.max(8, Math.min(11, w * 0.09)));
+
+  if (item.type === "worker") {
+    text("$" + formatNumber(workerCost(d.id)), x + w - 5, y + h * 0.5);
+  } else if (isBuildItem) {
+    text(d.kind === "upgrade"
+      ? game.autoSellPurchased ? (game.autoSell ? "ON" : "OFF") : "$" + formatNumber(d.cost)
+      : "$" + formatNumber(buildCost(d)), x + w - 5, y + h * 0.5);
+  } else if (item.type === "daily") {
+    text(dailyClaimed ? "DONE" : "OPEN", x + w - 5, y + h * 0.5);
+  } else if (item.type === "buyCandy") {
+    text("$" + candyPriceLabel(), x + w - 5, y + h * 0.5);
+  } else if (item.type === "sell") {
+    text("$" + formatNumber(Math.floor(game.pumpkins)), x + w - 5, y + h * 0.5);
+  }
+
+  if (item.type === "worker") {
+    addTarget(x, y, w, h, () => buyWorker(d.id, purchaseLimit()), false, getItemHoverInfo(item));
+  }
+
+  if (isBuildItem) {
+    addTarget(x, y, w, h, () => {
+      if (d.kind === "upgrade") {
+        toggleAutoSell();
+        return;
+      }
+
+      if (d.kind === "generator" || d.kind === "multiplier" || d.kind === "vault") {
+        const cost = buildCost(d);
+        if (game.cash < cost) {
+          selectedBuild = null;
+          bulkPlaceRemaining = 0;
+          showToast(d.name + " costs $" + formatNumber(cost));
+          return;
+        }
+      }
+
+      const next = selectedBuild === d.id ? null : d.id;
+      if (!next) {
+        selectedBuild = null;
+        bulkPlaceRemaining = 0;
+        showToast("Build selection cleared");
+        return;
+      }
+
+      selectedBuild = next;
+
+      if (d.kind === "generator" || d.kind === "multiplier" || d.kind === "vault") {
+        const limit = purchaseLimit();
+
+        if (limit > 1) {
+          const cost = buildCost(d);
+          if (game.cash < cost) {
+            showToast(d.name + " costs $" + formatNumber(cost));
+            selectedBuild = null;
+            bulkPlaceRemaining = 0;
+            return;
+          }
+
+          bulkPlaceRemaining = limit;
+          showToast("Bulk placement armed for " + d.name + " — "
+            + (limit === Infinity ? "place as many as you can afford" : "up to " + limit + " empty farm tiles"));
+        } else {
+          bulkPlaceRemaining = 0;
+          showToast("Click an empty farm tile");
+        }
+      } else {
+        bulkPlaceRemaining = 0;
+        showToast("Click an empty farm tile");
+      }
+    }, false, getItemHoverInfo(item));
+  }
+
+  if (item.type === "daily") {
+    addTarget(x, y, w, h, claimDailyCandy, false, {
+      id: "daily-candy",
+      title: "Daily Candy",
+      kind: "candy",
+      summary: "Claim a free random candy once each local day.",
+      rules: [
+        "Opens with a shake and pop animation.",
+        "Also grants a cash reward and up to 10 pumpkins.",
+        "The candy bonus lasts one hour.",
+        "A new claim is available after the local date changes."
+      ]
+    });
+  }
+
+  if (item.type === "buyCandy") {
+    addTarget(x, y, w, h, () => buyCandy(purchaseLimit()), false, {
+      id: "buy-candy",
+      title: "Buy Random Candy",
+      kind: "candy",
+      summary: "Spend $" + candyPriceLabel() + " for a random one-hour bonus.",
+      rules: [
+        "Uses the global ×1, ×10 or MAX purchase mode; Shift-click forces ×10. Purchases stop when cash runs out or the next candy is unaffordable.",
+        "Each candy has its own reveal; press Continue to advance through the queue.",
+        "Multiple different candies can be active at once.",
+        "Duplicate candy refreshes that candy’s timer."
+      ]
+    });
+  }
+
+  if (item.type === "sell") {
+    addTarget(x, y, w, h, sellPumpkins);
+  }
+
+  if (item.type === "delete") {
+    addTarget(x, y, w, h, () => {
+      selectedBuild = selectedBuild === "__sell" ? null : "__sell";
+      showToast(selectedBuild === "__sell"
+        ? "Click a farm tile to delete it for a 25% refund"
+        : "Delete / Sell cancelled");
+    }, false, {
+      id: "delete-tool",
+      title: "Delete / Sell",
+      kind: "action",
+      summary: "Clear a building and recover 25% of its value.",
+      rules: [
+        "Select this tool, then click a placed building.",
+        "The building is removed and 25% of its value is refunded.",
+        "Vault contents must fit in other storage before deleting the vault.",
+        "Vines cost $" + formatNumber(vineClearCost()) + " to remove and do not give a refund; each removal makes the next one 10× more expensive."
+      ]
+    });
+  }
+
+  if (item.type === "info") {
+    addTarget(x, y, w, h, () => {
+      showToast("Click BUILD, choose a building, then click an empty tile.");
+    });
+  }
 }
 function drawMainPanel(L) {
   const x = L.mainX;
