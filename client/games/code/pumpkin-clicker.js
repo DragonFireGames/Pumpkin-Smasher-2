@@ -252,27 +252,151 @@ function windowResized() {
   shopScroll = 0;
 }
 
-function loadGame(){
- let d=null;try{d=JSON.parse(localStorage.getItem(saveKey)||"null");}catch(e){}
- if(d&&Array.isArray(d.farm)){
-  const f=newGameState(+d.prestige||0);game=Object.assign(f,d);game.workers=Object.assign(f.workers,d.workers||{});game.clickUpgrades=Object.assign({power:0,bonus:0,cash:0},d.clickUpgrades||{});game.autoSellPurchased=typeof d.autoSellPurchased==="boolean"?d.autoSellPurchased:!!d.autoSell;
-  game.farmCols=Math.max(6,+game.farmCols||6);game.farmRows=Math.max(4,+game.farmRows||4);
-  game.farm=game.farm.slice(0,game.farmRows);while(game.farm.length<game.farmRows)game.farm.push([]);
-  game.farm.forEach(r=>{while(r.length<game.farmCols)r.push(null);r.length=game.farmCols;});
-  if(!game.vinesSeeded){if(!game.farm.some(row=>row.some(o=>o&&o.kind==="vine")))seedVines();else game.vinesSeeded=true;}
-  // JSON duplicates shared generator references; reconnect every large footprint after loading.
-  for(let r=0;r<game.farmRows;r++)for(let c=0;c<game.farmCols;c++){
-   const m=game.farm[r][c],size=m&&m.kind==="generator"?generatorSize(m):1;
-   if(size>1&&m.row===r&&m.col===c&&r+size<=game.farmRows&&c+size<=game.farmCols){for(let dy=0;dy<size;dy++)for(let dx=0;dx<size;dx++)game.farm[r+dy][c+dx]=m;}
+function loadGame() {
+  let savedGame = null;
+
+  try {
+    savedGame = JSON.parse(localStorage.getItem(saveKey) || "null");
+  } catch (e) {}
+
+  if (savedGame && Array.isArray(savedGame.farm)) {
+    const defaults = newGameState(+savedGame.prestige || 0);
+    game = Object.assign(defaults, savedGame);
+    game.workers = Object.assign(defaults.workers, savedGame.workers || {});
+    game.clickUpgrades = Object.assign(
+      { power: 0, bonus: 0, cash: 0 },
+      savedGame.clickUpgrades || {}
+    );
+    game.autoSellPurchased = typeof savedGame.autoSellPurchased === "boolean"
+      ? savedGame.autoSellPurchased
+      : !!savedGame.autoSell;
+
+    game.farmCols = Math.max(6, +game.farmCols || 6);
+    game.farmRows = Math.max(4, +game.farmRows || 4);
+    game.farm = game.farm.slice(0, game.farmRows);
+
+    while (game.farm.length < game.farmRows) {
+      game.farm.push([]);
+    }
+
+    game.farm.forEach(row => {
+      while (row.length < game.farmCols) {
+        row.push(null);
+      }
+      row.length = game.farmCols;
+    });
+
+    if (!game.vinesSeeded) {
+      const hasVines = game.farm.some(row => row.some(building => building && building.kind === "vine"));
+      if (!hasVines) {
+        seedVines();
+      } else {
+        game.vinesSeeded = true;
+      }
+    }
+
+    // JSON duplicates shared generator references, so reconnect large footprints after loading.
+    for (let row = 0; row < game.farmRows; row++) {
+      for (let col = 0; col < game.farmCols; col++) {
+        const building = game.farm[row][col];
+        const size = building && building.kind === "generator" ? generatorSize(building) : 1;
+
+        if (size > 1 && building.row === row && building.col === col
+          && row + size <= game.farmRows && col + size <= game.farmCols) {
+          for (let dy = 0; dy < size; dy++) {
+            for (let dx = 0; dx < size; dx++) {
+              game.farm[row + dy][col + dx] = building;
+            }
+          }
+        }
+      }
+    }
+  } else {
+    game = newGameState();
+    game.farm = Array.from({ length: 4 }, () => Array(6).fill(null));
+    seedVines();
   }
- }else{game=newGameState();game.farm=Array.from({length:4},()=>Array(6).fill(null));seedVines();}
- game.cash=Math.max(0,+game.cash||0);game.pumpkins=Math.max(0,+game.pumpkins||0);game.progress=Math.max(0,+game.progress||0);game.vinesCleared=Math.max(0,Math.floor(Number(game.vinesCleared)||0));
- game.activeCandies=Array.isArray(game.activeCandies)?game.activeCandies.filter(v=>v&&v.expiresAt>Date.now()):[];game.candyPurchases=Math.max(Math.max(0,Math.floor(Number(game.candyPurchases)||0)),game.activeCandies.length);
- game.farm.forEach(row=>row.forEach(o=>{if(o&&o.kind==="shield")o.kind="multiplier";}));game.autoSellProgressMs=Math.max(0,Math.min(59999,Number(game.autoSellProgressMs)||0));
- if(d.storageVersion!==2||!Number.isFinite(Number(d.baseStored))){let remaining=Math.max(0,Number(game.pumpkins)||0);game.baseStored=0;const baseTake=Math.min(remaining,baseStorageCapacity());game.baseStored=baseTake;remaining-=baseTake;getVaults().forEach(v=>{v.stored=0;const take=Math.min(remaining,vaultCapacity(v));v.stored=take;remaining-=take;});}else{game.baseStored=Math.max(0,Number(game.baseStored)||0);getVaults().forEach(v=>{v.stored=Math.max(0,Number(v.stored)||0);});}game.storageVersion=2;syncStoredPumpkins();
- try{dailyClaimed=localStorage.getItem(dailyKey)===todayKey();}catch(e){dailyClaimed=false;}
+
+  game.cash = Math.max(0, +game.cash || 0);
+  game.pumpkins = Math.max(0, +game.pumpkins || 0);
+  game.progress = Math.max(0, +game.progress || 0);
+  game.vinesCleared = Math.max(0, Math.floor(Number(game.vinesCleared) || 0));
+
+  game.activeCandies = Array.isArray(game.activeCandies)
+    ? game.activeCandies.filter(candy => candy && candy.expiresAt > Date.now())
+    : [];
+  game.candyPurchases = Math.max(
+    Math.max(0, Math.floor(Number(game.candyPurchases) || 0)),
+    game.activeCandies.length
+  );
+
+  game.farm.forEach(row => {
+    row.forEach(building => {
+      if (building && building.kind === "shield") {
+        building.kind = "multiplier";
+      }
+    });
+  });
+  game.autoSellProgressMs = Math.max(0, Math.min(59999, Number(game.autoSellProgressMs) || 0));
+
+  if (savedGame.storageVersion !== 2 || !Number.isFinite(Number(savedGame.baseStored))) {
+    let remaining = Math.max(0, Number(game.pumpkins) || 0);
+    game.baseStored = 0;
+
+    const baseTake = Math.min(remaining, baseStorageCapacity());
+    game.baseStored = baseTake;
+    remaining -= baseTake;
+
+    getVaults().forEach(vault => {
+      vault.stored = 0;
+      const take = Math.min(remaining, vaultCapacity(vault));
+      vault.stored = take;
+      remaining -= take;
+    });
+  } else {
+    game.baseStored = Math.max(0, Number(game.baseStored) || 0);
+    getVaults().forEach(vault => {
+      vault.stored = Math.max(0, Number(vault.stored) || 0);
+    });
+  }
+
+  game.storageVersion = 2;
+  syncStoredPumpkins();
+
+  try {
+    dailyClaimed = localStorage.getItem(dailyKey) === todayKey();
+  } catch (e) {
+    dailyClaimed = false;
+  }
 }
-function seedVines(){const cells=[];for(let r=0;r<game.farmRows;r++)for(let c=0;c<game.farmCols;c++)if(!game.farm[r][c])cells.push({r,c});for(let i=cells.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[cells[i],cells[j]]=[cells[j],cells[i]];}const count=Math.min(cells.length,Math.max(5,Math.round(game.farmRows*game.farmCols*.12)));for(let i=0;i<count;i++){const {r,c}=cells[i];game.farm[r][c]={kind:"vine",row:r,col:c};}game.vinesSeeded=true;}
+
+function seedVines() {
+  const cells = [];
+
+  for (let row = 0; row < game.farmRows; row++) {
+    for (let col = 0; col < game.farmCols; col++) {
+      if (!game.farm[row][col]) cells.push({ row, col });
+    }
+  }
+
+  for (let i = cells.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [cells[i], cells[j]] = [cells[j], cells[i]];
+  }
+
+  const count = Math.min(
+    cells.length,
+    Math.max(5, Math.round(game.farmRows * game.farmCols * 0.12))
+  );
+
+  for (let i = 0; i < count; i++) {
+    const { row, col } = cells[i];
+    game.farm[row][col] = { kind: "vine", row, col };
+  }
+
+  game.vinesSeeded = true;
+}
+
 function saveGame(){if(!game)return;game.lastSavedAt=Date.now();try{localStorage.setItem(saveKey,JSON.stringify(game));}catch(e){}}
 function todayKey(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 function markActivity(){if(typeof document!=="undefined"&&document.visibilityState!=="hidden")lastActivity=Date.now();}
@@ -287,39 +411,376 @@ function formatNumber(v){
  const u=["K","M","B","T","Qa","Qi"];let i=-1;while(Math.abs(v)>=1000&&i<u.length-1){v/=1000;i++;}
  return (Math.abs(v)>=100?v.toFixed(0):Math.abs(v)>=10?v.toFixed(1):v.toFixed(2))+u[i];
 }
-function forEachUniqueBuilding(fn){const seen=new Set();for(let r=0;r<game.farmRows;r++)for(let c=0;c<game.farmCols;c++){const o=game.farm[r][c];if(o&&!seen.has(o)){seen.add(o);fn(o);}}}
-function hasCandy(id){return game.activeCandies.some(v=>v.id===id&&v.expiresAt>Date.now());}
-function candyMultiplier(key){return candies.reduce((n,v)=>n*(v[key]&&hasCandy(v.id)?v[key]:1),1);}
-function generatorSize(o){return o&&o.hyper?5:o&&o.ultra?3:o&&o.mega?2:1;}
-function generatorFootprint(o){if(!o)return [];const size=generatorSize(o),cells=[];for(let dr=0;dr<size;dr++)for(let dc=0;dc<size;dc++)cells.push([o.row+dr,o.col+dc]);return cells;}
-function getVaults(){const out=[];forEachUniqueBuilding(o=>{if(o.kind==="vault")out.push(o);});return out.sort((a,b)=>(a.row-b.row)||(a.col-b.col));}
-function baseStorageCapacity(){const w=game.workers||{},workerBonus=1+(w.monster||0)*.02+(w.brute||0)*.05;return Math.floor(50*workerBonus*candyMultiplier("capacity"));}
-const vaultCaps=[50,125,250,500,1000,3500,7500,15000,50000,125000,250000,500000,1000000,3500000,7500000,15000000,50000000,125000000,250000000,500000000];
-const vaultUpgradeCosts=[60,120,240,450,900,1800,3500,7000,18000,35000,70000,140000,280000,700000,1400000,2800000,7000000,17500000,35000000,70000000];
-function vaultCapacity(o){const level=Math.max(0,Math.floor(o.level||0)),base=level<vaultCaps.length?vaultCaps[level]:vaultCaps[vaultCaps.length-1]*Math.pow(2,level-(vaultCaps.length-1));return Math.ceil(base*candyMultiplier("capacity"));}
-function vaultUpgradeCost(level){level=Math.max(0,Math.floor(level||0));return Math.ceil(level<vaultUpgradeCosts.length?vaultUpgradeCosts[level]:vaultUpgradeCosts[vaultUpgradeCosts.length-1]*Math.pow(2,level-(vaultUpgradeCosts.length-1)));}
-function storageCapacity(){let cap=baseStorageCapacity();getVaults().forEach(v=>cap+=vaultCapacity(v));return cap;}
-function availableStorage(){let free=Math.max(0,baseStorageCapacity()-(Number(game.baseStored)||0));getVaults().forEach(v=>free+=Math.max(0,vaultCapacity(v)-(Number(v.stored)||0)));return free;}
-function syncStoredPumpkins(){game.pumpkins=Math.max(0,Number(game.baseStored)||0);getVaults().forEach(v=>game.pumpkins+=Math.max(0,Number(v.stored)||0));return game.pumpkins;}
-function vaultsForGenerator(o){const cells=generatorFootprint(o);return getVaults().filter(v=>cells.some(([r,c])=>Math.abs(v.row-r)<=1&&Math.abs(v.col-c)<=1));}
-function generatorDestinations(o){return vaultsForGenerator(o);}
-function depositForGenerator(o,amount){let left=Math.max(0,Math.floor(amount));const initial=left;generatorDestinations(o).forEach(v=>{if(!left)return;const take=Math.min(left,Math.max(0,Math.floor(vaultCapacity(v)-(Number(v.stored)||0))));v.stored=(Number(v.stored)||0)+take;left-=take;});if(left>0){const take=Math.min(left,Math.max(0,Math.floor(baseStorageCapacity()-(Number(game.baseStored)||0))));game.baseStored=(Number(game.baseStored)||0)+take;left-=take;}syncStoredPumpkins();return initial-left;}
-function depositInStorage(amount){let left=Math.max(0,Math.floor(amount)),initial=left;const takeBase=Math.min(left,Math.max(0,Math.floor(baseStorageCapacity()-(Number(game.baseStored)||0))));game.baseStored=(Number(game.baseStored)||0)+takeBase;left-=takeBase;getVaults().forEach(v=>{if(!left)return;const take=Math.min(left,Math.max(0,Math.floor(vaultCapacity(v)-(Number(v.stored)||0))));v.stored=(Number(v.stored)||0)+take;left-=take;});syncStoredPumpkins();return initial-left;}
-function generatorCanStore(o){return generatorDestinations(o).some(v=>vaultCapacity(v)>(Number(v.stored)||0))||baseStorageCapacity()>(Number(game.baseStored)||0);}
-function advanceGenerator(o,amount){if(!generatorCanStore(o)){o.clogged=true;o.progress=0;return;}const total=(Number(o.progress)||0)+Math.max(0,amount),whole=Math.floor(total);if(whole>0){const stored=depositForGenerator(o,whole);o.progress=total-whole;if(stored<whole)o.clogged=true;}else o.progress=total;if(!generatorCanStore(o))o.clogged=true;else o.clogged=false;}
-function multiplierAdjacencyCount(o){let count=0;[[o.row-1,o.col],[o.row+1,o.col],[o.row,o.col-1],[o.row,o.col+1]].forEach(([r,c])=>{if(r<0||c<0||r>=game.farmRows||c>=game.farmCols)return;const a=game.farm[r]&&game.farm[r][c];if(a&&a!==o&&(a.kind==="multiplier"||a.kind==="shield"))count++;});return count;}
-function shieldMultiplier(o){const seen=new Set();generatorFootprint(o).forEach(([r,c])=>{[[r-1,c],[r+1,c],[r,c-1],[r,c+1]].forEach(([y,x])=>{if(y<0||x<0||y>=game.farmRows||x>=game.farmCols)return;const a=game.farm[y]&&game.farm[y][x];if(a&&(a.kind==="multiplier"||a.kind==="shield"))seen.add(a);});});let strength=0;seen.forEach(a=>{strength+=Math.pow(1.6,multiplierAdjacencyCount(a));});return 1+.28*strength;}
-function hasVaultBonus(o){return vaultsForGenerator(o).length>0;}
-function generatorRate(o){const w=game.workers,deb=(1+w.debuffer*.08)*candyMultiplier("workers"),global=(1+w.ghost*.05*deb)*(1+w.speeder*.1*deb)*(1+w.wizard*.18*deb)*(1+w.rusher*.035*deb);return (generators[o.tier].rate+(w.monster*.1+w.brute*.55)*deb)*shieldMultiplier(o)*(hasVaultBonus(o)?1.15:1)*(o.hyper?5:o.ultra?3:o.mega?1.5:1)*global*candyMultiplier("production")*(1+game.prestige*.5);}
-function productionRate(){let total=0;forEachUniqueBuilding(o=>{if(o.kind==="generator")total+=generatorRate(o);});return total;}
-function updateGame(){
- const now=millis(),dt=Math.max(0,Math.min(.25,(now-lastTick)/1000));lastTick=now;const activeAuto=game.autoSell&&userIsActive();
- forEachUniqueBuilding(o=>{if(o.kind==="generator")advanceGenerator(o,generatorRate(o)*dt);});
- if(game.workers.rusher>0&&frameCount%600===0)depositInStorage(game.workers.rusher*5);
- if(activeAuto){game.autoSellProgressMs=(Number(game.autoSellProgressMs)||0)+dt*1000;while(game.autoSellProgressMs>=60000){game.autoSellProgressMs-=60000;syncStoredPumpkins();const sold=Math.floor(game.pumpkins);if(sold>0){game.baseStored=0;getVaults().forEach(v=>v.stored=0);game.pumpkins=0;const earned=sold*candyMultiplier("sell");game.cash+=earned;game.totalSold+=sold;showToast("AUTO-SOLD "+formatNumber(sold)+" pumpkins for $"+formatNumber(earned));}}}
- syncStoredPumpkins();if(++saveTicks>=60){saveTicks=0;saveGame();}
+function forEachUniqueBuilding(callback) {
+  const seen = new Set();
+
+  for (let row = 0; row < game.farmRows; row++) {
+    for (let col = 0; col < game.farmCols; col++) {
+      const building = game.farm[row][col];
+      if (!building || seen.has(building)) continue;
+
+      seen.add(building);
+      callback(building);
+    }
+  }
 }
-function draw(){updateGame();targets=[];background(backgroundColor);noStroke();backgroundSpecks.forEach(p=>{fill(123,150,65,p.a);rect(p.x%width,p.y%height,p.s,p.s);});const L=getLayout();drawTopBar(L);drawSidebar(L);drawMainPanel(L);if(toastMessage&&millis()<toastEnd)drawToast(L);if(candyOpening)drawCandyReveal();finishHover();}
+
+function hasCandy(id) {
+  return game.activeCandies.some(candy => candy.id === id && candy.expiresAt > Date.now());
+}
+
+function candyMultiplier(key) {
+  return candies.reduce((multiplier, candy) => {
+    return multiplier * (candy[key] && hasCandy(candy.id) ? candy[key] : 1);
+  }, 1);
+}
+
+function generatorSize(building) {
+  if (building && building.hyper) return 5;
+  if (building && building.ultra) return 3;
+  if (building && building.mega) return 2;
+  return 1;
+}
+
+function generatorFootprint(building) {
+  if (!building) return [];
+
+  const size = generatorSize(building);
+  const cells = [];
+
+  for (let dy = 0; dy < size; dy++) {
+    for (let dx = 0; dx < size; dx++) {
+      cells.push([building.row + dy, building.col + dx]);
+    }
+  }
+
+  return cells;
+}
+
+function getVaults() {
+  const vaults = [];
+
+  forEachUniqueBuilding(building => {
+    if (building.kind === "vault") vaults.push(building);
+  });
+
+  return vaults.sort((a, b) => (a.row - b.row) || (a.col - b.col));
+}
+
+function baseStorageCapacity() {
+  const staff = game.workers || {};
+  const workerBonus = 1 + (staff.monster || 0) * 0.02 + (staff.brute || 0) * 0.05;
+  return Math.floor(50 * workerBonus * candyMultiplier("capacity"));
+}
+
+const vaultCaps = [
+  50, 125, 250, 500, 1000, 3500, 7500, 15000, 50000, 125000,
+  250000, 500000, 1000000, 3500000, 7500000, 15000000,
+  50000000, 125000000, 250000000, 500000000
+];
+
+const vaultUpgradeCosts = [
+  60, 120, 240, 450, 900, 1800, 3500, 7000, 18000, 35000,
+  70000, 140000, 280000, 700000, 1400000, 2800000,
+  7000000, 17500000, 35000000, 70000000
+];
+
+function vaultCapacity(vault) {
+  const level = Math.max(0, Math.floor(vault.level || 0));
+  const last = vaultCaps[vaultCaps.length - 1];
+  const base = level < vaultCaps.length
+    ? vaultCaps[level]
+    : last * Math.pow(2, level - (vaultCaps.length - 1));
+
+  return Math.ceil(base * candyMultiplier("capacity"));
+}
+
+function vaultUpgradeCost(level) {
+  level = Math.max(0, Math.floor(level || 0));
+  const last = vaultUpgradeCosts[vaultUpgradeCosts.length - 1];
+  const cost = level < vaultUpgradeCosts.length
+    ? vaultUpgradeCosts[level]
+    : last * Math.pow(2, level - (vaultUpgradeCosts.length - 1));
+
+  return Math.ceil(cost);
+}
+
+function storageCapacity() {
+  let capacity = baseStorageCapacity();
+  getVaults().forEach(vault => {
+    capacity += vaultCapacity(vault);
+  });
+  return capacity;
+}
+
+function availableStorage() {
+  let free = Math.max(0, baseStorageCapacity() - (Number(game.baseStored) || 0));
+
+  getVaults().forEach(vault => {
+    free += Math.max(0, vaultCapacity(vault) - (Number(vault.stored) || 0));
+  });
+
+  return free;
+}
+
+function syncStoredPumpkins() {
+  game.pumpkins = Math.max(0, Number(game.baseStored) || 0);
+
+  getVaults().forEach(vault => {
+    game.pumpkins += Math.max(0, Number(vault.stored) || 0);
+  });
+
+  return game.pumpkins;
+}
+
+function vaultsForGenerator(building) {
+  const cells = generatorFootprint(building);
+
+  return getVaults().filter(vault => {
+    return cells.some(([row, col]) => Math.abs(vault.row - row) <= 1 && Math.abs(vault.col - col) <= 1);
+  });
+}
+
+function generatorDestinations(building) {
+  return vaultsForGenerator(building);
+}
+
+function depositForGenerator(building, amount) {
+  let remaining = Math.max(0, Math.floor(amount));
+  const initial = remaining;
+
+  generatorDestinations(building).forEach(vault => {
+    if (!remaining) return;
+
+    const available = Math.max(0, Math.floor(vaultCapacity(vault) - (Number(vault.stored) || 0)));
+    const stored = Math.min(remaining, available);
+    vault.stored = (Number(vault.stored) || 0) + stored;
+    remaining -= stored;
+  });
+
+  if (remaining > 0) {
+    const available = Math.max(0, Math.floor(baseStorageCapacity() - (Number(game.baseStored) || 0)));
+    const stored = Math.min(remaining, available);
+    game.baseStored = (Number(game.baseStored) || 0) + stored;
+    remaining -= stored;
+  }
+
+  syncStoredPumpkins();
+  return initial - remaining;
+}
+
+function depositInStorage(amount) {
+  let remaining = Math.max(0, Math.floor(amount));
+  const initial = remaining;
+
+  const baseAvailable = Math.max(0, Math.floor(baseStorageCapacity() - (Number(game.baseStored) || 0)));
+  const baseStored = Math.min(remaining, baseAvailable);
+  game.baseStored = (Number(game.baseStored) || 0) + baseStored;
+  remaining -= baseStored;
+
+  getVaults().forEach(vault => {
+    if (!remaining) return;
+
+    const available = Math.max(0, Math.floor(vaultCapacity(vault) - (Number(vault.stored) || 0)));
+    const stored = Math.min(remaining, available);
+    vault.stored = (Number(vault.stored) || 0) + stored;
+    remaining -= stored;
+  });
+
+  syncStoredPumpkins();
+  return initial - remaining;
+}
+
+function generatorCanStore(building) {
+  const hasVaultSpace = generatorDestinations(building).some(vault => {
+    return vaultCapacity(vault) > (Number(vault.stored) || 0);
+  });
+
+  return hasVaultSpace || baseStorageCapacity() > (Number(game.baseStored) || 0);
+}
+
+function advanceGenerator(building, amount) {
+  if (!generatorCanStore(building)) {
+    building.clogged = true;
+    building.progress = 0;
+    return;
+  }
+
+  const total = (Number(building.progress) || 0) + Math.max(0, amount);
+  const whole = Math.floor(total);
+
+  if (whole > 0) {
+    const stored = depositForGenerator(building, whole);
+    building.progress = total - whole;
+
+    if (stored < whole) {
+      building.clogged = true;
+    }
+  } else {
+    building.progress = total;
+  }
+
+  building.clogged = !generatorCanStore(building);
+}
+
+function multiplierAdjacencyCount(building) {
+  const neighbors = [
+    [building.row - 1, building.col],
+    [building.row + 1, building.col],
+    [building.row, building.col - 1],
+    [building.row, building.col + 1]
+  ];
+  let count = 0;
+
+  neighbors.forEach(([row, col]) => {
+    if (row < 0 || col < 0 || row >= game.farmRows || col >= game.farmCols) return;
+
+    const neighbor = game.farm[row] && game.farm[row][col];
+    if (neighbor && neighbor !== building && (neighbor.kind === "multiplier" || neighbor.kind === "shield")) {
+      count++;
+    }
+  });
+
+  return count;
+}
+
+function shieldMultiplier(building) {
+  const adjacentMultipliers = new Set();
+
+  generatorFootprint(building).forEach(([row, col]) => {
+    const neighbors = [
+      [row - 1, col],
+      [row + 1, col],
+      [row, col - 1],
+      [row, col + 1]
+    ];
+
+    neighbors.forEach(([neighborRow, neighborCol]) => {
+      if (neighborRow < 0 || neighborCol < 0
+        || neighborRow >= game.farmRows || neighborCol >= game.farmCols) {
+        return;
+      }
+
+      const neighbor = game.farm[neighborRow] && game.farm[neighborRow][neighborCol];
+      if (neighbor && (neighbor.kind === "multiplier" || neighbor.kind === "shield")) {
+        adjacentMultipliers.add(neighbor);
+      }
+    });
+  });
+
+  let strength = 0;
+  adjacentMultipliers.forEach(multiplier => {
+    strength += Math.pow(1.6, multiplierAdjacencyCount(multiplier));
+  });
+
+  return 1 + 0.28 * strength;
+}
+
+function hasVaultBonus(building) {
+  return vaultsForGenerator(building).length > 0;
+}
+
+function generatorRate(building) {
+  const staff = game.workers;
+  const workerBonus = (1 + staff.debuffer * 0.08) * candyMultiplier("workers");
+  const globalBonus = (1 + staff.ghost * 0.05 * workerBonus)
+    * (1 + staff.speeder * 0.1 * workerBonus)
+    * (1 + staff.wizard * 0.18 * workerBonus)
+    * (1 + staff.rusher * 0.035 * workerBonus);
+  const workerProduction = (staff.monster * 0.1 + staff.brute * 0.55) * workerBonus;
+
+  return (generators[building.tier].rate + workerProduction)
+    * shieldMultiplier(building)
+    * (hasVaultBonus(building) ? 1.15 : 1)
+    * (building.hyper ? 5 : building.ultra ? 3 : building.mega ? 1.5 : 1)
+    * globalBonus
+    * candyMultiplier("production")
+    * (1 + game.prestige * 0.5);
+}
+
+function productionRate() {
+  let total = 0;
+
+  forEachUniqueBuilding(building => {
+    if (building.kind === "generator") {
+      total += generatorRate(building);
+    }
+  });
+
+  return total;
+}
+
+function productionRate(){let total=0;forEachUniqueBuilding(o=>{if(o.kind==="generator")total+=generatorRate(o);});return total;}
+function updateGame() {
+  const now = millis();
+  const dt = Math.max(0, Math.min(0.25, (now - lastTick) / 1000));
+  lastTick = now;
+
+  const activeAuto = game.autoSell && userIsActive();
+
+  forEachUniqueBuilding(building => {
+    if (building.kind === "generator") {
+      advanceGenerator(building, generatorRate(building) * dt);
+    }
+  });
+
+  if (game.workers.rusher > 0 && frameCount % 600 === 0) {
+    depositInStorage(game.workers.rusher * 5);
+  }
+
+  if (activeAuto) {
+    game.autoSellProgressMs = (Number(game.autoSellProgressMs) || 0) + dt * 1000;
+
+    while (game.autoSellProgressMs >= 60000) {
+      game.autoSellProgressMs -= 60000;
+      syncStoredPumpkins();
+
+      const sold = Math.floor(game.pumpkins);
+      if (sold <= 0) continue;
+
+      game.baseStored = 0;
+      getVaults().forEach(vault => vault.stored = 0);
+      game.pumpkins = 0;
+
+      const earned = sold * candyMultiplier("sell");
+      game.cash += earned;
+      game.totalSold += sold;
+      showToast("AUTO-SOLD " + formatNumber(sold) + " pumpkins for $" + formatNumber(earned));
+    }
+  }
+
+  syncStoredPumpkins();
+
+  if (++saveTicks >= 60) {
+    saveTicks = 0;
+    saveGame();
+  }
+}
+
+function draw() {
+  updateGame();
+  targets = [];
+  background(backgroundColor);
+  noStroke();
+
+  backgroundSpecks.forEach(speck => {
+    fill(123, 150, 65, speck.a);
+    rect(speck.x % width, speck.y % height, speck.s, speck.s);
+  });
+
+  const layout = getLayout();
+  drawTopBar(layout);
+  drawSidebar(layout);
+  drawMainPanel(layout);
+
+  if (toastMessage && millis() < toastEnd) {
+    drawToast(layout);
+  }
+  if (candyOpening) drawCandyReveal();
+
+  finishHover();
+}
+
 function getLayout(){
  const W=width,H=height,top=Math.max(68,Math.min(88,H*.15)),side=Math.max(112,Math.min(205,W*.255)),mainX=side+8,mainW=Math.max(120,W-mainX);
  const gridStart=Math.max(top+146,H*.535),gridTop=gridStart+25,gap=3,panelInset=3,gridInnerW=Math.max(1,mainW-panelInset*2),tile=Math.max(1,Math.min(54,Math.floor((gridInnerW-(game.farmCols-1)*gap)/game.farmCols)));
