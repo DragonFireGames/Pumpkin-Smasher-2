@@ -153,7 +153,7 @@ function pcItem(it,x,y,w,h){
  if(it.type==="worker")pcSprite(d.id,ix,iy,sz,d.frames,d.fps);
  else if(isB&&d.kind==="generator")pcGen(d.tier,ix,iy,sz);
  else if(isB&&d.kind==="multiplier"){const si=pcImgs.multiplier;if(si&&si.width)pcSheet(si,ix,iy,sz,3,Math.floor(frameCount/7)%3);else pcDrawShieldFallback(ix,iy,sz);}
- else if(isB&&d.kind==="vault")pcDrawGrowGenerator(1,ix,iy,sz,false);
+ else if(isB&&d.kind==="vault"){const pumpkin=pcImgs.objective||pcImgs.regular;if(pumpkin&&pumpkin.width)pcSheet(pumpkin,ix,iy,sz,1);else pcGen(1,ix,iy,sz);}
  else if(it.type==="daily"||it.type==="buyCandy"){const img=pcImgs.candyBag;if(img?.width)pcSheet(img,ix,iy,sz,1);else{noStroke();fill(PC_ORANGE);rect(ix-5,iy-8,10,16);}}
  else{noStroke();fill(PC_ORANGE);textAlign(CENTER,CENTER);textSize(Math.max(11,sz*.75));text(isB?(d.kind==="shield"?"S":d.kind==="vault"?"V":"$"):(it.type==="sell"?"$":"i"),ix,iy);}
  const tx=x+sz+9,tw=Math.max(26,w-sz-18-w*.28);noStroke();fill(PC_WHITE);textAlign(LEFT,TOP);textSize(Math.max(8,Math.min(11,w*.082)));text(d.name,tx,y+4,tw,h*.40);
