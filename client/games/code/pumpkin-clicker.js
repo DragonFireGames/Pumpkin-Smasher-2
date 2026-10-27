@@ -125,7 +125,7 @@ function pcTick(){
 }
 function draw(){pcTick();pcTargets=[];background(PC_BG);noStroke();pcSpecks.forEach(p=>{fill(123,150,65,p.a);rect(p.x%width,p.y%height,p.s,p.s);});const L=pcLayout();pcTop(L);pcSidebar(L);pcMain(L);if(pcToast&&millis()<pcToastEnd)pcDrawToast(L);if(pcCandyOpening)pcDrawCandyReveal();pcFinishHover();}
 function pcLayout(){
- const W=width,H=height,top=Math.max(68,Math.min(88,H*.15)),side=Math.max(112,Math.min(205,W*.245)),mainX=side+11,mainW=Math.max(120,W-mainX-6);
+ const W=width,H=height,top=Math.max(68,Math.min(88,H*.15)),side=Math.max(112,Math.min(205,W*.255)),mainX=side+8,mainW=Math.max(120,W-mainX);
  const gridStart=Math.max(top+146,H*.535),gridTop=gridStart+25,gap=3,panelInset=3,gridInnerW=Math.max(1,mainW-panelInset*2),tile=Math.max(1,Math.min(54,Math.floor((gridInnerW-(pcState.farmCols-1)*gap)/pcState.farmCols)));
  const gridW=pcState.farmCols*tile+(pcState.farmCols-1)*gap,gridX=mainX+panelInset+Math.max(0,(gridInnerW-gridW)/2),content=pcState.farmRows*(tile+gap)-gap,view=Math.max(0,H-5-gridTop);
  pcGridScroll=constrain(pcGridScroll,0,Math.max(0,content-view));
