@@ -154,7 +154,7 @@ function pcItem(it,x,y,w,h){
  const d=it.d,isB=it.type==="build",sel=isB&&pcSelected===d.id;fill(sel?"#263d16":"#172414");stroke(sel?PC_ORANGE:"#50623f");strokeWeight(sel?2:1);rect(x,y+1,w,h-3);
  const sz=Math.min(28,h*.46),ix=x+sz/2+4,iy=y+sz/2+5;
  if(it.type==="worker")pcSprite(d.id,ix,iy,sz,d.frames,d.fps);
- else if(isB&&d.kind==="generator")pcDrawGrowGenerator(d.tier,ix,iy,sz*1.35,false,true);
+ else if(isB&&d.kind==="generator")pcDrawGrowGenerator(d.tier,ix+sz*.06,iy+sz*.08,sz*1.18,false,true);
  else if(isB&&d.kind==="multiplier"){const si=pcImgs.multiplier;if(si&&si.width)pcSheet(si,ix,iy,sz,3,Math.floor(frameCount/7)%3);else pcDrawShieldFallback(ix,iy,sz);}
  else if(isB&&d.kind==="vault"){const pumpkin=pcImgs.objective||pcImgs.regular;if(pumpkin&&pumpkin.width)pcSheet(pumpkin,ix,iy,sz,1);else pcGen(1,ix,iy,sz);}
  else if(it.type==="daily"||it.type==="buyCandy"){const img=pcImgs.candyBag;if(img?.width)pcSheet(img,ix,iy,sz,1);else{noStroke();fill(PC_ORANGE);rect(ix-5,iy-8,10,16);}}
@@ -271,9 +271,9 @@ function pcGen(t,x,y,s){const img=pcImgs[PC_GENS[t].id];if(img?.width)pcSheet(im
 function pcDrawGrowGenerator(t,x,y,s,isVault=false,fullyGrown=false){
  const pot=pcImgs.generatorPot,fruit=pcImgs[fullyGrown&&t===0?"green":t>=3?"diamond":t>=2?"gold":"regular"],rate=PC_GENS[t].rate,cycle=Math.max(1300,1000/Math.max(.01,rate));
  const phase=fullyGrown?1:((Date.now()+Math.round(x*13+y*7))%cycle)/cycle,growth=fullyGrown?1:(phase<.84?Math.max(.12,phase/.84):1);
- if(pot&&pot.width&&pot.height)image(pot,x,y+s*.17,pot.width*(s*1.18/pot.height),s*1.18);else{noStroke();fill("#79502c");stroke("#b87a35");rect(x-s*.36,y+s*.07,s*.72,s*.46);}
+ if(pot&&pot.width&&pot.height)image(pot,x,y+s*.10,pot.width*(s*1.18/pot.height),s*1.18);else{noStroke();fill("#79502c");stroke("#b87a35");rect(x-s*.36,y,s*.72,s*.46);}
  const img=phase<.84?pcImgs.green:fruit;
- if(img&&img.width&&img.height){const fw=img.width>img.height*1.4?img.width/8:img.width,fy=y+s*.04-(s*.22*phase),h=(isVault?s*.40:s*.46)*growth;pcSheet(img,x,fy,h,img.width>img.height*1.4?8:1,Math.floor(frameCount/8)%8);}
+ if(img&&img.width&&img.height){const fw=img.width>img.height*1.4?img.width/8:img.width,fy=y+s*.10-(s*.10*phase),h=(isVault?s*.40:s*.46)*growth;pcSheet(img,x,fy,h,img.width>img.height*1.4?8:1,Math.floor(frameCount/8)%8);}
  
 }
 function pcDrawShieldFallback(x,y,s){noStroke();fill("#9ed8f0");stroke("#e6f5ff");beginShape();vertex(x,y-s*.4);vertex(x+s*.32,y-s*.2);vertex(x+s*.25,y+s*.23);vertex(x,y+s*.4);vertex(x-s*.25,y+s*.23);vertex(x-s*.32,y-s*.2);endShape(CLOSE);}
@@ -315,7 +315,7 @@ function pcMerge(){
 }
 function pcBuyWorker(id){const w=PC_WORKERS.find(v=>v.id===id);if(!w)return;if(pcState.cash<w.cost){pcSay("Not enough cash");return;}pcState.cash-=w.cost;pcState.workers[id]++;pcState.totalWorkers++;pcSay(w.name+" hired");pcSave();}
 function pcToggleAuto(){if(!pcState.autoSellPurchased){if(pcState.cash<650){pcSay("Auto-Sell costs $650");return;}pcState.cash-=650;pcState.autoSellPurchased=true;pcState.autoSell=true;pcSelected=null;pcSay("Auto-Sell purchased and enabled");pcSave();return;}pcState.autoSell=!pcState.autoSell;pcSay(pcState.autoSell?"Auto-Sell activated":"Auto-Sell paused");pcSave();}
-function pcClick(){pcPumpkinPressedAt=millis();const u=pcState.clickUpgrades||{power:0,bonus:0,cash:0};if(!pcState.autoSell&&pcState.pumpkins>=pcCap()){pcSay("Storage full — sell pumpkins or add a vault");return;}pcState.totalClicks++;pcState.totalHarvested++;if(pcState.autoSell){const earned=1+(u.cash||0);pcState.cash+=earned;pcSay("+$"+earned);}else{const n=Math.max(1,Math.floor((1+(u.power||0))*(1+(u.bonus||0)*.25)*pcCandyMult("click")));pcState.pumpkins=Math.min(pcCap(),pcState.pumpkins+n);pcSay("+"+n+" pumpkins");if(u.cash>0){pcState.cash+=u.cash;pcSay("+$"+u.cash+" click bonus");}}if(pcHasCandy("chocolate")){pcState.cash+=5;pcSay("+$5 candy bonus");}pcSave();}
+function pcClick(){pcPumpkinPressedAt=millis();const u=pcState.clickUpgrades||{power:0,bonus:0,cash:0};if(!pcState.autoSell&&pcState.pumpkins>=pcCap()){pcSay("Storage full — sell pumpkins or add a vault");return;}pcState.totalClicks++;pcState.totalHarvested++;if(pcState.autoSell){const earned=1+(u.cash||0);pcState.cash+=earned;pcSay("+$"+earned);}else{const n=Math.max(1,Math.floor((1+(u.power||0))*(1+(u.bonus||0)*.25)*pcCandyMult("click")));pcState.pumpkins=Math.min(pcCap(),pcState.pumpkins+n);pcSay("+"+n+" pumpkins");if(u.cash>0){pcState.cash+=u.cash;pcSay("+$"+u.cash+" click bonus");}}if(pcHasCandy("chocolate")){pcState.cash+=5;pcSay("+$5 candy bonus");}if(Math.random()<.001){const candy=pcRandomCandy();pcActivateCandy(candy);pcSay("LUCKY CLICK! "+candy.name+" buff for 1 hour!");}pcSave();}
 function pcSell(){const n=Math.floor(pcState.pumpkins);if(n<=0){pcSay("No pumpkins to sell");return;}pcState.pumpkins-=n;const earned=n*pcCandyMult("sell");pcState.cash+=earned;pcState.totalSold+=n;pcSay("Sold "+pcFmt(n)+" pumpkins for $"+pcFmt(earned));pcSave();}
 function pcCandyPrice(){return 250+Math.min(1750,pcState.prestige*100);}
 function pcRandomCandy(){return PC_CANDIES[Math.floor(Math.random()*PC_CANDIES.length)];}
