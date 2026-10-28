@@ -281,7 +281,7 @@ function csRandomCandyId() {
     let weight = type.weight;
     if (type.id === "hot_tamale") {
       // Classic and Puzzle share the same rate; Frenzy is slightly more generous.
-      if (csMode.id === "fast") weight = 0.12;
+      if (csMode.id === "fast") weight = 0.15;
       else weight = 0.06;
     }
     if (type.id === "smarties" && csMode.id === "fast") weight = 2;
@@ -619,9 +619,10 @@ function csTrySwap(from, to) {
     const otherCandy = csBoard[from.row][from.col];
     if (centerCandy) centerCandy.special = null;
     if (otherCandy) otherCandy.special = null;
+    const sourceTypes = [centerCandy && centerCandy.type, otherCandy && otherCandy.type].filter(Boolean);
     const cells = csGetSpecialClearCells("star", center);
     csAddSpecialEffect("cross", center);
-    csBeginClear(cells, true);
+    csBeginClear(cells, true, null, sourceTypes);
     return true;
   }
 
@@ -632,12 +633,21 @@ function csTrySwap(from, to) {
     const center = first.special ? to : from;
     const specialCandy = csBoard[center.row][center.col];
     const special = specialCandy.special;
+    const sourceType = specialCandy.type;
     const cells = csGetSpecialClearCells(special, center);
+    // A directly swapped Hot Tamale counts as hit by the ability even when it
+    // isn't on the beam's axis after the swap.
+    const swappedCell = first.special ? from : to;
+    const swappedCandy = csBoard[swappedCell.row][swappedCell.col];
+    if (swappedCandy && swappedCandy.type === "hot_tamale" &&
+        !cells.some(cell => cell.row === swappedCell.row && cell.col === swappedCell.col)) {
+      cells.push({ row: swappedCell.row, col: swappedCell.col });
+    }
     specialCandy.special = null;
     csAddSpecialEffect(special === "lineH" ? "beamH" :
       special === "lineV" ? "beamV" :
       special === "star" ? "cross" : "bomb", center);
-    csBeginClear(cells, true);
+    csBeginClear(cells, true, null, [sourceType]);
     return true;
   }
 
@@ -818,7 +828,19 @@ function csGetCascadeBombCell(cells, creationCell, preferredSpawnCell) {
   return best ? best.cell : null;
 }
 
-function csBeginClear(cells, fromSpecial, preferredSpawnCell) {
+function csAddCandyColorCells(unique, typeId) {
+  if (!typeId || typeId === "hot_tamale") return;
+  for (let row = 0; row < CS_ROWS; row++) {
+    for (let col = 0; col < CS_COLS; col++) {
+      const candy = csBoard[row][col];
+      if (candy && candy.type === typeId) {
+        unique.set(row + "," + col, { row, col });
+      }
+    }
+  }
+}
+
+function csBeginClear(cells, fromSpecial, preferredSpawnCell, sourceTypes) {
   if (!fromSpecial) {
     const matchedTamale = cells.find(cell => {
       const candy = csBoard[cell.row] && csBoard[cell.row][cell.col];
@@ -841,6 +863,20 @@ function csBeginClear(cells, fromSpecial, preferredSpawnCell) {
     unique.set(cell.row + "," + cell.col, { row: cell.row, col: cell.col });
   };
   clearCells.forEach(addCell);
+
+  const zapSourceTypes = Array.from(new Set(
+    (Array.isArray(sourceTypes) ? sourceTypes : sourceTypes ? [sourceTypes] : [])
+      .filter(Boolean)
+  ));
+  // If a beam/cross/bomb hits a Hot Tamale, clear every candy of the color
+  // belonging to the ability that hit it, as well as the ability's normal area.
+  const hitsHotTamale = fromSpecial && clearCells.some(cell => {
+    const candy = csBoard[cell.row] && csBoard[cell.row][cell.col];
+    return candy && candy.type === "hot_tamale";
+  });
+  if (hitsHotTamale) {
+    zapSourceTypes.forEach(typeId => csAddCandyColorCells(unique, typeId));
+  }
 
   // Count the initial match as 1, the first cascade as 2, and the second as 3.
   // Every third clear in a chain spawns exactly one bomb. If that same clear makes
@@ -894,6 +930,11 @@ function csBeginClear(cells, fromSpecial, preferredSpawnCell) {
         special === "star" ? "cross" : "bomb";
       csAddSpecialEffect(effectType, cell);
       const effectCells = csGetSpecialClearCells(special, cell);
+      const sourceCandyType = candy.type;
+      const effectHitsHotTamale = effectCells.some(effectCell => {
+        const hitCandy = csBoard[effectCell.row] && csBoard[effectCell.row][effectCell.col];
+        return hitCandy && hitCandy.type === "hot_tamale";
+      });
       for (const effectCell of effectCells) {
         const effectKey = effectCell.row + "," + effectCell.col;
         if (!unique.has(effectKey)) {
@@ -901,6 +942,9 @@ function csBeginClear(cells, fromSpecial, preferredSpawnCell) {
           expanded = true;
         }
       }
+      // Chain activations preserve their own source color: if this special's
+      // beam/blast reaches a Hot Tamale, remove all candies of this special's type.
+      if (effectHitsHotTamale) csAddCandyColorCells(unique, sourceCandyType);
     }
   }
 
@@ -1291,43 +1335,49 @@ function csDrawCandy(candy, x, y, cellSize) {
 }
 
 function csDrawMaskedStripe(sprite, x, y, drawW, drawH, horizontal) {
-  if (!csEffectCanvas || !csEffectContext) return;
-  const scale = 2;
-  const w = Math.max(1, Math.round(drawW * scale));
-  const h = Math.max(1, Math.round(drawH * scale));
-  csEffectCanvas.width = w;
-  csEffectCanvas.height = h;
-  const ctx = csEffectContext;
-  ctx.clearRect(0, 0, w, h);
+  if (!csEffectCanvas || !csEffectContext || drawW <= 0 || drawH <= 0) return;
   const source = sprite.canvas || sprite.elt;
   if (!source) return;
-  ctx.drawImage(source, 0, 0, w, h);
-  ctx.globalCompositeOperation = "source-in";
-  const p = ((millis() % 1250) / 1250);
-  if (horizontal) {
-    const sx = -w * 0.45 + p * w * 1.9;
-    const grad = ctx.createLinearGradient(sx - w * 0.22, 0, sx + w * 0.22, 0);
-    grad.addColorStop(0, "rgba(255,255,255,0)");
-    grad.addColorStop(0.42, "rgba(255,255,255,0.08)");
-    grad.addColorStop(0.5, "rgba(255,255,255,0.82)");
-    grad.addColorStop(0.58, "rgba(255,255,255,0.08)");
-    grad.addColorStop(1, "rgba(255,255,255,0)");
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, w, h);
-  } else {
-    const sy = -h * 0.45 + p * h * 1.9;
-    const grad = ctx.createLinearGradient(0, sy - h * 0.22, 0, sy + h * 0.22);
-    grad.addColorStop(0, "rgba(255,255,255,0)");
-    grad.addColorStop(0.42, "rgba(255,255,255,0.08)");
-    grad.addColorStop(0.5, "rgba(255,255,255,0.82)");
-    grad.addColorStop(0.58, "rgba(255,255,255,0.08)");
-    grad.addColorStop(1, "rgba(255,255,255,0)");
-    ctx.fillStyle = grad;
+
+  const scale = 3;
+  const w = Math.max(1, Math.round(drawW * scale));
+  const h = Math.max(1, Math.round(drawH * scale));
+  if (csEffectCanvas.width !== w) csEffectCanvas.width = w;
+  if (csEffectCanvas.height !== h) csEffectCanvas.height = h;
+
+  const ctx = csEffectContext;
+  ctx.globalCompositeOperation = "source-over";
+  ctx.clearRect(0, 0, w, h);
+
+  const phase = (millis() % 1250) / 1250;
+  const axisLength = horizontal ? w : h;
+  const spacing = axisLength * 0.46;
+  const bandWidth = Math.max(3, axisLength * 0.14);
+
+  // Draw several soft parallel glints at once. Their evenly spaced centers
+  // travel together, giving the direction marker a repeating striped shine.
+  for (let band = -2; band <= 3; band++) {
+    const center = band * spacing + phase * spacing;
+    const gradient = horizontal
+      ? ctx.createLinearGradient(center - bandWidth, 0, center + bandWidth, 0)
+      : ctx.createLinearGradient(0, center - bandWidth, 0, center + bandWidth);
+    gradient.addColorStop(0, "rgba(255,255,255,0)");
+    gradient.addColorStop(0.36, "rgba(255,255,255,0.06)");
+    gradient.addColorStop(0.5, "rgba(255,255,255,0.78)");
+    gradient.addColorStop(0.64, "rgba(255,255,255,0.06)");
+    gradient.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, w, h);
   }
+
+  // Clip all the stripes together to the candy's actual alpha.
+  ctx.globalCompositeOperation = "destination-in";
+  ctx.drawImage(source, 0, 0, w, h);
   ctx.globalCompositeOperation = "source-over";
+
   drawingContext.save();
   drawingContext.globalAlpha = 0.9;
+  drawingContext.globalCompositeOperation = "source-over";
   drawingContext.drawImage(csEffectCanvas, x - drawW / 2, y - drawH / 2, drawW, drawH);
   drawingContext.restore();
 }
@@ -1432,6 +1482,28 @@ function csDrawRayBeam(centerX, centerY, horizontal, progress) {
     ctx.lineWidth = 2.2;
     ctx.shadowBlur = 2;
     ctx.stroke();
+
+    // Two thinner companion tracks make each direction a ribbon of parallel rays.
+    for (const offset of [-6, 6]) {
+      const ox = horizontal ? 0 : offset;
+      const oy = horizontal ? offset : 0;
+      ctx.beginPath();
+      ctx.moveTo(centerX + ox, centerY + oy);
+      ctx.lineTo(head.x + ox, head.y + oy);
+      ctx.strokeStyle = `rgba(255, 152, 54, ${0.62 * visibility})`;
+      ctx.lineWidth = 6;
+      ctx.shadowColor = "rgba(255, 158, 45, 0.85)";
+      ctx.shadowBlur = 8;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(centerX + ox, centerY + oy);
+      ctx.lineTo(head.x + ox, head.y + oy);
+      ctx.strokeStyle = `rgba(255, 243, 203, ${0.76 * visibility})`;
+      ctx.lineWidth = 1.5;
+      ctx.shadowBlur = 3;
+      ctx.stroke();
+    }
 
     // The leading spark marks the current wavefront instead of showing the whole
     // beam across the board from the very first animation frame.
