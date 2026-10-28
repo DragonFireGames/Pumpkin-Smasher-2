@@ -281,7 +281,7 @@ function csRandomCandyId() {
     let weight = type.weight;
     if (type.id === "hot_tamale") {
       // Classic and Puzzle share the same rate; Frenzy is slightly more generous.
-      if (csMode.id === "fast") weight = 0.085;
+      if (csMode.id === "fast") weight = 0.12;
       else weight = 0.06;
     }
     if (type.id === "smarties" && csMode.id === "fast") weight = 2;
