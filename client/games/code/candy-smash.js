@@ -597,11 +597,17 @@ function csTrySwap(from, to) {
     const targetType = first.type === "hot_tamale" ? second.type : first.type;
     const center = first.type === "hot_tamale" ? from : to;
     const bombCells = [];
-    for (let row = 0; row < CS_ROWS; row++) {
-      for (let col = 0; col < CS_COLS; col++) {
-        if (csBoard[row][col] && (csBoard[row][col].type === targetType ||
-            (row === from.row && col === from.col) || (row === to.row && col === to.col))) {
-          bombCells.push({ row, col });
+    if (first.type === "hot_tamale" && second.type === "hot_tamale") {
+      for (let row = 0; row < CS_ROWS; row++) {
+        for (let col = 0; col < CS_COLS; col++) bombCells.push({ row, col });
+      }
+    } else {
+      for (let row = 0; row < CS_ROWS; row++) {
+        for (let col = 0; col < CS_COLS; col++) {
+          if (csBoard[row][col] && (csBoard[row][col].type === targetType ||
+              (row === from.row && col === from.col) || (row === to.row && col === to.col))) {
+            bombCells.push({ row, col });
+          }
         }
       }
     }
@@ -715,6 +721,21 @@ function csGetMatchSpecial(cells, preferredSpawnCell) {
 }
 
 function csBeginClear(cells, fromSpecial, preferredSpawnCell) {
+  if (!fromSpecial) {
+    const matchedTamale = cells.find(cell => {
+      const candy = csBoard[cell.row] && csBoard[cell.row][cell.col];
+      return candy && candy.type === "hot_tamale";
+    });
+    if (matchedTamale) {
+      const blast = [];
+      for (let row = 0; row < CS_ROWS; row++) {
+        for (let col = 0; col < CS_COLS; col++) blast.push({ row, col });
+      }
+      csAddSpecialEffect("bomb", matchedTamale);
+      csBeginClear(blast, true);
+      return;
+    }
+  }
   let clearCells = cells.slice();
   const unique = new Map();
   const addCell = cell => {
