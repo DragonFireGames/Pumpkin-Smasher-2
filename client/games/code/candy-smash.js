@@ -70,7 +70,7 @@ const CS_MODES = [
   {
     id: "puzzle",
     name: "PUZZLE",
-    description: "18 moves. Destroy every pumpkin using special abilities.",
+    description: "18 moves. Swap pumpkins into position, then destroy them with special abilities.",
     candyId: "smarties",
     moves: 18,
     seconds: null
@@ -291,7 +291,7 @@ function csCreateCandy(id) {
 }
 
 function csPlacePuzzlePumpkins(board) {
-  const targetCount = 5;
+  const targetCount = 8;
   let placed = 0;
   const positions = [];
   for (let row = 0; row < CS_ROWS; row++) {
@@ -776,6 +776,27 @@ function csTrySwap(from, to, tryTamaleMatch = false) {
   const second = csBoard[to.row][to.col];
   if (!first || !second) return false;
   csSelected = null;
+
+  // In Puzzle mode, pumpkins can be repositioned directly. This is a real
+  // move even when it creates no match; any match the displaced candy makes
+  // at the pumpkin's old position still resolves as usual.
+  if (csMode.id === "puzzle" && (first.type === "pumpkin" || second.type === "pumpkin")) {
+    csSwapBoardCandies(csBoard, from, to);
+    csVisualSwap = {
+      from: { row: from.row, col: from.col },
+      to: { row: to.row, col: to.col },
+      startedAt: millis(),
+      duration: 130,
+      invalid: false
+    };
+    csMovesLeft = Math.max(0, csMovesLeft - 1);
+    csKeyboardFocus = { row: to.row, col: to.col };
+    const pumpkinSwapMatches = csFindMatches(csBoard);
+    if (pumpkinSwapMatches.length) {
+      csBeginClear(pumpkinSwapMatches, false, to);
+    }
+    return true;
+  }
 
   // If a regular candy was selected first, test an actual swap into the Tamale.
   // Keep the Tamale if the swap makes a match; otherwise restore and activate it.
