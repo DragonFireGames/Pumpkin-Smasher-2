@@ -521,8 +521,9 @@ function csBoardHasLegalMove(board) {
         const first = board[from.row][from.col];
         const second = board[to.row][to.col];
         if (!first || !second) continue;
-        if (first.type === "hot_tamale" || second.type === "hot_tamale" ||
-            first.special || second.special) return true;
+        // Hot Tamales can always be activated by swapping them. Other specials
+        // only count as a legal move when the swap actually makes a match.
+        if (first.type === "hot_tamale" || second.type === "hot_tamale") return true;
         csSwapBoardCandies(board, from, to);
         const hasMatch = csFindMatches(board).length > 0;
         csSwapBoardCandies(board, from, to);
@@ -608,48 +609,6 @@ function csTrySwap(from, to) {
   const second = csBoard[to.row][to.col];
   if (!first || !second) return false;
   csSelected = null;
-
-  // Combining two directional candies creates and fires a stronger crossbeam.
-  const isDirectional = special => special === "lineH" || special === "lineV";
-  if (isDirectional(first.special) && isDirectional(second.special)) {
-    csMovesLeft = csMode.moves === null ? csMovesLeft : csMovesLeft - 1;
-    csSwapBoardCandies(csBoard, from, to);
-    const center = { row: to.row, col: to.col };
-    const centerCandy = csBoard[center.row][center.col];
-    const otherCandy = csBoard[from.row][from.col];
-    if (centerCandy) centerCandy.special = null;
-    if (otherCandy) otherCandy.special = null;
-    const sourceTypes = [centerCandy && centerCandy.type, otherCandy && otherCandy.type].filter(Boolean);
-    const cells = csGetSpecialClearCells("star", center);
-    csAddSpecialEffect("cross", center);
-    csBeginClear(cells, true, null, sourceTypes);
-    return true;
-  }
-
-  // A special activates when swapped. Its effect is centered on its new cell.
-  if (first.special || second.special) {
-    csMovesLeft = csMode.moves === null ? csMovesLeft : csMovesLeft - 1;
-    csSwapBoardCandies(csBoard, from, to);
-    const center = first.special ? to : from;
-    const specialCandy = csBoard[center.row][center.col];
-    const special = specialCandy.special;
-    const sourceType = specialCandy.type;
-    const cells = csGetSpecialClearCells(special, center);
-    // A directly swapped Hot Tamale counts as hit by the ability even when it
-    // isn't on the beam's axis after the swap.
-    const swappedCell = first.special ? from : to;
-    const swappedCandy = csBoard[swappedCell.row][swappedCell.col];
-    if (swappedCandy && swappedCandy.type === "hot_tamale" &&
-        !cells.some(cell => cell.row === swappedCell.row && cell.col === swappedCell.col)) {
-      cells.push({ row: swappedCell.row, col: swappedCell.col });
-    }
-    specialCandy.special = null;
-    csAddSpecialEffect(special === "lineH" ? "beamH" :
-      special === "lineV" ? "beamV" :
-      special === "star" ? "cross" : "bomb", center);
-    csBeginClear(cells, true, null, [sourceType]);
-    return true;
-  }
 
   // Legacy Hot Tamales still clear candies of the swapped candy's type.
   if (first.type === "hot_tamale" || second.type === "hot_tamale") {
