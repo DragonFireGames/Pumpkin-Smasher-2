@@ -559,27 +559,34 @@ function csTrySwap(from, to) {
   if (!first || !second) return false;
   csSelected = null;
 
-  // Combining two directional candies creates and immediately fires a crossbeam.
-  if (first.special && second.special) {
+  // Combining two directional candies creates and fires a stronger crossbeam.
+  const isDirectional = special => special === "lineH" || special === "lineV";
+  if (isDirectional(first.special) && isDirectional(second.special)) {
     csMovesLeft = csMode.moves === null ? csMovesLeft : csMovesLeft - 1;
     csSwapBoardCandies(csBoard, from, to);
     const center = { row: to.row, col: to.col };
+    const centerCandy = csBoard[center.row][center.col];
+    const otherCandy = csBoard[from.row][from.col];
+    if (centerCandy) centerCandy.special = null;
+    if (otherCandy) otherCandy.special = null;
     const cells = csGetSpecialClearCells("star", center);
     csAddSpecialEffect("cross", center);
     csBeginClear(cells, true);
     return true;
   }
 
-  // A single special activates when swapped. Its effect is centered on its new cell.
+  // A special activates when swapped. Its effect is centered on its new cell.
   if (first.special || second.special) {
     csMovesLeft = csMode.moves === null ? csMovesLeft : csMovesLeft - 1;
     csSwapBoardCandies(csBoard, from, to);
     const center = first.special ? to : from;
     const specialCandy = csBoard[center.row][center.col];
-    const cells = csGetSpecialClearCells(specialCandy.special, center);
-    csAddSpecialEffect(specialCandy.special === "lineH" ? "beamH" :
-      specialCandy.special === "lineV" ? "beamV" :
-      specialCandy.special === "star" ? "cross" : "bomb", center);
+    const special = specialCandy.special;
+    const cells = csGetSpecialClearCells(special, center);
+    specialCandy.special = null;
+    csAddSpecialEffect(special === "lineH" ? "beamH" :
+      special === "lineV" ? "beamV" :
+      special === "star" ? "cross" : "bomb", center);
     csBeginClear(cells, true);
     return true;
   }
