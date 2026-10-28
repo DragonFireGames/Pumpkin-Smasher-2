@@ -1535,7 +1535,7 @@ function csDrawShuffleOverlay() {
     rect(0, 0, width, height);
   } else {
     fill(0, 0, 0, shadeAlpha);
-    rect(Math.max(0, beamX), 0, Math.max(0, width - beamX), height);
+    rect(0, 0, Math.min(width, Math.max(0, beamX)), height);
   }
 
   // Keep the moving glow visible during entry and exit, but let the label
