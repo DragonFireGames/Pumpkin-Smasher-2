@@ -902,13 +902,41 @@ function csGetMatchSpecial(cells, preferredSpawnCell) {
     return count;
   };
 
+  // A five-run crossing a three-run creates a Hot Tamale at the
+  // five-run's center and a star one step along the three-run, in the
+  // direction of the swap. This replaces the old instant board clear.
   for (const cell of cells) {
     const candy = csBoard[cell.row][cell.col];
     if (!candy) continue;
     const h = runLength(cell.row, cell.col, 0, 1, candy.type);
     const v = runLength(cell.row, cell.col, 1, 0, candy.type);
-    // Five-plus-three crossing is the board-clearing combo.
-    if ((h >= 5 && v >= 3) || (v >= 5 && h >= 3)) return { clearBoard: true };
+    if (!((h >= 5 && v >= 3) || (v >= 5 && h >= 3))) continue;
+
+    const horizontalFive = h >= 5;
+    const fiveLength = horizontalFive ? h : v;
+    const fiveStart = horizontalFive
+      ? cell.col - Math.floor((fiveLength - 1) / 2)
+      : cell.row - Math.floor((fiveLength - 1) / 2);
+    const center = horizontalFive
+      ? { row: cell.row, col: fiveStart + Math.floor((fiveLength - 1) / 2) }
+      : { row: fiveStart + Math.floor((fiveLength - 1) / 2), col: cell.col };
+    const threeIsHorizontal = horizontalFive ? false : true;
+    const swapDr = preferredSpawnCell ? preferredSpawnCell.row - cell.row : 0;
+    const swapDc = preferredSpawnCell ? preferredSpawnCell.col - cell.col : 0;
+    let starCell;
+    if (threeIsHorizontal) {
+      const direction = Math.sign(swapDc) || 1;
+      starCell = { row: center.row, col: center.col + direction };
+    } else {
+      const direction = Math.sign(swapDr) || 1;
+      starCell = { row: center.row + direction, col: center.col };
+    }
+    if (starCell.row < 0 || starCell.row >= CS_ROWS || starCell.col < 0 || starCell.col >= CS_COLS) {
+      starCell = threeIsHorizontal
+        ? { row: center.row, col: center.col - Math.sign(swapDc || 1) }
+        : { row: center.row - Math.sign(swapDr || 1), col: center.col };
+    }
+    return { cell: center, special: "hot_tamale", extraStarCell: starCell };
   }
 
   // A 4-by-3 crossing makes a star at the junction and a bomb beside it.
@@ -1117,6 +1145,21 @@ function csBeginClear(cells, fromSpecial, preferredSpawnCell, sourceTypes, combo
         }
       }
 
+      if (creation && creation.extraStarCell) {
+        const starKey = keyOf(creation.extraStarCell);
+        const starCandy = csBoard[creation.extraStarCell.row] && csBoard[creation.extraStarCell.row][creation.extraStarCell.col];
+        if (!starCandy || starCandy.special || starKey === keyOf(creation.cell) || starKey === reservedBombKey) {
+          const alternateStar = clearCells.find(cell => {
+            const key = keyOf(cell);
+            const candy = csBoard[cell.row] && csBoard[cell.row][cell.col];
+            return key !== keyOf(creation.cell) && key !== reservedBombKey && candy && !candy.special &&
+              !["hot_tamale", "pumpkin", "peppermint"].includes(candy.type);
+          });
+          if (alternateStar) creation.extraStarCell = { row: alternateStar.row, col: alternateStar.col };
+          else delete creation.extraStarCell;
+        }
+      }
+
       if (creation && creation.extraBombCell) {
         const extraKey = keyOf(creation.extraBombCell);
         const extra = csBoard[creation.extraBombCell.row] && csBoard[creation.extraBombCell.row][creation.extraBombCell.col];
@@ -1161,6 +1204,15 @@ function csBeginClear(cells, fromSpecial, preferredSpawnCell, sourceTypes, combo
           extra.specialDirection = null;
           extra.bornAt = millis();
           unique.delete(creation.extraBombCell.row + "," + creation.extraBombCell.col);
+        }
+      }
+      if (creation.extraStarCell) {
+        const extra = csBoard[creation.extraStarCell.row][creation.extraStarCell.col];
+        if (extra) {
+          extra.special = "star";
+          extra.specialDirection = null;
+          extra.bornAt = millis();
+          unique.delete(creation.extraStarCell.row + "," + creation.extraStarCell.col);
         }
       }
     }
