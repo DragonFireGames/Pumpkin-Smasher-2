@@ -1279,8 +1279,13 @@ function csUpdateGame() {
     csTimeLeft -= Math.max(0, now - csLastTickAt) / 1000;
     if (csTimeLeft <= 0) {
       csTimeLeft = 0;
-      csFinishGame(false, "TIME UP");
-      return;
+      // Don't interrupt an in-progress clear/cascade. Let every special and
+      // post-fall match resolve; a peppermint cleared in that chain can still
+      // award time before the board finally settles.
+      if (csState === "playing") {
+        csFinishGame(false, "TIME UP");
+        return;
+      }
     }
   }
   csLastTickAt = now;
@@ -1305,6 +1310,10 @@ function csUpdateGame() {
       csRegisterActivity();
       if (csMode.id === "puzzle" && csCountPumpkins() === 0) {
         csFinishGame(true, "PUMPKINS SMASHED");
+        return;
+      }
+      if (csMode.id === "fast" && csTimeLeft <= 0) {
+        csFinishGame(false, "TIME UP");
         return;
       }
       csAfterBoardSettles();
