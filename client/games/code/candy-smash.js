@@ -1254,7 +1254,6 @@ function csDrawCandy(candy, x, y, cellSize) {
     const displayWidth = displayHeight * sprite.width / sprite.height;
     const drawW = Math.min(displayWidth, cellSize * 0.9);
     const drawH = Math.min(displayHeight, cellSize * 0.9);
-
     if (candy.special === "bomb") {
       const red = Math.min(1, Math.max(0, (millis() - candy.bornAt) / 900));
       tint(255, Math.round(255 - red * 190), Math.round(255 - red * 205), 255);
@@ -1262,18 +1261,21 @@ function csDrawCandy(candy, x, y, cellSize) {
     image(sprite, x, y, drawW, drawH);
     noTint();
 
-    // Use the same animated per-pixel sine fields as the enchantment demo,
-    // masked by the source sprite's alpha instead of substituting drawn icons.
-    if (candy.special === "lineH") {
-      csDrawMaskedWave(sprite, x, y, drawW, drawH, "linear-x");
-    } else if (candy.special === "lineV") {
-      csDrawMaskedWave(sprite, x, y, drawW, drawH, "linear-y");
+    // Keep the familiar small shine on directional candies and the classic
+    // star/bomb accents. Standard Hot Tamales do not get an extra overlay.
+    if (candy.special === "lineH" || candy.special === "lineV") {
+      csDrawMaskedStripe(sprite, x, y, drawW, drawH, candy.special === "lineH");
     } else if (candy.special === "star") {
-      csDrawMaskedWave(sprite, x, y, drawW, drawH, "star");
-    } else if (candy.special === "bomb" || type.special === "bomb") {
-      // Hot Tamales retain their identity, but use the same radial wave visual
-      // as a naturally spawned bomb special.
-      csDrawMaskedWave(sprite, x, y, drawW, drawH, "radial");
+      const phase = (millis() - candy.bornAt) / 850;
+      const pulse = 0.5 + 0.5 * Math.sin(phase * Math.PI * 2);
+      const scale = 0.55 + 0.38 * pulse;
+      csDrawStarOverlay(x, y, cellSize * 0.32 * scale, 0.62 + 0.28 * pulse);
+    } else if (candy.special === "bomb") {
+      const pulse = 0.5 + 0.5 * Math.sin((millis() - candy.bornAt) / 150);
+      noFill();
+      stroke(255, 75, 35, 85 + pulse * 90);
+      strokeWeight(1.5);
+      ellipse(x, y, cellSize * 0.66, cellSize * 0.66);
     }
   } else {
     noStroke();
@@ -1288,87 +1290,72 @@ function csDrawCandy(candy, x, y, cellSize) {
   }
 }
 
-function csDrawMaskedWave(sprite, x, y, drawW, drawH, kind) {
-  if (!csEffectCanvas || !csEffectContext || drawW <= 0 || drawH <= 0) return;
+function csDrawMaskedStripe(sprite, x, y, drawW, drawH, horizontal) {
+  if (!csEffectCanvas || !csEffectContext) return;
+  const scale = 2;
+  const w = Math.max(1, Math.round(drawW * scale));
+  const h = Math.max(1, Math.round(drawH * scale));
+  csEffectCanvas.width = w;
+  csEffectCanvas.height = h;
+  const ctx = csEffectContext;
+  ctx.clearRect(0, 0, w, h);
   const source = sprite.canvas || sprite.elt;
   if (!source) return;
-
-  // Render at 3x the visible sprite size, but evaluate the field in the same
-  // 232px reference space used by the HTML demo so WAVE_PERIOD stays meaningful.
-  const renderScale = 3;
-  const w = Math.max(1, Math.ceil(drawW * renderScale));
-  const h = Math.max(1, Math.ceil(drawH * renderScale));
-  if (csEffectCanvas.width !== w) csEffectCanvas.width = w;
-  if (csEffectCanvas.height !== h) csEffectCanvas.height = h;
-
-  const ctx = csEffectContext;
-  ctx.globalCompositeOperation = "source-over";
-  ctx.clearRect(0, 0, w, h);
-  const imageData = ctx.createImageData(w, h);
-  const pixels = imageData.data;
-
-  const t = millis() * 0.001;
-  const referenceScale = CS_WAVE_REFERENCE_SIZE / Math.max(drawW, drawH);
-  const isStar = kind === "star";
-  const isRadial = kind === "radial";
-  const spacingMultiplier = isStar ? CS_STAR_SPACING : isRadial ? CS_RADIAL_SPACING : 1;
-  const speedMultiplier = isStar ? CS_STAR_SPEED : isRadial ? CS_RADIAL_SPEED : 1;
-  const period = CS_WAVE_PERIOD * spacingMultiplier;
-  const phaseSpeed = CS_WAVE_PHASE_SPEED * speedMultiplier;
-  const maxAlpha = CS_WAVE_ALPHA;
-
-  for (let py = 0; py < h; py++) {
-    const localY = (py + 0.5) / renderScale;
-    const centeredY = (localY - drawH / 2) * referenceScale;
-    const absY = Math.abs(centeredY);
-    const sqrtY = Math.sqrt(absY + Math.exp(-absY));
-    const yRef = localY * referenceScale;
-
-    for (let px = 0; px < w; px++) {
-      const localX = (px + 0.5) / renderScale;
-      const centeredX = (localX - drawW / 2) * referenceScale;
-      const absX = Math.abs(centeredX);
-      let distance;
-
-      if (isStar) {
-        // Exact star field from the demo: the exponential term smooths the
-        // center, and the sum is deliberately not squared.
-        const fX = Math.sqrt(absX + Math.exp(-absX));
-        distance = (fX + sqrtY) * 10;
-      } else if (isRadial) {
-        distance = Math.hypot(centeredX, centeredY);
-      } else if (kind === "linear-x") {
-        // Vertical wavefronts move sideways, as in the demo's Wave stripes.
-        distance = localX * referenceScale;
-      } else {
-        // Horizontal wavefronts move up/down, as in Vertical-travel bands.
-        distance = yRef;
-      }
-
-      const wave = 0.5 + 0.5 * Math.sin(
-        (distance / period) * Math.PI * 2 - t * phaseSpeed
-      );
-      const alpha = Math.min(125, maxAlpha * wave);
-      const i = (py * w + px) * 4;
-      pixels[i] = 255;
-      pixels[i + 1] = 255;
-      pixels[i + 2] = 255;
-      pixels[i + 3] = alpha;
-    }
-  }
-
-  ctx.putImageData(imageData, 0, 0);
-
-  // Apply the actual candy sprite's alpha to the computed wave field.
-  ctx.globalCompositeOperation = "destination-in";
   ctx.drawImage(source, 0, 0, w, h);
+  ctx.globalCompositeOperation = "source-in";
+  const p = ((millis() % 1250) / 1250);
+  if (horizontal) {
+    const sx = -w * 0.45 + p * w * 1.9;
+    const grad = ctx.createLinearGradient(sx - w * 0.22, 0, sx + w * 0.22, 0);
+    grad.addColorStop(0, "rgba(255,255,255,0)");
+    grad.addColorStop(0.42, "rgba(255,255,255,0.08)");
+    grad.addColorStop(0.5, "rgba(255,255,255,0.82)");
+    grad.addColorStop(0.58, "rgba(255,255,255,0.08)");
+    grad.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+  } else {
+    const sy = -h * 0.45 + p * h * 1.9;
+    const grad = ctx.createLinearGradient(0, sy - h * 0.22, 0, sy + h * 0.22);
+    grad.addColorStop(0, "rgba(255,255,255,0)");
+    grad.addColorStop(0.42, "rgba(255,255,255,0.08)");
+    grad.addColorStop(0.5, "rgba(255,255,255,0.82)");
+    grad.addColorStop(0.58, "rgba(255,255,255,0.08)");
+    grad.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+  }
   ctx.globalCompositeOperation = "source-over";
-
   drawingContext.save();
-  drawingContext.globalAlpha = 1;
-  drawingContext.globalCompositeOperation = "source-over";
+  drawingContext.globalAlpha = 0.9;
   drawingContext.drawImage(csEffectCanvas, x - drawW / 2, y - drawH / 2, drawW, drawH);
   drawingContext.restore();
+}
+
+function csDrawStarOverlay(x, y, radius, alpha) {
+  const ctx = drawingContext;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = "rgba(255,245,175,0.8)";
+  ctx.strokeStyle = "rgba(255,255,255,0.98)";
+  ctx.lineWidth = 1.5;
+  ctx.shadowColor = "rgba(255,245,170,0.9)";
+  ctx.shadowBlur = 7;
+  ctx.beginPath();
+  const steps = 100;
+  for (let i = 0; i <= steps; i++) {
+    const a = i / steps * Math.PI * 2;
+    const ca = Math.cos(a), sa = Math.sin(a);
+    const denom = Math.sqrt(Math.abs(ca)) + Math.sqrt(Math.abs(sa));
+    const px = (denom ? ca / (denom * denom) : 0) * radius * 2.05;
+    const py = (denom ? sa / (denom * denom) : 0) * radius * 2.05;
+    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
 }
 
 function csDrawSpecialEffects() {
@@ -1423,8 +1410,8 @@ function csDrawRayBeam(centerX, centerY, horizontal, progress) {
     ctx.beginPath();
     ctx.moveTo(centerX, centerY);
     ctx.lineTo(head.x, head.y);
-    ctx.strokeStyle = `rgba(255, 135, 28, ${0.72 * visibility})`;
-    ctx.lineWidth = 13;
+    ctx.strokeStyle = `rgba(255, 135, 28, ${0.78 * visibility})`;
+    ctx.lineWidth = 16;
     ctx.shadowColor = "rgba(255, 160, 45, 0.95)";
     ctx.shadowBlur = 14;
     ctx.stroke();
@@ -1432,8 +1419,8 @@ function csDrawRayBeam(centerX, centerY, horizontal, progress) {
     ctx.beginPath();
     ctx.moveTo(centerX, centerY);
     ctx.lineTo(head.x, head.y);
-    ctx.strokeStyle = `rgba(255, 237, 170, ${0.94 * visibility})`;
-    ctx.lineWidth = 5;
+    ctx.strokeStyle = `rgba(255, 237, 170, ${0.96 * visibility})`;
+    ctx.lineWidth = 6.5;
     ctx.shadowColor = "rgba(255, 245, 195, 0.95)";
     ctx.shadowBlur = 7;
     ctx.stroke();
@@ -1441,21 +1428,21 @@ function csDrawRayBeam(centerX, centerY, horizontal, progress) {
     ctx.beginPath();
     ctx.moveTo(centerX, centerY);
     ctx.lineTo(head.x, head.y);
-    ctx.strokeStyle = `rgba(255, 255, 255, ${0.98 * visibility})`;
-    ctx.lineWidth = 1.7;
+    ctx.strokeStyle = `rgba(255, 255, 255, ${0.99 * visibility})`;
+    ctx.lineWidth = 2.2;
     ctx.shadowBlur = 2;
     ctx.stroke();
 
     // The leading spark marks the current wavefront instead of showing the whole
     // beam across the board from the very first animation frame.
-    const headRadius = 4 + 3 * Math.sin(Math.PI * progress);
-    const glow = ctx.createRadialGradient(head.x, head.y, 0, head.x, head.y, headRadius * 2.8);
+    const headRadius = 5 + 3.5 * Math.sin(Math.PI * progress);
+    const glow = ctx.createRadialGradient(head.x, head.y, 0, head.x, head.y, headRadius * 3.0);
     glow.addColorStop(0, "rgba(255,255,245,0.98)");
     glow.addColorStop(0.3, "rgba(255,224,135,0.82)");
     glow.addColorStop(1, "rgba(255,140,25,0)");
     ctx.fillStyle = glow;
     ctx.beginPath();
-    ctx.arc(head.x, head.y, headRadius * 2.8, 0, Math.PI * 2);
+    ctx.arc(head.x, head.y, headRadius * 3.0, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.fillStyle = "rgba(255,255,255,0.98)";
