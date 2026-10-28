@@ -18,6 +18,8 @@ const CS_WHITE = "#ffffff";
 const CS_CLEAR_DELAY = 270;
 const CS_SPECIAL_EFFECT_MS = 520;
 const CS_FALL_DELAY = 390;
+const CS_NATURAL_SPECIAL_CHANCE = 0.0125;
+const CS_FRENZY_NATURAL_SPECIAL_CHANCE = 0.04;
 const CS_PEPPERMINT_TIME_BONUS = 1;
 const CS_HINT_IDLE_MS = 5000;
 const CS_HINT_FLASH_MS = 1500;
@@ -38,7 +40,7 @@ const CS_MODES = [
   {
     id: "fast",
     name: "FAST FRENZY",
-    description: "60 seconds. Peppermints match only each other and add time.",
+    description: "60 seconds. Peppermints cannot match; clear them with special abilities for bonus time.",
     candyId: "peppermint",
     moves: null,
     seconds: 60
@@ -268,8 +270,8 @@ function csRandomCandyId() {
   const weighted = candidates.map(type => {
     let weight = type.weight;
     if (type.id === "hot_tamale") {
-      if (csMode.id === "puzzle") weight = 0.65;
-      else if (csMode.id === "fast") weight = 0.045;
+      // Classic and Puzzle share the same rate; Frenzy is slightly more generous.
+      if (csMode.id === "fast") weight = 0.075;
       else weight = 0.06;
     }
     if (type.id === "smarties" && csMode.id === "fast") weight = 2;
@@ -286,8 +288,11 @@ function csRandomCandyId() {
 }
 
 function csCandyRunMatches(types) {
-  // Every run must consist of the exact same candy type; special candies are not wildcards.
-  return types.length > 0 && types.every(typeId => typeId === types[0]);
+  // Peppermints are ability-only targets: matching candy types can never clear them.
+  // Other runs must consist of the exact same type; special candies are not wildcards.
+  return types.length > 0 &&
+    types[0] !== "peppermint" &&
+    types.every(typeId => typeId === types[0]);
 }
 
 function csWouldMakeMatchAt(board, row, col, type) {
@@ -320,6 +325,37 @@ function csEnsureFastPeppermint(board, requireLegalMove) {
   board[0][0] = csCreateCandy("peppermint");
   return false;
 }
+function csApplyNaturalSpecial(candy) {
+  if (!candy) return candy;
+  const candyType = CS_CANDY_TYPES.find(type => type.id === candy.type);
+  // Hot Tamales and Peppermints already have their own behavior and cannot roll
+  // a second special effect.
+  if (!candyType || candyType.special) return candy;
+
+  const chance = csMode.id === "fast"
+    ? CS_FRENZY_NATURAL_SPECIAL_CHANCE
+    : CS_NATURAL_SPECIAL_CHANCE;
+  if (Math.random() >= chance) return candy;
+
+  // Beam variants are the most common; stars are a little rarer and bombs rarest.
+  const roll = Math.random();
+  if (roll < 0.32) {
+    candy.special = "lineH";
+    candy.specialDirection = "horizontal";
+  } else if (roll < 0.64) {
+    candy.special = "lineV";
+    candy.specialDirection = "vertical";
+  } else if (roll < 0.88) {
+    candy.special = "star";
+    candy.specialDirection = null;
+  } else {
+    candy.special = "bomb";
+    candy.specialDirection = null;
+  }
+  candy.bornAt = millis();
+  return candy;
+}
+
 function csCreateCandyAt(board, row, col, avoidImmediateMatch) {
   let type = csRandomCandyId();
   if (avoidImmediateMatch) {
@@ -338,7 +374,7 @@ function csCreateCandyAt(board, row, col, avoidImmediateMatch) {
       }
     }
   }
-  return csCreateCandy(type);
+  return csApplyNaturalSpecial(csCreateCandy(type));
 }
 
 function csCreateInitialBoard() {
@@ -375,7 +411,9 @@ function csCreateFreshPlayableBoard() {
   for (let row = 0; row < CS_ROWS; row++) {
     fallback[row] = [];
     for (let col = 0; col < CS_COLS; col++) {
-      fallback[row][col] = csCreateCandy(ordinary[(row + col * 2) % ordinary.length]);
+      fallback[row][col] = csApplyNaturalSpecial(
+        csCreateCandy(ordinary[(row + col * 2) % ordinary.length])
+      );
     }
   }
   fallback[0][0].type = ordinary[0];
@@ -473,7 +511,8 @@ function csBoardHasLegalMove(board) {
         const first = board[from.row][from.col];
         const second = board[to.row][to.col];
         if (!first || !second) continue;
-        if (first.type === "hot_tamale" || second.type === "hot_tamale") return true;
+        if (first.type === "hot_tamale" || second.type === "hot_tamale" ||
+            first.special || second.special) return true;
         csSwapBoardCandies(board, from, to);
         const hasMatch = csFindMatches(board).length > 0;
         csSwapBoardCandies(board, from, to);
@@ -500,7 +539,8 @@ function csFindBasicHint() {
 
         const firstInfo = CS_CANDY_TYPES.find(item => item.id === first.type);
         const secondInfo = CS_CANDY_TYPES.find(item => item.id === second.type);
-        if (!firstInfo || !secondInfo || firstInfo.special || secondInfo.special) continue;
+        if (!firstInfo || !secondInfo || firstInfo.special || secondInfo.special ||
+            first.special || second.special) continue;
 
         csSwapBoardCandies(csBoard, from, to);
         const matches = csFindMatches(csBoard);
@@ -1035,8 +1075,8 @@ function csDrawHud() {
   fill(CS_WHITE);
   textStyle(NORMAL);
   textSize(9);
-  if (csMode.id === "fast") text("PEPPERMINT +1 SEC EACH", width - 8, 31);
-  else if (csMode.id === "puzzle") text("HOT TAMALES ARE COMMON", width - 8, 31);
+  if (csMode.id === "fast") text("PEPPERMINTS: ABILITIES ONLY (+1 SEC)", width - 8, 31);
+  else if (csMode.id === "puzzle") text("HOT TAMALE RATE = CLASSIC", width - 8, 31);
   else text("MATCH 3 OR MORE", width - 8, 31);
 }
 
