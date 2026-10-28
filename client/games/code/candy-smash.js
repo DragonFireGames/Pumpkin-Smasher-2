@@ -16,7 +16,7 @@ const CS_BLACK = "#0C2504";
 const CS_ORANGE = "#ffa500";
 const CS_WHITE = "#ffffff";
 const CS_CLEAR_DELAY = 270;
-const CS_SPECIAL_EFFECT_MS = 390;
+const CS_SPECIAL_EFFECT_MS = 520;
 const CS_FALL_DELAY = 390;
 const CS_PEPPERMINT_TIME_BONUS = 1;
 const CS_HINT_IDLE_MS = 5000;
@@ -720,6 +720,21 @@ function csGetMatchSpecial(cells, preferredSpawnCell) {
   return null;
 }
 
+function csGetMatchCenterCell(cells, preferredSpawnCell) {
+  const matched = new Set(cells.map(cell => cell.row + "," + cell.col));
+  if (preferredSpawnCell && matched.has(preferredSpawnCell.row + "," + preferredSpawnCell.col)) {
+    return { row: preferredSpawnCell.row, col: preferredSpawnCell.col };
+  }
+  if (!cells.length) return null;
+  const centerRow = cells.reduce((sum, cell) => sum + cell.row, 0) / cells.length;
+  const centerCol = cells.reduce((sum, cell) => sum + cell.col, 0) / cells.length;
+  return cells.reduce((best, cell) => {
+    const distance = Math.pow(cell.row - centerRow, 2) + Math.pow(cell.col - centerCol, 2);
+    if (!best || distance < best.distance) return { cell, distance };
+    return best;
+  }, null).cell;
+}
+
 function csBeginClear(cells, fromSpecial, preferredSpawnCell) {
   if (!fromSpecial) {
     const matchedTamale = cells.find(cell => {
@@ -758,8 +773,7 @@ function csBeginClear(cells, fromSpecial, preferredSpawnCell) {
       }
     } else if (csCombo > 1 && csCombo % 3 === 0) {
       // Every third clear in a cascade leaves a 3×3 bomb at the center of the match.
-      const center = preferredSpawnCell && unique.has(preferredSpawnCell.row + "," + preferredSpawnCell.col)
-        ? preferredSpawnCell : clearCells[Math.floor(clearCells.length / 2)];
+      const center = csGetMatchCenterCell(clearCells, preferredSpawnCell);
       if (center) {
         const candy = csBoard[center.row][center.col];
         if (candy) {
@@ -1251,62 +1265,182 @@ function csDrawStarOverlay(x, y, radius, alpha) {
 function csDrawSpecialEffects() {
   const now = millis();
   csSpecialEffects = csSpecialEffects.filter(effect => now - effect.startedAt < effect.duration);
+
   for (const effect of csSpecialEffects) {
-    const p = Math.min(1, Math.max(0, (now - effect.startedAt) / effect.duration));
-    const fade = Math.sin(Math.PI * p);
+    const progress = Math.min(1, Math.max(0, (now - effect.startedAt) / effect.duration));
     const centerX = CS_BOARD_X + effect.col * CS_CELL + CS_CELL / 2;
     const centerY = CS_BOARD_Y + effect.row * CS_CELL + CS_CELL / 2;
-    const left = CS_BOARD_X + 1;
-    const right = CS_BOARD_X + CS_COLS * CS_CELL - 1;
-    const top = CS_BOARD_Y + 1;
-    const bottom = CS_BOARD_Y + CS_ROWS * CS_CELL - 1;
 
-    const beam = (horizontal, verticalOffset = 0) => {
-      const y = centerY + verticalOffset;
-      const x = centerX + verticalOffset;
-      const startX = horizontal ? left : centerX;
-      const endX = horizontal ? right : centerX;
-      const startY = horizontal ? centerY : top;
-      const endY = horizontal ? centerY : bottom;
-      const travel = p;
-      const headX = horizontal ? lerp(startX, endX, travel) : centerX;
-      const headY = horizontal ? centerY : lerp(startY, endY, travel);
-      noStroke();
-      fill(255, 245, 200, 35 + 65 * fade);
-      if (horizontal) rect(startX, y - (5 + 3 * fade), endX - startX, 10 + 6 * fade);
-      else rect(x - (5 + 3 * fade), startY, 10 + 6 * fade, endY - startY);
-      stroke(255, 255, 255, 150 + 100 * fade);
-      strokeWeight(2 + 2 * fade);
-      line(startX, startY, endX, endY);
-      noStroke();
-      fill(255, 255, 230, 210 * fade);
-      ellipse(headX, headY, 9 + 9 * fade, 9 + 9 * fade);
-      fill(255, 190, 65, 190 * fade);
-      ellipse(headX, headY, 4 + 3 * fade, 4 + 3 * fade);
-    };
-
-    if (effect.type === "beamH") beam(true);
-    else if (effect.type === "beamV") beam(false);
-    else if (effect.type === "cross") {
-      beam(true);
-      beam(false);
+    if (effect.type === "beamH") {
+      csDrawRayBeam(centerX, centerY, true, progress);
+    } else if (effect.type === "beamV") {
+      csDrawRayBeam(centerX, centerY, false, progress);
+    } else if (effect.type === "cross") {
+      // Two crossing rays launch from the special candy at the same time.
+      csDrawRayBeam(centerX, centerY, true, progress);
+      csDrawRayBeam(centerX, centerY, false, progress);
     } else if (effect.type === "bomb") {
-      const maxRadius = CS_CELL * 1.55;
-      const radius = maxRadius * (0.15 + 0.85 * (1 - Math.pow(1 - p, 2)));
-      noFill();
-      stroke(255, 65, 25, 220 * fade);
-      strokeWeight(5 * (1 - p) + 1.5);
-      ellipse(centerX, centerY, radius * 2, radius * 2);
-      stroke(255, 210, 110, 200 * fade);
-      strokeWeight(2);
-      ellipse(centerX, centerY, radius * 1.55, radius * 1.55);
-      noStroke();
-      fill(255, 90, 30, 65 * fade);
-      ellipse(centerX, centerY, radius * 1.7, radius * 1.7);
-      fill(255, 240, 190, 190 * fade);
-      ellipse(centerX, centerY, Math.max(3, 13 * (1 - p)), Math.max(3, 13 * (1 - p)));
+      csDrawBombExplosion(centerX, centerY, progress);
     }
   }
+}
+
+function csDrawRayBeam(centerX, centerY, horizontal, progress) {
+  const ctx = drawingContext;
+  const left = CS_BOARD_X + 2;
+  const right = CS_BOARD_X + CS_COLS * CS_CELL - 2;
+  const top = CS_BOARD_Y + 2;
+  const bottom = CS_BOARD_Y + CS_ROWS * CS_CELL - 2;
+  // The fronts ease out from the candy, sending a pair of rays toward each edge.
+  const travel = 1 - Math.pow(1 - progress, 2.5);
+  const visibility = 1 - 0.24 * progress;
+  const heads = horizontal
+    ? [
+        { x: centerX + (left - centerX) * travel, y: centerY },
+        { x: centerX + (right - centerX) * travel, y: centerY }
+      ]
+    : [
+        { x: centerX, y: centerY + (top - centerY) * travel },
+        { x: centerX, y: centerY + (bottom - centerY) * travel }
+      ];
+
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  for (const head of heads) {
+    // Warm, soft glow under a crisp near-white core gives the ray a layered look.
+    ctx.beginPath();
+    ctx.moveTo(centerX, centerY);
+    ctx.lineTo(head.x, head.y);
+    ctx.strokeStyle = `rgba(255, 135, 28, ${0.72 * visibility})`;
+    ctx.lineWidth = 13;
+    ctx.shadowColor = "rgba(255, 160, 45, 0.95)";
+    ctx.shadowBlur = 14;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(centerX, centerY);
+    ctx.lineTo(head.x, head.y);
+    ctx.strokeStyle = `rgba(255, 237, 170, ${0.94 * visibility})`;
+    ctx.lineWidth = 5;
+    ctx.shadowColor = "rgba(255, 245, 195, 0.95)";
+    ctx.shadowBlur = 7;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(centerX, centerY);
+    ctx.lineTo(head.x, head.y);
+    ctx.strokeStyle = `rgba(255, 255, 255, ${0.98 * visibility})`;
+    ctx.lineWidth = 1.7;
+    ctx.shadowBlur = 2;
+    ctx.stroke();
+
+    // The leading spark marks the current wavefront instead of showing the whole
+    // beam across the board from the very first animation frame.
+    const headRadius = 4 + 3 * Math.sin(Math.PI * progress);
+    const glow = ctx.createRadialGradient(head.x, head.y, 0, head.x, head.y, headRadius * 2.8);
+    glow.addColorStop(0, "rgba(255,255,245,0.98)");
+    glow.addColorStop(0.3, "rgba(255,224,135,0.82)");
+    glow.addColorStop(1, "rgba(255,140,25,0)");
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(head.x, head.y, headRadius * 2.8, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "rgba(255,255,255,0.98)";
+    ctx.beginPath();
+    ctx.arc(head.x, head.y, headRadius * 0.48, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // A short-lived flare at the launch point makes the origin read clearly.
+  const originRadius = 3 + 5 * Math.sin(Math.PI * progress);
+  const originGlow = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, originRadius * 3);
+  originGlow.addColorStop(0, "rgba(255,255,255,0.98)");
+  originGlow.addColorStop(0.35, "rgba(255,224,130,0.84)");
+  originGlow.addColorStop(1, "rgba(255,150,30,0)");
+  ctx.fillStyle = originGlow;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, originRadius * 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function csDrawBombExplosion(centerX, centerY, progress) {
+  const ctx = drawingContext;
+  const maxRadius = CS_CELL * 1.5; // A three-by-three cell footprint.
+  const eased = 1 - Math.pow(1 - progress, 2.15);
+  const radius = Math.max(0.75, maxRadius * eased);
+  const fade = Math.pow(1 - progress, 0.72);
+
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+
+  // Soft, expanding flash behind the rings.
+  const bloom = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+  bloom.addColorStop(0, `rgba(255,250,210,${0.28 * fade})`);
+  bloom.addColorStop(0.42, `rgba(255,145,38,${0.18 * fade})`);
+  bloom.addColorStop(0.78, `rgba(255,75,24,${0.09 * fade})`);
+  bloom.addColorStop(1, "rgba(255,60,15,0)");
+  ctx.fillStyle = bloom;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Main shockwave and a trailing inner ring, both fading as they expand.
+  const rings = [
+    { r: radius, alpha: 0.94, width: 4.5 * fade + 1 },
+    { r: maxRadius * Math.max(0, eased - 0.2), alpha: 0.58 * fade, width: 2.2 * fade + 0.8 }
+  ];
+  for (const ring of rings) {
+    if (ring.r < 1) continue;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, ring.r, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255,220,135,${ring.alpha})`;
+    ctx.lineWidth = ring.width;
+    ctx.shadowColor = "rgba(255,105,25,0.9)";
+    ctx.shadowBlur = 12 * fade;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, ring.r, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255,255,245,${0.52 * fade})`;
+    ctx.lineWidth = Math.max(0.8, ring.width * 0.32);
+    ctx.shadowBlur = 2;
+    ctx.stroke();
+  }
+
+  // Tiny radial sparks add a burst without obscuring the board.
+  const sparkRadius = radius * 0.88;
+  ctx.lineCap = "round";
+  for (let i = 0; i < 8; i++) {
+    const angle = (Math.PI * 2 * i) / 8 + 0.18;
+    const inner = sparkRadius - (4 + 5 * fade);
+    const outer = sparkRadius + 2 + 9 * fade;
+    ctx.beginPath();
+    ctx.moveTo(centerX + Math.cos(angle) * inner, centerY + Math.sin(angle) * inner);
+    ctx.lineTo(centerX + Math.cos(angle) * outer, centerY + Math.sin(angle) * outer);
+    ctx.strokeStyle = `rgba(255,244,195,${0.8 * fade})`;
+    ctx.lineWidth = 1.6 + fade;
+    ctx.shadowColor = "rgba(255,150,35,0.85)";
+    ctx.shadowBlur = 6;
+    ctx.stroke();
+  }
+
+  const coreRadius = Math.max(0, 10 * (1 - progress));
+  const core = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, Math.max(1, coreRadius * 2));
+  core.addColorStop(0, `rgba(255,255,250,${0.9 * fade})`);
+  core.addColorStop(0.45, `rgba(255,215,125,${0.56 * fade})`);
+  core.addColorStop(1, "rgba(255,130,25,0)");
+  ctx.fillStyle = core;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, Math.max(1, coreRadius * 2), 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
 }
 
 function csDrawClearHighlights() {
