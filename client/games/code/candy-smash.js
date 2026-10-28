@@ -29,8 +29,8 @@ const CS_STAR_SPEED = 1.0;
 const CS_WAVE_ALPHA = 78;
 const CS_WAVE_REFERENCE_SIZE = 232;
 const CS_NATURAL_SPECIAL_CHANCE = 0.015;
-const CS_FRENZY_NATURAL_SPECIAL_CHANCE = 0.08;
-const CS_FRENZY_HOT_TAMALE_WEIGHT = 0.35;
+const CS_FRENZY_NATURAL_SPECIAL_CHANCE = 0.10;
+const CS_FRENZY_HOT_TAMALE_WEIGHT = 0.38;
 const CS_FRENZY_TAMALE_GUARANTEE_INTERVAL = 12;
 const CS_SHUFFLE_ANIMATION_MS = 780;
 const CS_PEPPERMINT_TIME_BONUS = 1;
@@ -46,7 +46,8 @@ const CS_CANDY_TYPES = [
   { id: "ghost", name: "Ghost Chew", path: "/assets/candies/ghost-chew.png", weight: 1 },
   { id: "smarties", name: "Smarties", path: "/assets/candies/smarties.png", weight: 1 },
   { id: "hot_tamale", name: "Hot Tamale", path: "/assets/candies/hot-tamale.png", weight: 0.10, special: "bomb" },
-  { id: "peppermint", name: "Peppermint", path: "/assets/candies/peppermint.png", weight: 1.0, special: "time_bonus" }
+  { id: "peppermint", name: "Peppermint", path: "/assets/candies/peppermint.png", weight: 1.0, special: "time_bonus" },
+  { id: "pumpkin", name: "Pumpkin", path: "/assets/pumpkins/pumpkin.png", weight: 0, special: "pumpkin" }
 ];
 
 const CS_MODES = [
@@ -69,7 +70,7 @@ const CS_MODES = [
   {
     id: "puzzle",
     name: "PUZZLE",
-    description: "18 moves. Use Hot Tamales to maximize your score.",
+    description: "18 moves. Destroy every pumpkin using special abilities.",
     candyId: "smarties",
     moves: 18,
     seconds: null
@@ -261,6 +262,7 @@ function csStartGame(modeIndex) {
   csClearSequence = 0;
   csSpecialEffects = [];
   csBoard = csCreateInitialBoard();
+  if (csMode.id === "puzzle") csPlacePuzzlePumpkins(csBoard);
   // Initial-board construction doesn't count toward the in-game spawn guarantee.
   csCandiesSinceHotTamale = 0;
   csState = "playing";
@@ -283,10 +285,48 @@ function csCreateCandy(id) {
   };
 }
 
-function csRandomCandyId(excludeHotTamale) {
+function csPlacePuzzlePumpkins(board) {
+  const targetCount = 5;
+  let placed = 0;
+  const positions = [];
+  for (let row = 0; row < CS_ROWS; row++) {
+    for (let col = 0; col < CS_COLS; col++) positions.push({ row, col });
+  }
+  for (let i = positions.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [positions[i], positions[j]] = [positions[j], positions[i]];
+  }
+  for (const cell of positions) {
+    if (placed >= targetCount) break;
+    const candy = board[cell.row][cell.col];
+    if (!candy || candy.special || candy.type === "hot_tamale" ||
+        candy.type === "peppermint" || csHasAdjacentPumpkin(board, cell.row, cell.col)) continue;
+    board[cell.row][cell.col] = csCreateCandy("pumpkin");
+    placed++;
+  }
+}
+
+function csHasAdjacentPumpkin(board, row, col) {
+  return [[row - 1, col], [row + 1, col], [row, col - 1], [row, col + 1]].some(([r, c]) =>
+    r >= 0 && r < CS_ROWS && c >= 0 && c < CS_COLS &&
+    board[r] && board[r][c] && board[r][c].type === "pumpkin"
+  );
+}
+
+function csCountPumpkins() {
+  let count = 0;
+  for (let row = 0; row < CS_ROWS; row++) {
+    for (let col = 0; col < CS_COLS; col++) {
+      if (csBoard[row][col] && csBoard[row][col].type === "pumpkin") count++;
+    }
+  }
+  return count;
+}
+
+function csRandomCandyId() {
   const candidates = CS_CANDY_TYPES.filter(type =>
-    (type.id !== "peppermint" || csMode.id === "fast") &&
-    (!excludeHotTamale || type.id !== "hot_tamale")
+    type.id !== "pumpkin" &&
+    (type.id !== "peppermint" || csMode.id === "fast")
   );
   let totalWeight = 0;
   const weighted = candidates.map(type => {
@@ -310,10 +350,9 @@ function csRandomCandyId(excludeHotTamale) {
 }
 
 function csCandyRunMatches(types) {
-  // Peppermints are ability-only targets: matching candy types can never clear them.
-  // Other runs must consist of the exact same type; special candies are not wildcards.
+  // Peppermints, Hot Tamales and pumpkins cannot be ordinary matches.
   return types.length > 0 &&
-    types[0] !== "peppermint" &&
+    !["peppermint", "hot_tamale", "pumpkin"].includes(types[0]) &&
     types.every(typeId => typeId === types[0]);
 }
 
@@ -359,15 +398,15 @@ function csApplyNaturalSpecial(candy) {
     : CS_NATURAL_SPECIAL_CHANCE;
   if (Math.random() >= chance) return candy;
 
-  // Beam variants are the most common; stars are a little rarer and bombs rarest.
+  // Bombs are most common naturally, followed by line beams; stars are rarest.
   const roll = Math.random();
-  if (roll < 0.32) {
+  if (roll < 0.22) {
     candy.special = "lineH";
     candy.specialDirection = "horizontal";
-  } else if (roll < 0.64) {
+  } else if (roll < 0.44) {
     candy.special = "lineV";
     candy.specialDirection = "vertical";
-  } else if (roll < 0.88) {
+  } else if (roll < 0.55) {
     candy.special = "star";
     candy.specialDirection = null;
   } else {
@@ -388,17 +427,6 @@ function csHasAdjacentHotTamale(board, row, col) {
   );
 }
 
-function csBoardHasAdjacentHotTamales(board) {
-  for (let row = 0; row < CS_ROWS; row++) {
-    for (let col = 0; col < CS_COLS; col++) {
-      if (!board[row][col] || board[row][col].type !== "hot_tamale") continue;
-      if ((col > 0 && board[row][col - 1] && board[row][col - 1].type === "hot_tamale") ||
-          (row > 0 && board[row - 1][col] && board[row - 1][col].type === "hot_tamale")) return true;
-    }
-  }
-  return false;
-}
-
 function csEnsureFastHotTamale(board) {
   if (csMode.id !== "fast") return true;
   for (let row = 0; row < CS_ROWS; row++) {
@@ -413,7 +441,8 @@ function csEnsureFastHotTamale(board) {
       const previous = board[row][col];
       if (!previous || previous.type === "peppermint" || previous.special) continue;
       board[row][col] = csCreateCandy("hot_tamale");
-      if (!csBoardHasAdjacentHotTamales(board) &&
+      if (
+          
           csFindMatches(board).length === 0 && csBoardHasLegalMove(board)) {
         csCandiesSinceHotTamale = 0;
         return true;
@@ -427,14 +456,13 @@ function csEnsureFastHotTamale(board) {
 function csCreateCandyAt(board, row, col, avoidImmediateMatch, allowGuaranteedSpawn = true) {
   const adjacentHotTamale = csHasAdjacentHotTamale(board, row, col);
   const guaranteedTamale = allowGuaranteedSpawn && csMode.id === "fast" &&
-    csCandiesSinceHotTamale >= CS_FRENZY_TAMALE_GUARANTEE_INTERVAL - 1 &&
-    !adjacentHotTamale;
-  let type = guaranteedTamale ? "hot_tamale" : csRandomCandyId(adjacentHotTamale);
+    csCandiesSinceHotTamale >= CS_FRENZY_TAMALE_GUARANTEE_INTERVAL - 1;
+  let type = guaranteedTamale ? "hot_tamale" : csRandomCandyId();
 
   if (avoidImmediateMatch && type !== "hot_tamale") {
     let attempts = 0;
     while (csWouldMakeMatchAt(board, row, col, type) && attempts < 60) {
-      type = csRandomCandyId(adjacentHotTamale);
+      type = csRandomCandyId();
       attempts++;
     }
     if (csWouldMakeMatchAt(board, row, col, type)) {
@@ -470,7 +498,7 @@ function csCreateInitialBoard() {
     csEnsureFastPeppermint(board, true);
     csEnsureFastHotTamale(board);
     if (csFindMatches(board).length === 0 &&
-        !csBoardHasAdjacentHotTamales(board) && csBoardHasLegalMove(board)) return board;
+           csBoardHasLegalMove(board)) return board;
   }
   return csCreateFreshPlayableBoard();
 }
@@ -488,7 +516,7 @@ function csCreateFreshPlayableBoard() {
     csEnsureFastPeppermint(board, true);
     csEnsureFastHotTamale(board);
     if (csFindMatches(board).length === 0 &&
-        !csBoardHasAdjacentHotTamales(board) && csBoardHasLegalMove(board)) return board;
+           csBoardHasLegalMove(board)) return board;
   }
   const fallback = [];
   const ordinary = CS_CANDY_TYPES.filter(item => !item.special).map(item => item.id);
@@ -678,14 +706,30 @@ function csGetCellAt(x, y) {
   };
 }
 
-function csTrySwap(from, to) {
+function csTrySwap(from, to, tryTamaleMatch = false) {
   if (csState !== "playing" || csIsShuffleAnimating() || !csAreAdjacent(from, to)) return false;
   const first = csBoard[from.row][from.col];
   const second = csBoard[to.row][to.col];
   if (!first || !second) return false;
   csSelected = null;
 
-  // Legacy Hot Tamales still clear candies of the swapped candy's type.
+  // If a regular candy was selected first, test an actual swap into the Tamale.
+  // Keep the Tamale if the swap makes a match; otherwise restore and activate it.
+  if (tryTamaleMatch && first.type !== "hot_tamale" && second.type === "hot_tamale") {
+    csSwapBoardCandies(csBoard, from, to);
+    const tamaleSwapMatches = csFindMatches(csBoard);
+    if (tamaleSwapMatches.length) {
+      csVisualSwap = { from: {row:from.row,col:from.col}, to: {row:to.row,col:to.col},
+        startedAt: millis(), duration: 130, invalid: false };
+      csMovesLeft = csMode.moves === null ? csMovesLeft : csMovesLeft - 1;
+      csKeyboardFocus = { row: to.row, col: to.col };
+      csBeginClear(tamaleSwapMatches, false, to);
+      return true;
+    }
+    csSwapBoardCandies(csBoard, from, to);
+  }
+
+  // Clicking a Tamale first activates it immediately.
   if (first.type === "hot_tamale" || second.type === "hot_tamale") {
     csMovesLeft = csMode.moves === null ? csMovesLeft : csMovesLeft - 1;
     const targetType = first.type === "hot_tamale" ? second.type : first.type;
@@ -776,39 +820,62 @@ function csGetMatchSpecial(cells, preferredSpawnCell) {
       let r = row + dr * sign, c = col + dc * sign;
       while (r >= 0 && r < CS_ROWS && c >= 0 && c < CS_COLS &&
              csBoard[r][c] && csBoard[r][c].type === type && matched.has(r + "," + c)) {
-        count++;
-        r += dr * sign;
-        c += dc * sign;
+        count++; r += dr * sign; c += dc * sign;
       }
     }
     return count;
   };
 
-  // A T/L/cross intersection creates a star at the intersection itself.
   for (const cell of cells) {
     const candy = csBoard[cell.row][cell.col];
     if (!candy) continue;
-    const horizontal = runLength(cell.row, cell.col, 0, 1, candy.type);
-    const vertical = runLength(cell.row, cell.col, 1, 0, candy.type);
-    if (horizontal >= 3 && vertical >= 3) return { cell, special: "star" };
+    const h = runLength(cell.row, cell.col, 0, 1, candy.type);
+    const v = runLength(cell.row, cell.col, 1, 0, candy.type);
+    // Five-plus-three crossing is the board-clearing combo.
+    if ((h >= 5 && v >= 3) || (v >= 5 && h >= 3)) return { clearBoard: true };
   }
 
-  // Four-in-a-row creates a directional beam. Five or more creates the crossbeam star.
+  // A 4-by-3 crossing makes a star at the junction and a bomb beside it.
+  for (const cell of cells) {
+    const candy = csBoard[cell.row][cell.col];
+    if (!candy) continue;
+    const h = runLength(cell.row, cell.col, 0, 1, candy.type);
+    const v = runLength(cell.row, cell.col, 1, 0, candy.type);
+    if (h >= 3 && v >= 3) {
+      const creation = { cell, special: "star" };
+      if (h >= 4 || v >= 4) {
+        const adjacent = cells.find(other =>
+          !(other.row === cell.row && other.col === cell.col) &&
+          Math.abs(other.row - cell.row) + Math.abs(other.col - cell.col) === 1 &&
+          csBoard[other.row][other.col] &&
+          !csBoard[other.row][other.col].special &&
+          csBoard[other.row][other.col].type !== "hot_tamale"
+        );
+        if (adjacent) creation.extraBombCell = adjacent;
+      }
+      return creation;
+    }
+  }
+
+  // A straight five without a crossing creates a Hot Tamale rather than a star.
+  for (const cell of cells) {
+    const candy = csBoard[cell.row][cell.col];
+    if (!candy) continue;
+    if (runLength(cell.row, cell.col, 0, 1, candy.type) >= 5 ||
+        runLength(cell.row, cell.col, 1, 0, candy.type) >= 5) {
+      return { cell: preferredSpawnCell && matched.has(preferredSpawnCell.row + "," + preferredSpawnCell.col)
+        ? preferredSpawnCell : cell, special: "hot_tamale" };
+    }
+  }
+
   const directions = [{ dr: 0, dc: 1, special: "lineH" }, { dr: 1, dc: 0, special: "lineV" }];
   for (const direction of directions) {
     for (const cell of cells) {
       const candy = csBoard[cell.row][cell.col];
       if (!candy) continue;
-      const length = runLength(cell.row, cell.col, direction.dr, direction.dc, candy.type);
-      if (length >= 5) {
-        const preferred = preferredSpawnCell && matched.has(preferredSpawnCell.row + "," + preferredSpawnCell.col)
-          ? preferredSpawnCell : cell;
-        return { cell: preferred, special: "star" };
-      }
-      if (length >= 4) {
-        const preferred = preferredSpawnCell && matched.has(preferredSpawnCell.row + "," + preferredSpawnCell.col)
-          ? preferredSpawnCell : cell;
-        return { cell: preferred, special: direction.special };
+      if (runLength(cell.row, cell.col, direction.dr, direction.dc, candy.type) >= 4) {
+        return { cell: preferredSpawnCell && matched.has(preferredSpawnCell.row + "," + preferredSpawnCell.col)
+          ? preferredSpawnCell : cell, special: direction.special };
       }
     }
   }
@@ -869,7 +936,7 @@ function csAddTamaleZapEffect(center, targetType) {
   for (let row = 0; row < CS_ROWS; row++) {
     for (let col = 0; col < CS_COLS; col++) {
       const candy = csBoard[row][col];
-      if (candy && candy.type === targetType) targets.push({ row, col });
+      if (candy && candy.type === targetType && candy.type !== "pumpkin") targets.push({ row, col });
     }
   }
   csSpecialEffects.push({
@@ -889,7 +956,7 @@ function csAddCandyColorCells(unique, typeId) {
     for (let col = 0; col < CS_COLS; col++) {
       const candy = csBoard[row][col];
       const key = row + "," + col;
-      if (candy && candy.type === typeId && !unique.has(key)) {
+      if (candy && candy.type === typeId && candy.type !== "pumpkin" && !unique.has(key)) {
         unique.set(key, { row, col });
         addedCells = true;
       }
@@ -950,18 +1017,37 @@ function csBeginClear(cells, fromSpecial, preferredSpawnCell, sourceTypes) {
   // a beam/star, keep it and place the bomb on another ordinary candy.
   if (!fromSpecial) {
     const creation = csGetMatchSpecial(clearCells, preferredSpawnCell);
-    if (creation) {
+    if (creation && creation.clearBoard) {
+      for (let row = 0; row < CS_ROWS; row++) {
+        for (let col = 0; col < CS_COLS; col++) addCell({ row, col });
+      }
+    } else if (creation) {
       const candy = csBoard[creation.cell.row][creation.cell.col];
       if (candy) {
-        candy.special = creation.special;
-        candy.specialDirection = creation.special === "lineH" ? "horizontal" :
-          creation.special === "lineV" ? "vertical" : null;
+        if (creation.special === "hot_tamale") {
+          candy.type = "hot_tamale";
+          candy.special = null;
+          candy.specialDirection = null;
+        } else {
+          candy.special = creation.special;
+          candy.specialDirection = creation.special === "lineH" ? "horizontal" :
+            creation.special === "lineV" ? "vertical" : null;
+        }
         candy.bornAt = millis();
         unique.delete(creation.cell.row + "," + creation.cell.col);
       }
+      if (creation.extraBombCell) {
+        const extra = csBoard[creation.extraBombCell.row][creation.extraBombCell.col];
+        if (extra) {
+          extra.special = "bomb";
+          extra.specialDirection = null;
+          extra.bornAt = millis();
+          unique.delete(creation.extraBombCell.row + "," + creation.extraBombCell.col);
+        }
+      }
     }
 
-    if (csCombo > 1 && csCombo % 3 === 0) {
+    if ((!creation || !creation.clearBoard) && csCombo > 1 && csCombo % 3 === 0) {
       const center = csGetCascadeBombCell(
         clearCells,
         creation ? creation.cell : null,
@@ -1076,6 +1162,10 @@ function csUpdateGame() {
       csState = "playing";
       csCombo = 1;
       csRegisterActivity();
+      if (csMode.id === "puzzle" && csCountPumpkins() === 0) {
+        csFinishGame(true, "PUMPKINS SMASHED");
+        return;
+      }
       csAfterBoardSettles();
     }
   }
@@ -1115,38 +1205,13 @@ function csApplyGravityAndRefill() {
       csBoard[row][col] = candy;
     }
   }
-  csEnsureHotTamaleSpacing(csBoard);
   csEnsureFastPeppermint(csBoard, false);
-}
-
-function csEnsureHotTamaleSpacing(board) {
-  const ordinary = CS_CANDY_TYPES.filter(item => !item.special).map(item => item.id);
-  for (let row = 0; row < CS_ROWS; row++) {
-    for (let col = 0; col < CS_COLS; col++) {
-      const candy = board[row][col];
-      if (!candy || candy.type !== "hot_tamale") continue;
-      const adjacentEarlierTamale =
-        (col > 0 && board[row][col - 1] && board[row][col - 1].type === "hot_tamale") ||
-        (row > 0 && board[row - 1][col] && board[row - 1][col].type === "hot_tamale");
-      if (!adjacentEarlierTamale) continue;
-
-      let replacementId = ordinary[Math.floor(Math.random() * ordinary.length)];
-      for (let attempt = 0; attempt < 40 && csWouldMakeMatchAt(board, row, col, replacementId); attempt++) {
-        replacementId = ordinary[Math.floor(Math.random() * ordinary.length)];
-      }
-      const replacement = csCreateCandy(replacementId);
-      replacement.fall = candy.fall;
-      board[row][col] = replacement;
-      if (csMode.id === "fast") {
-        csCandiesSinceHotTamale = Math.max(csCandiesSinceHotTamale, CS_FRENZY_TAMALE_GUARANTEE_INTERVAL);
-      }
-    }
-  }
 }
 
 function csAfterBoardSettles() {
   if (csMode.moves !== null && csMovesLeft <= 0) {
-    csFinishGame(false, "OUT OF MOVES");
+    if (csMode.id === "puzzle" && csCountPumpkins() === 0) csFinishGame(true, "PUMPKINS SMASHED");
+    else csFinishGame(false, csMode.id === "puzzle" ? "PUMPKINS REMAIN" : "OUT OF MOVES");
     return;
   }
   if (!csBoardHasLegalMove(csBoard)) {
@@ -1181,7 +1246,7 @@ function csReshuffleBoard() {
       }
     }
     if (csFindMatches(csBoard).length === 0 &&
-        !csBoardHasAdjacentHotTamales(csBoard) &&
+        
         csBoardHasLegalMove(csBoard)) {
       csStartShuffleAnimation(originalPositions);
       return;
@@ -1206,6 +1271,7 @@ function csStartShuffleAnimation(originalPositions) {
       candy.fall = null;
     }
   }
+  if (csMode.id === "fast") csTimeLeft += 15;
   csShuffleAnimation = { startedAt: millis(), duration: CS_SHUFFLE_ANIMATION_MS, movements };
   csSelected = null;
   csVisualSwap = null;
@@ -1274,7 +1340,11 @@ function csDrawShuffleOverlay() {
   stroke(255, 175, 58, 210 * pulse);
   strokeWeight(2);
   fill(255, 247, 205, 245 * pulse);
-  text("SHUFFLE", beamX, beamY);
+  text("SHUFFLE", beamX, beamY - 10);
+  if (csMode.id === "fast") {
+    textSize(12);
+    text("+15 SECONDS", beamX, beamY + 16);
+  }
   pop();
 }
 
@@ -1371,7 +1441,7 @@ function csDrawHud() {
   textStyle(NORMAL);
   textSize(9);
   if (csMode.id === "fast") text("PEPPERMINTS: ABILITIES ONLY (+1 SEC)", width - 8, 31);
-  else if (csMode.id === "puzzle") text("HOT TAMALE RATE = CLASSIC", width - 8, 31);
+  else if (csMode.id === "puzzle") text("PUMPKINS LEFT " + csCountPumpkins(), width - 8, 31);
   else text("MATCH 3 OR MORE", width - 8, 31);
 }
 
@@ -1497,10 +1567,18 @@ function csDrawCandy(candy, x, y, cellSize) {
   const sprite = csImages[candy.type];
   const isHotTamale = candy.type === "hot_tamale";
   const energyPhase = millis() / 1000;
-  const hotTamalePulse = isHotTamale ? 1 + Math.sin(energyPhase * 8 + candy.bornAt * 0.01) * 0.065 : 1;
-  const hotTamaleShakeX = isHotTamale ? Math.sin(energyPhase * 19 + candy.bornAt * 0.017) * 1.05 : 0;
-  const hotTamaleShakeY = isHotTamale ? Math.cos(energyPhase * 15 + candy.bornAt * 0.013) * 0.8 : 0;
-  const hotTamaleTilt = isHotTamale ? Math.sin(energyPhase * 17 + candy.bornAt * 0.011) * 0.045 : 0;
+  const hotTamalePulse = isHotTamale
+    ? 1 + Math.sin(energyPhase * 14.5 + candy.bornAt * 0.071) * 0.045 +
+        Math.sin(energyPhase * 23.7 + candy.bornAt * 0.037) * 0.025 : 1;
+  const hotTamaleShakeX = isHotTamale
+    ? Math.sin(energyPhase * 37 + candy.bornAt * 0.083) * 1.65 +
+        Math.sin(energyPhase * 53 + candy.bornAt * 0.019) * 0.65 : 0;
+  const hotTamaleShakeY = isHotTamale
+    ? Math.cos(energyPhase * 31 + candy.bornAt * 0.061) * 1.35 +
+        Math.sin(energyPhase * 47 + candy.bornAt * 0.029) * 0.5 : 0;
+  const hotTamaleTilt = isHotTamale
+    ? Math.sin(energyPhase * 34 + candy.bornAt * 0.053) * 0.075 +
+        Math.sin(energyPhase * 49 + candy.bornAt * 0.031) * 0.025 : 0;
   const drawX = x + hotTamaleShakeX;
   const drawY = y + hotTamaleShakeY;
   if (sprite && sprite.width > 0 && sprite.height > 0) {
@@ -1998,7 +2076,11 @@ function mousePressed(event) {
     csSelected = null;
   } else if (csAreAdjacent(csSelected, cell)) {
     const from = csSelected;
-    const swapped = csTrySwap(from, cell);
+    const selectedCandy = csBoard[from.row] && csBoard[from.row][from.col];
+    const targetCandy = csBoard[cell.row] && csBoard[cell.row][cell.col];
+    const tryTamaleMatch = Boolean(selectedCandy && selectedCandy.type !== "hot_tamale" &&
+      targetCandy && targetCandy.type === "hot_tamale");
+    const swapped = csTrySwap(from, cell, tryTamaleMatch);
     if (!swapped) csSelected = from;
   } else {
     csSelected = cell;
@@ -2064,7 +2146,10 @@ function keyPressed(event) {
       };
       if (to.row >= 0 && to.row < CS_ROWS && to.col >= 0 && to.col < CS_COLS) {
         const from = csSelected;
-        if (csTrySwap(from, to)) csKeyboardFocus = to;
+        const tryTamaleMatch = Boolean(csBoard[from.row][from.col] &&
+          csBoard[from.row][from.col].type !== "hot_tamale" &&
+          csBoard[to.row][to.col] && csBoard[to.row][to.col].type === "hot_tamale");
+        if (csTrySwap(from, to, tryTamaleMatch)) csKeyboardFocus = to;
       }
     } else {
       csKeyboardFocus = {
