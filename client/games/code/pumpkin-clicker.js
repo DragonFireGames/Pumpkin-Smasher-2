@@ -2358,13 +2358,29 @@ function drawGeneratorMergeButtons(L) {
     rect(x + 1, y + 1, foot - 2, foot - 2);
 
     const buttonH = Math.max(14, Math.min(24, t * 0.56));
-    const buttonW = foot * 0.78;
+    const buttonW = foot * 0.88;
     const buttonX = x + (foot - buttonW) / 2;
     const buttonY = y + (foot - buttonH) / 2;
     const kind = size === 5 ? "HYPER" : size === 3 ? "ULTRA" : "MEGA";
+    const label = "MERGE " + kind;
     const buttonColor = mouseIsPressed && hovered ? "#6b9b31" : hovered ? "#b6ed62" : "#8fc748";
-    drawButton(buttonX, buttonY, buttonW, buttonH, "MERGE " + kind, buttonColor, "#10200a",
-      hovered ? "#e0ffae" : "#d0ef9f");
+
+    // Fit the entire label inside the button, with visible padding even on
+    // small farm tiles where "MERGE MEGA" would otherwise touch the edges.
+    fill(buttonColor);
+    stroke(hovered ? "#e0ffae" : "#d0ef9f");
+    strokeWeight(1);
+    rect(buttonX, buttonY, buttonW, buttonH);
+    noStroke();
+    fill("#10200a");
+    textAlign(CENTER, CENTER);
+    let labelSize = Math.max(6, Math.min(11, buttonH * 0.48));
+    textSize(labelSize);
+    while (textWidth(label) > buttonW - 12 && labelSize > 6) {
+      labelSize = Math.max(6, labelSize - 0.5);
+      textSize(labelSize);
+    }
+    text(label, buttonX + buttonW / 2, buttonY + buttonH / 2);
     addTarget(buttonX, buttonY, buttonW, buttonH, () => {
       if (!mergeBasicGeneratorBlock(row, col, size, tier)) {
         showToast("Merge requires only matching basic generators");
