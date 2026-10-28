@@ -788,15 +788,19 @@ function csGetCascadeBombCell(cells, creationCell, preferredSpawnCell) {
 }
 
 function csAddCandyColorCells(unique, typeId) {
-  if (!typeId || typeId === "hot_tamale") return;
+  if (!typeId || typeId === "hot_tamale") return false;
+  let addedCells = false;
   for (let row = 0; row < CS_ROWS; row++) {
     for (let col = 0; col < CS_COLS; col++) {
       const candy = csBoard[row][col];
-      if (candy && candy.type === typeId) {
-        unique.set(row + "," + col, { row, col });
+      const key = row + "," + col;
+      if (candy && candy.type === typeId && !unique.has(key)) {
+        unique.set(key, { row, col });
+        addedCells = true;
       }
     }
   }
+  return addedCells;
 }
 
 function csBeginClear(cells, fromSpecial, preferredSpawnCell, sourceTypes) {
@@ -903,7 +907,11 @@ function csBeginClear(cells, fromSpecial, preferredSpawnCell, sourceTypes) {
       }
       // Chain activations preserve their own source color: if this special's
       // beam/blast reaches a Hot Tamale, remove all candies of this special's type.
-      if (effectHitsHotTamale) csAddCandyColorCells(unique, sourceCandyType);
+      // Re-run resolution when the zap adds cells, so specials among those candies
+      // also activate instead of being cleared without firing.
+      if (effectHitsHotTamale && csAddCandyColorCells(unique, sourceCandyType)) {
+        expanded = true;
+      }
     }
   }
 
@@ -1251,17 +1259,29 @@ function csDrawCandy(candy, x, y, cellSize) {
   if (!type) return;
 
   const sprite = csImages[candy.type];
+  const isHotTamale = candy.type === "hot_tamale";
+  const energyPhase = millis() / 1000;
+  const hotTamalePulse = isHotTamale ? 1 + Math.sin(energyPhase * 8 + candy.bornAt * 0.01) * 0.065 : 1;
+  const hotTamaleShakeX = isHotTamale ? Math.sin(energyPhase * 19 + candy.bornAt * 0.017) * 1.05 : 0;
+  const hotTamaleShakeY = isHotTamale ? Math.cos(energyPhase * 15 + candy.bornAt * 0.013) * 0.8 : 0;
+  const hotTamaleTilt = isHotTamale ? Math.sin(energyPhase * 17 + candy.bornAt * 0.011) * 0.045 : 0;
+  const drawX = x + hotTamaleShakeX;
+  const drawY = y + hotTamaleShakeY;
   if (sprite && sprite.width > 0 && sprite.height > 0) {
     const displaySize = cellSize * (candy.special || type.special ? 0.72 : 0.78);
     const displayHeight = displaySize;
     const displayWidth = displayHeight * sprite.width / sprite.height;
-    const drawW = Math.min(displayWidth, cellSize * 0.9);
-    const drawH = Math.min(displayHeight, cellSize * 0.9);
+    const drawW = Math.min(displayWidth, cellSize * 0.9) * hotTamalePulse;
+    const drawH = Math.min(displayHeight, cellSize * 0.9) * hotTamalePulse;
     if (candy.special === "bomb") {
       const red = Math.min(1, Math.max(0, (millis() - candy.bornAt) / 900));
       tint(255, Math.round(255 - red * 190), Math.round(255 - red * 205), 255);
     }
-    image(sprite, x, y, drawW, drawH);
+    push();
+    translate(drawX, drawY);
+    rotate(hotTamaleTilt);
+    image(sprite, 0, 0, drawW, drawH);
+    pop();
     noTint();
 
     // Keep the familiar small shine on directional candies and the classic
@@ -1281,15 +1301,20 @@ function csDrawCandy(candy, x, y, cellSize) {
       ellipse(x, y, cellSize * 0.66, cellSize * 0.66);
     }
   } else {
+    push();
+    translate(drawX, drawY);
+    rotate(hotTamaleTilt);
+    scale(hotTamalePulse);
     noStroke();
     fill(candy.type === "hot_tamale" ? "#ffa500" : candy.type === "peppermint" ? "#1C4E0A" : "#ffa500");
-    ellipse(x, y, cellSize * 0.55, cellSize * 0.55);
+    ellipse(0, 0, cellSize * 0.55, cellSize * 0.55);
     fill(CS_BLACK);
     textStyle(BOLD);
     textAlign(CENTER, CENTER);
     textSize(8);
-    text(type.name.slice(0, 2).toUpperCase(), x, y);
+    text(type.name.slice(0, 2).toUpperCase(), 0, 0);
     textStyle(NORMAL);
+    pop();
   }
 }
 
