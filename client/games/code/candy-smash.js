@@ -1351,12 +1351,12 @@ function csDrawMaskedStripe(sprite, x, y, drawW, drawH, horizontal) {
 
   const phase = (millis() % 1250) / 1250;
   const axisLength = horizontal ? w : h;
-  const spacing = axisLength * 0.46;
-  const bandWidth = Math.max(3, axisLength * 0.14);
+  const spacing = axisLength * 0.23; // Twice the previous line frequency.
+  const bandWidth = Math.max(4.5, axisLength * 0.21); // 1.5x thicker bands.
 
   // Draw several soft parallel glints at once. Their evenly spaced centers
   // travel together, giving the direction marker a repeating striped shine.
-  for (let band = -2; band <= 3; band++) {
+  for (let band = -4; band <= 7; band++) {
     const center = band * spacing + phase * spacing;
     const gradient = horizontal
       ? ctx.createLinearGradient(center - bandWidth, 0, center + bandWidth, 0)
@@ -1461,7 +1461,7 @@ function csDrawRayBeam(centerX, centerY, horizontal, progress) {
     ctx.moveTo(centerX, centerY);
     ctx.lineTo(head.x, head.y);
     ctx.strokeStyle = `rgba(255, 135, 28, ${0.78 * visibility})`;
-    ctx.lineWidth = 16;
+    ctx.lineWidth = 24;
     ctx.shadowColor = "rgba(255, 160, 45, 0.95)";
     ctx.shadowBlur = 14;
     ctx.stroke();
@@ -1470,7 +1470,7 @@ function csDrawRayBeam(centerX, centerY, horizontal, progress) {
     ctx.moveTo(centerX, centerY);
     ctx.lineTo(head.x, head.y);
     ctx.strokeStyle = `rgba(255, 237, 170, ${0.96 * visibility})`;
-    ctx.lineWidth = 6.5;
+    ctx.lineWidth = 9.75;
     ctx.shadowColor = "rgba(255, 245, 195, 0.95)";
     ctx.shadowBlur = 7;
     ctx.stroke();
@@ -1479,19 +1479,19 @@ function csDrawRayBeam(centerX, centerY, horizontal, progress) {
     ctx.moveTo(centerX, centerY);
     ctx.lineTo(head.x, head.y);
     ctx.strokeStyle = `rgba(255, 255, 255, ${0.99 * visibility})`;
-    ctx.lineWidth = 2.2;
+    ctx.lineWidth = 3.3;
     ctx.shadowBlur = 2;
     ctx.stroke();
 
     // Two thinner companion tracks make each direction a ribbon of parallel rays.
-    for (const offset of [-6, 6]) {
+    for (const offset of [-6, -3, 3, 6]) {
       const ox = horizontal ? 0 : offset;
       const oy = horizontal ? offset : 0;
       ctx.beginPath();
       ctx.moveTo(centerX + ox, centerY + oy);
       ctx.lineTo(head.x + ox, head.y + oy);
       ctx.strokeStyle = `rgba(255, 152, 54, ${0.62 * visibility})`;
-      ctx.lineWidth = 6;
+      ctx.lineWidth = 9;
       ctx.shadowColor = "rgba(255, 158, 45, 0.85)";
       ctx.shadowBlur = 8;
       ctx.stroke();
@@ -1500,7 +1500,7 @@ function csDrawRayBeam(centerX, centerY, horizontal, progress) {
       ctx.moveTo(centerX + ox, centerY + oy);
       ctx.lineTo(head.x + ox, head.y + oy);
       ctx.strokeStyle = `rgba(255, 243, 203, ${0.76 * visibility})`;
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 2.25;
       ctx.shadowBlur = 3;
       ctx.stroke();
     }
