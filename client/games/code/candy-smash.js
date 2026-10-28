@@ -18,8 +18,8 @@ const CS_WHITE = "#ffffff";
 const CS_CLEAR_DELAY = 270;
 const CS_SPECIAL_EFFECT_MS = 520;
 const CS_FALL_DELAY = 390;
-const CS_NATURAL_SPECIAL_CHANCE = 0.0125;
-const CS_FRENZY_NATURAL_SPECIAL_CHANCE = 0.04;
+const CS_NATURAL_SPECIAL_CHANCE = 0.015;
+const CS_FRENZY_NATURAL_SPECIAL_CHANCE = 0.08;
 const CS_PEPPERMINT_TIME_BONUS = 1;
 const CS_HINT_IDLE_MS = 5000;
 const CS_HINT_FLASH_MS = 1500;
@@ -271,7 +271,7 @@ function csRandomCandyId() {
     let weight = type.weight;
     if (type.id === "hot_tamale") {
       // Classic and Puzzle share the same rate; Frenzy is slightly more generous.
-      if (csMode.id === "fast") weight = 0.075;
+      if (csMode.id === "fast") weight = 0.085;
       else weight = 0.06;
     }
     if (type.id === "smarties" && csMode.id === "fast") weight = 2;
