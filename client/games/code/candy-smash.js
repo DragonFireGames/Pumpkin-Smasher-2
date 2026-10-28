@@ -30,8 +30,8 @@ const CS_WAVE_ALPHA = 78;
 const CS_WAVE_REFERENCE_SIZE = 232;
 const CS_NATURAL_SPECIAL_CHANCE = 0.015;
 const CS_FRENZY_NATURAL_SPECIAL_CHANCE = 0.10;
-const CS_FRENZY_HOT_TAMALE_WEIGHT = 0.1;
-const CS_FRENZY_TAMALE_GUARANTEE_INTERVAL = 12;
+const CS_FRENZY_HOT_TAMALE_WEIGHT = 0.3;
+const CS_FRENZY_TAMALE_GUARANTEE_INTERVAL = 60;
 const CS_SHUFFLE_ANIMATION_MS = 780;
 const CS_PEPPERMINT_TIME_BONUS = 1;
 const CS_HINT_IDLE_MS = 5000;
@@ -262,7 +262,10 @@ function csStartGame(modeIndex) {
   csClearSequence = 0;
   csSpecialEffects = [];
   csBoard = csCreateInitialBoard();
-  if (csMode.id === "puzzle") csPlacePuzzlePumpkins(csBoard);
+  if (csMode.id === "puzzle") {
+    csPlacePuzzlePumpkins(csBoard);
+    csPowerPuzzleStartingBoard(csBoard);
+  }
   // Initial-board construction doesn't count toward the in-game spawn guarantee.
   csCandiesSinceHotTamale = 0;
   csState = "playing";
@@ -305,6 +308,49 @@ function csPlacePuzzlePumpkins(board) {
         candy.type === "peppermint" || csHasAdjacentPumpkin(board, cell.row, cell.col)) continue;
     board[cell.row][cell.col] = csCreateCandy("pumpkin");
     placed++;
+  }
+}
+
+function csPowerPuzzleStartingBoard(board) {
+  // Puzzle gets a one-time head start; normal refill odds remain unchanged.
+  const targetCount = 10;
+  let poweredCount = 0;
+  const candidates = [];
+
+  for (let row = 0; row < CS_ROWS; row++) {
+    for (let col = 0; col < CS_COLS; col++) {
+      const candy = board[row][col];
+      if (!candy || ["pumpkin", "hot_tamale", "peppermint"].includes(candy.type)) continue;
+      if (candy.special) poweredCount++;
+      else candidates.push({ row, col });
+    }
+  }
+
+  // Randomize which candies receive guaranteed starting powers.
+  for (let i = candidates.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+  }
+
+  for (const cell of candidates) {
+    if (poweredCount >= targetCount) break;
+    const candy = board[cell.row][cell.col];
+    const roll = Math.random();
+    if (roll < 0.22) {
+      candy.special = "lineH";
+      candy.specialDirection = "horizontal";
+    } else if (roll < 0.44) {
+      candy.special = "lineV";
+      candy.specialDirection = "vertical";
+    } else if (roll < 0.55) {
+      candy.special = "star";
+      candy.specialDirection = null;
+    } else {
+      candy.special = "bomb";
+      candy.specialDirection = null;
+    }
+    candy.bornAt = millis();
+    poweredCount++;
   }
 }
 
