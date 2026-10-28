@@ -1,10 +1,7 @@
 /*
  * Candy Smash
  * Standalone p5.js global-mode match-three game for the Pumpkin Smasher arcade.
- *
- * This file deliberately keeps special-candy visuals simple: their indicators are
- * geometric shapes drawn behind the existing sprites, so custom effects can replace
- * them later without changing the gameplay code.
+ * Special candies use the existing candy sprites with animated canvas effects.
  */
 
 const CS_WIDTH = 400;
@@ -18,7 +15,8 @@ const CS_BG = "#123904";
 const CS_BLACK = "#0C2504";
 const CS_ORANGE = "#ffa500";
 const CS_WHITE = "#ffffff";
-const CS_CLEAR_DELAY = 170;
+const CS_CLEAR_DELAY = 270;
+const CS_SPECIAL_EFFECT_MS = 390;
 const CS_FALL_DELAY = 390;
 const CS_PEPPERMINT_TIME_BONUS = 1;
 const CS_HINT_IDLE_MS = 5000;
@@ -89,6 +87,10 @@ let csLastActivityAt = 0;
 let csLastHintAt = 0;
 let csHintCells = [];
 let csHintStartedAt = 0;
+let csSpecialEffects = [];
+let csClearSequence = 0;
+let csEffectCanvas = null;
+let csEffectContext = null;
 
 function preload() {
   for (let i = 0; i < CS_CANDY_TYPES.length; i++) {
@@ -103,6 +105,8 @@ function setup() {
   frameRate(60);
   imageMode(CENTER);
   textFont("Arial");
+  csEffectCanvas = document.createElement("canvas");
+  csEffectContext = csEffectCanvas.getContext("2d");
   csResizeCanvasToContainer();
   window.addEventListener("resize", csResizeCanvasToContainer);
 }
@@ -235,6 +239,8 @@ function csStartGame(modeIndex) {
   csResultSummary = "";
   csVisualSwap = null;
   csShuffleCount = 0;
+  csClearSequence = 0;
+  csSpecialEffects = [];
   csBoard = csCreateInitialBoard();
   csState = "playing";
 }
@@ -249,6 +255,8 @@ function csRegisterActivity() {
 function csCreateCandy(id) {
   return {
     type: id,
+    special: null,
+    specialDirection: null,
     fall: null,
     bornAt: millis()
   };
@@ -549,29 +557,48 @@ function csTrySwap(from, to) {
   const first = csBoard[from.row][from.col];
   const second = csBoard[to.row][to.col];
   if (!first || !second) return false;
-
   csSelected = null;
 
-  // Hot Tamale is a swap-triggered universal bomb. Two bombs clear the whole board;
-  // otherwise the bomb clears every candy matching the other candy's type.
+  // Combining two directional candies creates and immediately fires a crossbeam.
+  if (first.special && second.special) {
+    csMovesLeft = csMode.moves === null ? csMovesLeft : csMovesLeft - 1;
+    csSwapBoardCandies(csBoard, from, to);
+    const center = { row: to.row, col: to.col };
+    const cells = csGetSpecialClearCells("star", center);
+    csAddSpecialEffect("cross", center);
+    csBeginClear(cells, true);
+    return true;
+  }
+
+  // A single special activates when swapped. Its effect is centered on its new cell.
+  if (first.special || second.special) {
+    csMovesLeft = csMode.moves === null ? csMovesLeft : csMovesLeft - 1;
+    csSwapBoardCandies(csBoard, from, to);
+    const center = first.special ? to : from;
+    const specialCandy = csBoard[center.row][center.col];
+    const cells = csGetSpecialClearCells(specialCandy.special, center);
+    csAddSpecialEffect(specialCandy.special === "lineH" ? "beamH" :
+      specialCandy.special === "lineV" ? "beamV" :
+      specialCandy.special === "star" ? "cross" : "bomb", center);
+    csBeginClear(cells, true);
+    return true;
+  }
+
+  // Legacy Hot Tamales still clear candies of the swapped candy's type.
   if (first.type === "hot_tamale" || second.type === "hot_tamale") {
     csMovesLeft = csMode.moves === null ? csMovesLeft : csMovesLeft - 1;
     const targetType = first.type === "hot_tamale" ? second.type : first.type;
+    const center = first.type === "hot_tamale" ? from : to;
     const bombCells = [];
-    if (first.type === "hot_tamale" && second.type === "hot_tamale") {
-      for (let row = 0; row < CS_ROWS; row++) {
-        for (let col = 0; col < CS_COLS; col++) bombCells.push({ row, col });
-      }
-    } else {
-      for (let row = 0; row < CS_ROWS; row++) {
-        for (let col = 0; col < CS_COLS; col++) {
-          if (csBoard[row][col] && (csBoard[row][col].type === targetType ||
-              (row === from.row && col === from.col) || (row === to.row && col === to.col))) {
-            bombCells.push({ row, col });
-          }
+    for (let row = 0; row < CS_ROWS; row++) {
+      for (let col = 0; col < CS_COLS; col++) {
+        if (csBoard[row][col] && (csBoard[row][col].type === targetType ||
+            (row === from.row && col === from.col) || (row === to.row && col === to.col))) {
+          bombCells.push({ row, col });
         }
       }
     }
+    csAddSpecialEffect("bomb", center);
     csBeginClear(bombCells, true);
     return true;
   }
@@ -580,7 +607,6 @@ function csTrySwap(from, to) {
   const matches = csFindMatches(csBoard);
   if (matches.length === 0) {
     csSwapBoardCandies(csBoard, from, to);
-    // Show the attempted swap, then animate both candies back to their original cells.
     csVisualSwap = {
       from: { row: from.row, col: from.col },
       to: { row: to.row, col: to.col },
@@ -604,53 +630,148 @@ function csTrySwap(from, to) {
   return true;
 }
 
-function csBeginClear(cells, fromBomb, preferredSpawnCell) {
-  // A Hot Tamale matched by a cascade still behaves like a bomb.
-  if (!fromBomb) {
-    let foundTamale = false;
-    for (let i = 0; i < cells.length; i++) {
-      const cell = cells[i];
-      const candy = csBoard[cell.row] && csBoard[cell.row][cell.col];
-      if (candy && candy.type === "hot_tamale") foundTamale = true;
-    }
-    if (foundTamale) {
-      const blast = [];
-      for (let row = 0; row < CS_ROWS; row++) {
-        for (let col = 0; col < CS_COLS; col++) blast.push({ row, col });
-      }
-      csBeginClear(blast, true);
-      return;
-    }
-  }
-
-  // A straight run of five or more candies creates a Hot Tamale at the swap
-  // destination, or at the middle of the run for a cascade-generated match.
-  if (!fromBomb) {
-    const fiveRun = csFindFiveInLine(cells);
-    if (fiveRun) {
-      let spawnCell = fiveRun[Math.floor(fiveRun.length / 2)];
-      if (preferredSpawnCell && fiveRun.some(cell =>
-        cell.row === preferredSpawnCell.row && cell.col === preferredSpawnCell.col
-      )) {
-        spawnCell = preferredSpawnCell;
-      }
-      const spawnKey = spawnCell.row + "," + spawnCell.col;
-      const candy = csBoard[spawnCell.row][spawnCell.col];
-      if (candy) {
-        candy.type = "hot_tamale";
-        candy.bornAt = millis();
-        candy.fall = null;
-        cells = cells.filter(cell => cell.row + "," + cell.col !== spawnKey);
-      }
+function csGetSpecialClearCells(special, center) {
+  const cells = [];
+  const add = (row, col) => {
+    if (row >= 0 && row < CS_ROWS && col >= 0 && col < CS_COLS) cells.push({ row, col });
+  };
+  if (special === "lineH") {
+    for (let col = 0; col < CS_COLS; col++) add(center.row, col);
+  } else if (special === "lineV") {
+    for (let row = 0; row < CS_ROWS; row++) add(row, center.col);
+  } else if (special === "star") {
+    for (let col = 0; col < CS_COLS; col++) add(center.row, col);
+    for (let row = 0; row < CS_ROWS; row++) add(row, center.col);
+  } else if (special === "bomb") {
+    for (let row = center.row - 1; row <= center.row + 1; row++) {
+      for (let col = center.col - 1; col <= center.col + 1; col++) add(row, col);
     }
   }
+  return cells;
+}
 
+function csAddSpecialEffect(type, center) {
+  csSpecialEffects.push({
+    type,
+    row: center.row,
+    col: center.col,
+    startedAt: millis(),
+    duration: type === "bomb" ? 430 : CS_SPECIAL_EFFECT_MS
+  });
+}
+
+function csGetMatchSpecial(cells, preferredSpawnCell) {
+  const matched = new Set(cells.map(cell => cell.row + "," + cell.col));
+  const runLength = (row, col, dr, dc, type) => {
+    let count = 1;
+    for (const sign of [-1, 1]) {
+      let r = row + dr * sign, c = col + dc * sign;
+      while (r >= 0 && r < CS_ROWS && c >= 0 && c < CS_COLS &&
+             csBoard[r][c] && csBoard[r][c].type === type && matched.has(r + "," + c)) {
+        count++;
+        r += dr * sign;
+        c += dc * sign;
+      }
+    }
+    return count;
+  };
+
+  // A T/L/cross intersection creates a star at the intersection itself.
+  for (const cell of cells) {
+    const candy = csBoard[cell.row][cell.col];
+    if (!candy) continue;
+    const horizontal = runLength(cell.row, cell.col, 0, 1, candy.type);
+    const vertical = runLength(cell.row, cell.col, 1, 0, candy.type);
+    if (horizontal >= 3 && vertical >= 3) return { cell, special: "star" };
+  }
+
+  // Four-in-a-row creates a directional beam. Five or more creates the crossbeam star.
+  const directions = [{ dr: 0, dc: 1, special: "lineH" }, { dr: 1, dc: 0, special: "lineV" }];
+  for (const direction of directions) {
+    for (const cell of cells) {
+      const candy = csBoard[cell.row][cell.col];
+      if (!candy) continue;
+      const length = runLength(cell.row, cell.col, direction.dr, direction.dc, candy.type);
+      if (length >= 5) {
+        const preferred = preferredSpawnCell && matched.has(preferredSpawnCell.row + "," + preferredSpawnCell.col)
+          ? preferredSpawnCell : cell;
+        return { cell: preferred, special: "star" };
+      }
+      if (length >= 4) {
+        const preferred = preferredSpawnCell && matched.has(preferredSpawnCell.row + "," + preferredSpawnCell.col)
+          ? preferredSpawnCell : cell;
+        return { cell: preferred, special: direction.special };
+      }
+    }
+  }
+  return null;
+}
+
+function csBeginClear(cells, fromSpecial, preferredSpawnCell) {
+  let clearCells = cells.slice();
   const unique = new Map();
-  for (let i = 0; i < cells.length; i++) {
-    const cell = cells[i];
-    if (cell.row < 0 || cell.row >= CS_ROWS || cell.col < 0 || cell.col >= CS_COLS) continue;
-    unique.set(cell.row + "," + cell.col, cell);
+  const addCell = cell => {
+    if (cell.row < 0 || cell.row >= CS_ROWS || cell.col < 0 || cell.col >= CS_COLS) return;
+    unique.set(cell.row + "," + cell.col, { row: cell.row, col: cell.col });
+  };
+  clearCells.forEach(addCell);
+
+  // A match intersection or long line creates a special candy that survives the clear.
+  if (!fromSpecial) {
+    const creation = csGetMatchSpecial(clearCells, preferredSpawnCell);
+    if (creation) {
+      const candy = csBoard[creation.cell.row][creation.cell.col];
+      if (candy) {
+        candy.special = creation.special;
+        candy.specialDirection = creation.special === "lineH" ? "horizontal" :
+          creation.special === "lineV" ? "vertical" : null;
+        candy.bornAt = millis();
+        unique.delete(creation.cell.row + "," + creation.cell.col);
+      }
+    } else if (csCombo > 1 && csCombo % 3 === 0) {
+      // Every third clear in a cascade leaves a 3×3 bomb at the center of the match.
+      const center = preferredSpawnCell && unique.has(preferredSpawnCell.row + "," + preferredSpawnCell.col)
+        ? preferredSpawnCell : clearCells[Math.floor(clearCells.length / 2)];
+      if (center) {
+        const candy = csBoard[center.row][center.col];
+        if (candy) {
+          candy.special = "bomb";
+          candy.specialDirection = null;
+          candy.bornAt = millis();
+          unique.delete(center.row + "," + center.col);
+        }
+      }
+    }
   }
+
+  // Any existing special caught in a clear fires too. Repeat for chain reactions,
+  // while tracking activations so a special can never trigger twice in one resolution.
+  const activated = new Set();
+  let expanded = true;
+  while (expanded) {
+    expanded = false;
+    const currentCells = Array.from(unique.values());
+    for (const cell of currentCells) {
+      const candy = csBoard[cell.row] && csBoard[cell.row][cell.col];
+      if (!candy || !candy.special) continue;
+      const key = cell.row + "," + cell.col;
+      if (activated.has(key)) continue;
+      activated.add(key);
+      const special = candy.special;
+      const effectType = special === "lineH" ? "beamH" : special === "lineV" ? "beamV" :
+        special === "star" ? "cross" : "bomb";
+      csAddSpecialEffect(effectType, cell);
+      const effectCells = csGetSpecialClearCells(special, cell);
+      for (const effectCell of effectCells) {
+        const effectKey = effectCell.row + "," + effectCell.col;
+        if (!unique.has(effectKey)) {
+          unique.set(effectKey, effectCell);
+          expanded = true;
+        }
+      }
+    }
+  }
+
   csPendingMatches = Array.from(unique.values());
   if (!csPendingMatches.length) {
     csState = "playing";
@@ -658,22 +779,21 @@ function csBeginClear(cells, fromBomb, preferredSpawnCell) {
   }
 
   let peppermintsCount = 0;
-  for (let i = 0; i < csPendingMatches.length; i++) {
-    const cell = csPendingMatches[i];
+  for (const cell of csPendingMatches) {
     const candy = csBoard[cell.row][cell.col];
     if (candy && candy.type === "peppermint") peppermintsCount++;
   }
 
   csScore += csPendingMatches.length * 10 * csCombo;
-  if (fromBomb) csScore += Math.min(100, csPendingMatches.length * 2);
+  if (fromSpecial) csScore += Math.min(100, csPendingMatches.length * 2);
   if (csMode.id === "fast" && peppermintsCount > 0) {
     csTimeLeft += peppermintsCount * CS_PEPPERMINT_TIME_BONUS;
   }
   csCombo++;
+  csClearSequence++;
   csState = "clearing";
   csPhaseStartedAt = millis();
   csPhaseEndsAt = csPhaseStartedAt + CS_CLEAR_DELAY;
-
 }
 
 function csUpdateGame() {
@@ -801,6 +921,7 @@ function csDrawGame() {
   csDrawBoard();
 
   if (csState === "clearing") csDrawClearHighlights();
+  csDrawSpecialEffects();
   csDrawIdleHint();
 }
 
@@ -996,10 +1117,28 @@ function csDrawCandy(candy, x, y, cellSize) {
 
   const sprite = csImages[candy.type];
   if (sprite && sprite.width > 0 && sprite.height > 0) {
-    const displaySize = cellSize * (type.special ? 0.72 : 0.78);
+    const displaySize = cellSize * (candy.special || type.special ? 0.72 : 0.78);
     const displayHeight = displaySize;
     const displayWidth = displayHeight * sprite.width / sprite.height;
+    if (candy.special === "bomb") {
+      const red = Math.min(1, Math.max(0, (millis() - candy.bornAt) / 900));
+      tint(255, Math.round(255 - red * 190), Math.round(255 - red * 205), 255);
+    }
     image(sprite, x, y, Math.min(displayWidth, cellSize * 0.9), Math.min(displayHeight, cellSize * 0.9));
+    noTint();
+    if (candy.special === "lineH" || candy.special === "lineV") {
+      csDrawMaskedStripe(sprite, x, y, Math.min(displayWidth, cellSize * 0.9), Math.min(displayHeight, cellSize * 0.9), candy.special === "lineH");
+    } else if (candy.special === "star") {
+      const phase = (millis() - candy.bornAt) / 850;
+      const scale = 0.55 + 0.38 * (0.5 + 0.5 * Math.sin(phase * Math.PI * 2));
+      csDrawStarOverlay(x, y, cellSize * 0.32 * scale, 0.62 + 0.28 * (0.5 + 0.5 * Math.sin(phase * Math.PI * 2)));
+    } else if (candy.special === "bomb") {
+      const pulse = 0.5 + 0.5 * Math.sin((millis() - candy.bornAt) / 150);
+      noFill();
+      stroke(255, 75, 35, 85 + pulse * 90);
+      strokeWeight(1.5);
+      ellipse(x, y, cellSize * 0.66, cellSize * 0.66);
+    }
   } else {
     noStroke();
     fill(candy.type === "hot_tamale" ? "#ffa500" : candy.type === "peppermint" ? "#1C4E0A" : "#ffa500");
@@ -1010,6 +1149,135 @@ function csDrawCandy(candy, x, y, cellSize) {
     textSize(8);
     text(type.name.slice(0, 2).toUpperCase(), x, y);
     textStyle(NORMAL);
+  }
+}
+
+function csDrawMaskedStripe(sprite, x, y, drawW, drawH, horizontal) {
+  if (!csEffectCanvas || !csEffectContext) return;
+  const scale = 2;
+  const w = Math.max(1, Math.round(drawW * scale));
+  const h = Math.max(1, Math.round(drawH * scale));
+  csEffectCanvas.width = w;
+  csEffectCanvas.height = h;
+  const ctx = csEffectContext;
+  ctx.clearRect(0, 0, w, h);
+  const source = sprite.canvas || sprite.elt;
+  if (!source) return;
+  ctx.drawImage(source, 0, 0, w, h);
+  ctx.globalCompositeOperation = "source-in";
+  const p = ((millis() % 1250) / 1250);
+  if (horizontal) {
+    const sx = -w * 0.45 + p * w * 1.9;
+    const grad = ctx.createLinearGradient(sx - w * 0.22, 0, sx + w * 0.22, 0);
+    grad.addColorStop(0, "rgba(255,255,255,0)");
+    grad.addColorStop(0.42, "rgba(255,255,255,0.08)");
+    grad.addColorStop(0.5, "rgba(255,255,255,0.82)");
+    grad.addColorStop(0.58, "rgba(255,255,255,0.08)");
+    grad.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+  } else {
+    const sy = -h * 0.45 + p * h * 1.9;
+    const grad = ctx.createLinearGradient(0, sy - h * 0.22, 0, sy + h * 0.22);
+    grad.addColorStop(0, "rgba(255,255,255,0)");
+    grad.addColorStop(0.42, "rgba(255,255,255,0.08)");
+    grad.addColorStop(0.5, "rgba(255,255,255,0.82)");
+    grad.addColorStop(0.58, "rgba(255,255,255,0.08)");
+    grad.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+  }
+  ctx.globalCompositeOperation = "source-over";
+  drawingContext.save();
+  drawingContext.globalAlpha = 0.9;
+  drawingContext.drawImage(csEffectCanvas, x - drawW / 2, y - drawH / 2, drawW, drawH);
+  drawingContext.restore();
+}
+
+function csDrawStarOverlay(x, y, radius, alpha) {
+  const ctx = drawingContext;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = "rgba(255,245,175,0.8)";
+  ctx.strokeStyle = "rgba(255,255,255,0.98)";
+  ctx.lineWidth = 1.5;
+  ctx.shadowColor = "rgba(255,245,170,0.9)";
+  ctx.shadowBlur = 7;
+  ctx.beginPath();
+  const steps = 100;
+  for (let i = 0; i <= steps; i++) {
+    const a = i / steps * Math.PI * 2;
+    const ca = Math.cos(a), sa = Math.sin(a);
+    const denom = Math.sqrt(Math.abs(ca)) + Math.sqrt(Math.abs(sa));
+    const px = (denom ? ca / (denom * denom) : 0) * radius * 2.05;
+    const py = (denom ? sa / (denom * denom) : 0) * radius * 2.05;
+    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
+
+function csDrawSpecialEffects() {
+  const now = millis();
+  csSpecialEffects = csSpecialEffects.filter(effect => now - effect.startedAt < effect.duration);
+  for (const effect of csSpecialEffects) {
+    const p = Math.min(1, Math.max(0, (now - effect.startedAt) / effect.duration));
+    const fade = Math.sin(Math.PI * p);
+    const centerX = CS_BOARD_X + effect.col * CS_CELL + CS_CELL / 2;
+    const centerY = CS_BOARD_Y + effect.row * CS_CELL + CS_CELL / 2;
+    const left = CS_BOARD_X + 1;
+    const right = CS_BOARD_X + CS_COLS * CS_CELL - 1;
+    const top = CS_BOARD_Y + 1;
+    const bottom = CS_BOARD_Y + CS_ROWS * CS_CELL - 1;
+
+    const beam = (horizontal, verticalOffset = 0) => {
+      const y = centerY + verticalOffset;
+      const x = centerX + verticalOffset;
+      const startX = horizontal ? left : centerX;
+      const endX = horizontal ? right : centerX;
+      const startY = horizontal ? centerY : top;
+      const endY = horizontal ? centerY : bottom;
+      const travel = p;
+      const headX = horizontal ? lerp(startX, endX, travel) : centerX;
+      const headY = horizontal ? centerY : lerp(startY, endY, travel);
+      noStroke();
+      fill(255, 245, 200, 35 + 65 * fade);
+      if (horizontal) rect(startX, y - (5 + 3 * fade), endX - startX, 10 + 6 * fade);
+      else rect(x - (5 + 3 * fade), startY, 10 + 6 * fade, endY - startY);
+      stroke(255, 255, 255, 150 + 100 * fade);
+      strokeWeight(2 + 2 * fade);
+      line(startX, startY, endX, endY);
+      noStroke();
+      fill(255, 255, 230, 210 * fade);
+      ellipse(headX, headY, 9 + 9 * fade, 9 + 9 * fade);
+      fill(255, 190, 65, 190 * fade);
+      ellipse(headX, headY, 4 + 3 * fade, 4 + 3 * fade);
+    };
+
+    if (effect.type === "beamH") beam(true);
+    else if (effect.type === "beamV") beam(false);
+    else if (effect.type === "cross") {
+      beam(true);
+      beam(false);
+    } else if (effect.type === "bomb") {
+      const maxRadius = CS_CELL * 1.55;
+      const radius = maxRadius * (0.15 + 0.85 * (1 - Math.pow(1 - p, 2)));
+      noFill();
+      stroke(255, 65, 25, 220 * fade);
+      strokeWeight(5 * (1 - p) + 1.5);
+      ellipse(centerX, centerY, radius * 2, radius * 2);
+      stroke(255, 210, 110, 200 * fade);
+      strokeWeight(2);
+      ellipse(centerX, centerY, radius * 1.55, radius * 1.55);
+      noStroke();
+      fill(255, 90, 30, 65 * fade);
+      ellipse(centerX, centerY, radius * 1.7, radius * 1.7);
+      fill(255, 240, 190, 190 * fade);
+      ellipse(centerX, centerY, Math.max(3, 13 * (1 - p)), Math.max(3, 13 * (1 - p)));
+    }
   }
 }
 
