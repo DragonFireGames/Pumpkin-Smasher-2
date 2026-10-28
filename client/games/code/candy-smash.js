@@ -775,6 +775,39 @@ function csGetMatchCenterCell(cells, preferredSpawnCell) {
   }, null).cell;
 }
 
+function csGetCascadeBombCell(cells, creationCell, preferredSpawnCell) {
+  const creationKey = creationCell ? creationCell.row + "," + creationCell.col : null;
+  // Prefer an ordinary matched candy so we can preserve a beam/star created by
+  // this same clear and avoid erasing an existing special before it can activate.
+  const matchedCandidates = cells.filter(cell => {
+    const key = cell.row + "," + cell.col;
+    const candy = csBoard[cell.row] && csBoard[cell.row][cell.col];
+    return key !== creationKey && candy && !candy.special;
+  });
+  if (matchedCandidates.length) {
+    return csGetMatchCenterCell(matchedCandidates, preferredSpawnCell);
+  }
+
+  // Rarely, all matched cells are already special candies. Still award the bomb
+  // by placing it on the nearest ordinary candy, without overwriting another special.
+  const centerRow = cells.length
+    ? cells.reduce((sum, cell) => sum + cell.row, 0) / cells.length
+    : CS_ROWS / 2;
+  const centerCol = cells.length
+    ? cells.reduce((sum, cell) => sum + cell.col, 0) / cells.length
+    : CS_COLS / 2;
+  let best = null;
+  for (let row = 0; row < CS_ROWS; row++) {
+    for (let col = 0; col < CS_COLS; col++) {
+      const candy = csBoard[row][col];
+      if (!candy || candy.special || (creationCell && row === creationCell.row && col === creationCell.col)) continue;
+      const distance = Math.pow(row - centerRow, 2) + Math.pow(col - centerCol, 2);
+      if (!best || distance < best.distance) best = { cell: { row, col }, distance };
+    }
+  }
+  return best ? best.cell : null;
+}
+
 function csBeginClear(cells, fromSpecial, preferredSpawnCell) {
   if (!fromSpecial) {
     const matchedTamale = cells.find(cell => {
@@ -799,7 +832,9 @@ function csBeginClear(cells, fromSpecial, preferredSpawnCell) {
   };
   clearCells.forEach(addCell);
 
-  // A match intersection or long line creates a special candy that survives the clear.
+  // Count the initial match as 1, the first cascade as 2, and the second as 3.
+  // Every third clear in a chain spawns exactly one bomb. If that same clear makes
+  // a beam/star, keep it and place the bomb on another ordinary candy.
   if (!fromSpecial) {
     const creation = csGetMatchSpecial(clearCells, preferredSpawnCell);
     if (creation) {
@@ -811,12 +846,17 @@ function csBeginClear(cells, fromSpecial, preferredSpawnCell) {
         candy.bornAt = millis();
         unique.delete(creation.cell.row + "," + creation.cell.col);
       }
-    } else if (csCombo > 1 && csCombo % 3 === 0) {
-      // Every third clear in a cascade leaves a 3×3 bomb at the center of the match.
-      const center = csGetMatchCenterCell(clearCells, preferredSpawnCell);
+    }
+
+    if (csCombo > 1 && csCombo % 3 === 0) {
+      const center = csGetCascadeBombCell(
+        clearCells,
+        creation ? creation.cell : null,
+        preferredSpawnCell
+      );
       if (center) {
         const candy = csBoard[center.row][center.col];
-        if (candy) {
+        if (candy && !candy.special) {
           candy.special = "bomb";
           candy.specialDirection = null;
           candy.bornAt = millis();
