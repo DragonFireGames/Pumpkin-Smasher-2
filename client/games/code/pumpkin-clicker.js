@@ -1677,6 +1677,7 @@ function drawFarmGrid(L){
  }
 
 
+  drawGeneratorMergeButtons(L);
   drawingContext.restore();
  if(L.content>L.view){fill("#35492c");
    noStroke();
@@ -2066,7 +2067,6 @@ function handleTileClick(row, col) {
           progress: 0,
           clogged: false
         };
-        mergeGenerators();
         bought++;
       }
 
@@ -2139,10 +2139,6 @@ function handleTileClick(row, col) {
   }
 
   game.farm[row][col] = placed;
-
-  if (placed.kind === "generator") {
-    mergeGenerators();
-  }
 
   if (bulk) {
     bulkPlaceRemaining = Math.max(0, bulkPlaceRemaining - 1);
@@ -2261,133 +2257,126 @@ function fragmentGenerator(building) {
 }
 
 
-function mergeGenerators() {
-  // Hyper merges first and can contain complete Mega/Ultra structures.
-  for (let row = 0; row <= game.farmRows - 5; row++) {
-    for (let col = 0; col <= game.farmCols - 5; col++) {
-      const first = game.farm[row][col];
-      if (!first || first.kind !== "generator" || first.hyper) continue;
+function isBasicMergeGenerator(building, tier) {
+  return Boolean(building &&
+    building.kind === "generator" &&
+    generatorSize(building) === 1 &&
+    !building.mega && !building.ultra && !building.hyper &&
+    building.tier === tier);
+}
 
-      let matches = true;
+function getBasicMergeCandidates() {
+  const candidates = [];
+  const reserved = new Set();
+  // Offer the largest possible merge first, using basic generators only.
+  const sizes = [
+    { size: 5, flag: "hyper" },
+    { size: 3, flag: "ultra" },
+    { size: 2, flag: "mega" }
+  ];
 
-      for (let dy = 0; dy < 5 && matches; dy++) {
-        for (let dx = 0; dx < 5; dx++) {
-          const building = game.farm[row + dy][col + dx];
+  for (const entry of sizes) {
+    const size = entry.size;
+    for (let row = 0; row <= game.farmRows - size; row++) {
+      for (let col = 0; col <= game.farmCols - size; col++) {
+        const first = game.farm[row] && game.farm[row][col];
+        if (!first || first.kind !== "generator" ||
+            !isBasicMergeGenerator(first, first.tier)) continue;
 
-          if (!building || building.kind !== "generator" || building.hyper || building.tier !== first.tier) {
-            matches = false;
-            break;
-          }
-
-          if (building.mega || building.ultra) {
-            const size = generatorSize(building);
-            const fits = Number.isInteger(building.row) && Number.isInteger(building.col)
-              && building.row >= row && building.col >= col
-              && building.row + size <= row + 5 && building.col + size <= col + 5;
-
-            if (!fits) {
+        const cells = [];
+        let matches = true;
+        for (let dy = 0; dy < size && matches; dy++) {
+          for (let dx = 0; dx < size; dx++) {
+            const r = row + dy, c = col + dx;
+            const key = r + "," + c;
+            const building = game.farm[r] && game.farm[r][c];
+            if (reserved.has(key) || !isBasicMergeGenerator(building, first.tier)) {
               matches = false;
               break;
             }
+            cells.push({ row: r, col: c });
           }
         }
+        if (!matches) continue;
+        cells.forEach(cell => reserved.add(cell.row + "," + cell.col));
+        candidates.push({ row, col, size, tier: first.tier, flag: entry.flag });
       }
+    }
+  }
+  return candidates;
+}
 
-      if (!matches) continue;
+function mergeBasicGeneratorBlock(row, col, size, tier) {
+  const flag = size === 2 ? "mega" : size === 3 ? "ultra" : size === 5 ? "hyper" : null;
+  if (!flag || row < 0 || col < 0 ||
+      row + size > game.farmRows || col + size > game.farmCols) return false;
 
-      const hyper = {
-        kind: "generator",
-        tier: first.tier,
-        row,
-        col,
-        mega: false,
-        ultra: false,
-        hyper: true
-      };
-
-      for (let dy = 0; dy < 5; dy++) {
-        for (let dx = 0; dx < 5; dx++) {
-          game.farm[row + dy][col + dx] = hyper;
-        }
-      }
-
-      showToast("Twenty-five pumpkins became a HYPER generator!");
+  for (let dy = 0; dy < size; dy++) {
+    for (let dx = 0; dx < size; dx++) {
+      const building = game.farm[row + dy] && game.farm[row + dy][col + dx];
+      if (!isBasicMergeGenerator(building, tier)) return false;
     }
   }
 
-  // Ultra merges after Hyper and before Mega, preserving the largest matching structure.
-  for (let row = 0; row <= game.farmRows - 3; row++) {
-    for (let col = 0; col <= game.farmCols - 3; col++) {
-      const first = game.farm[row][col];
-      if (!first || first.kind !== "generator" || first.hyper || first.ultra) continue;
-
-      const cells = [];
-      for (let dy = 0; dy < 3; dy++) {
-        for (let dx = 0; dx < 3; dx++) {
-          cells.push(game.farm[row + dy][col + dx]);
-        }
-      }
-
-      const matches = cells.every(building =>
-        building && building.kind === "generator" && !building.hyper && !building.ultra && building.tier === first.tier
-      );
-      if (!matches) continue;
-
-      const ultra = {
-        kind: "generator",
-        tier: first.tier,
-        row,
-        col,
-        mega: false,
-        ultra: true,
-        hyper: false
-      };
-
-      for (let dy = 0; dy < 3; dy++) {
-        for (let dx = 0; dx < 3; dx++) {
-          game.farm[row + dy][col + dx] = ultra;
-        }
-      }
-
-      showToast("Nine pumpkins became an ULTRA generator!");
+  const merged = {
+    kind: "generator",
+    tier,
+    row,
+    col,
+    mega: flag === "mega",
+    ultra: flag === "ultra",
+    hyper: flag === "hyper"
+  };
+  for (let dy = 0; dy < size; dy++) {
+    for (let dx = 0; dx < size; dx++) {
+      game.farm[row + dy][col + dx] = merged;
     }
   }
 
-  for (let row = 0; row < game.farmRows - 1; row++) {
-    for (let col = 0; col < game.farmCols - 1; col++) {
-      const first = game.farm[row][col];
-      const right = game.farm[row][col + 1];
-      const below = game.farm[row + 1][col];
-      const diagonal = game.farm[row + 1][col + 1];
+  showToast(size * size + " pumpkins became a " + flag.toUpperCase() + " generator!");
+  saveGame();
+  return true;
+}
 
-      if (!first || first.kind !== "generator" || first.hyper || first.mega || first.ultra
-        || !right || !below || !diagonal) {
-        continue;
+function drawGeneratorMergeButtons(L) {
+  const candidates = getBasicMergeCandidates();
+  if (!candidates.length) return;
+  const t = L.tile, g = L.gap, clipY = L.gridTop;
+
+  for (const candidate of candidates) {
+    const { row, col, size, tier } = candidate;
+    const x = L.gridX + col * (t + g);
+    const y = clipY + row * (t + g) - gridScroll;
+    const foot = size * t + (size - 1) * g;
+    if (y + foot < clipY || y > clipY + L.view) continue;
+
+    const hovered = mouseX >= x && mouseX <= x + foot &&
+      mouseY >= y && mouseY <= y + foot;
+    noFill();
+    stroke(hovered ? "#c8ff71" : "#94db51");
+    strokeWeight(hovered ? 3 : 2);
+    rect(x + 1, y + 1, foot - 2, foot - 2);
+
+    const buttonH = Math.max(14, Math.min(24, t * 0.56));
+    const buttonW = foot * 0.78;
+    const buttonX = x + (foot - buttonW) / 2;
+    const buttonY = y + (foot - buttonH) / 2;
+    const kind = size === 5 ? "HYPER" : size === 3 ? "ULTRA" : "MEGA";
+    const buttonColor = mouseIsPressed && hovered ? "#6b9b31" : hovered ? "#b6ed62" : "#8fc748";
+    drawButton(buttonX, buttonY, buttonW, buttonH, "MERGE " + kind, buttonColor, "#10200a",
+      hovered ? "#e0ffae" : "#d0ef9f");
+    addTarget(buttonX, buttonY, buttonW, buttonH, () => {
+      if (!mergeBasicGeneratorBlock(row, col, size, tier)) {
+        showToast("Merge requires only matching basic generators");
       }
-
-      const matches = [right, below, diagonal].every(building =>
-        building && building.kind === "generator" && !building.hyper && !building.mega
-        && !building.ultra && building.tier === first.tier
-      );
-      if (!matches) continue;
-
-      const mega = {
-        kind: "generator",
-        tier: first.tier,
-        row,
-        col,
-        mega: true,
-        ultra: false,
-        hyper: false
-      };
-
-      game.farm[row][col] = mega;
-      game.farm[row][col + 1] = mega;
-      game.farm[row + 1][col] = mega;
-      game.farm[row + 1][col + 1] = mega;
-
-      showToast("Four pumpkins became a MEGA generator!");
-    }
+    }, false, {
+      id: "merge-generator:" + row + ":" + col + ":" + size,
+      title: "Merge " + kind + " generator",
+      kind: "button",
+      summary: "Combine " + (size * size) + " matching basic generators into one " + kind + " generator.",
+      rules: ["Every tile in the highlighted area must contain a basic, unmerged generator of the same tier.",
+        "Merged generators cannot be used as ingredients for another merge."]
+    });
   }
 }
 
@@ -2628,7 +2617,7 @@ function getItemHoverInfo(it){
   return {id:"worker:"+d.id,title:d.name,kind:"worker",summary:d.desc,rules:["Next hire: $"+formatNumber(workerCost(d.id))+". Owned: "+count+".","Each additional worker of this type costs 40% more than the previous price.","Uses the global ×1, ×10 or MAX purchase mode; Shift-click forces ×10. Hiring stops when you cannot afford the next worker.",...(rules[d.id]||[]),"Workers never occupy farm tiles and have no recurring wages."]};
  }
  if(it.type==="build"||it.type==="autosell"){
-  if(d.kind==="generator")return {id:"build:"+d.id,title:d.name,kind:"build",summary:"Produces "+d.desc+".",rules:["Next cost: $"+formatNumber(buildCost(d))+". Each owned "+d.name+" or higher-tier generator increases this tier’s base-price component by "+generators[d.tier].growth.toFixed(2)+"×. Removing a generator lowers relevant prices. Choose this, then click an empty farm tile.","Click an existing generator to upgrade it for the difference between this tier’s price and the current tier’s price.","Four matching generators in a 2×2 square form a Mega; nine matching generators in a 3×3 square form an Ultra; twenty-five matching generators in a 5×5 square form a Hyper."]};
+  if(d.kind==="generator")return {id:"build:"+d.id,title:d.name,kind:"build",summary:"Produces "+d.desc+".",rules:["Next cost: $"+formatNumber(buildCost(d))+". Each owned "+d.name+" or higher-tier generator increases this tier’s base-price component by "+generators[d.tier].growth.toFixed(2)+"×. Removing a generator lowers relevant prices. Choose this, then click an empty farm tile.","Click an existing generator to upgrade it for the difference between this tier’s price and the current tier’s price.","Use the highlighted MERGE buttons to combine matching basic generators: 4 in a 2×2 square for a Mega, 9 in a 3×3 square for an Ultra, or 25 in a 5×5 square for a Hyper. Existing merged generators cannot be merged again."]};
   if(d.kind==="multiplier")return {id:"build:"+d.id,title:"Multiplier",kind:"build",summary:"Boosts adjacent generators; neighboring multipliers amplify one another.",rules:["Next cost: $"+formatNumber(buildCost(d))+". Each multiplier costs 35% more per multiplier currently placed, and removing one lowers the next price.","Only the four orthogonally adjacent tiles count; diagonals do not.","Each neighboring multiplier boosts the other multiplier’s strength by 1.6×."]};
   if(d.kind==="vault")return {id:"build:"+d.id,title:"Vault",kind:"build",summary:"Dedicated storage grows nonlinearly with each level.",rules:["Next cost: $"+formatNumber(buildCost(d))+". Each vault costs 15% more per vault currently placed, and removing one lowers the next price.","Its storage zone is a 3×3 area centered on the vault.","Generators in overlapping vault zones fill vaults top-to-bottom, then left-to-right, and finally base storage.","Click a placed vault to upgrade it; capacity grows by 1.5× per level; upgrade prices rise with each level.","Monster and Brute workers increase the base storage capacity, which starts at 50."]};
   return {id:"build:"+d.id,title:d.name,kind:"build",summary:"Automatically sells generated pumpkins for cash.",rules:["One-time purchase: $650.","After purchase, click the Auto-Sell card in Misc to switch it on or off without paying again.","Auto-Sell empties stored pumpkins every 60 seconds of active play. Its on/off setting is saved, but prestige resets the purchase. While inactive, production accumulates as pumpkins instead of cash."]};
@@ -2648,7 +2637,7 @@ function getFarmHoverInfo(o,r,c){
    }
  if(o.kind==="generator"){
   const g=generators[o.tier],rate=generatorRate(o),vaults=generatorDestinations(o),dest=vaults.map(v=>"Vault ("+(v.row+1)+","+(v.col+1)+")").concat(["Base storage"]),size=generatorSize(o);
-  return {id:"tile-object:"+o.row+":"+o.col,title:(o.hyper?"Hyper ":o.ultra?"Ultra ":o.mega?"Mega ":"")+g.name,kind:"tile",summary:"Output: "+formatNumber(rate)+" pumpkins/sec."+(o.clogged?" STALLED — storage is full.":""),rules:[size>1?"Occupies a "+size+"×"+size+" area and can be fragmented back into individual generators.":"Occupies one tile and grows a pumpkin on its generator pot.","Storage priority: "+dest.join(" → ")+".","Vault zones are 3×3; overlapping vaults are ordered top-to-bottom, then left-to-right.","When every assigned vault and base storage are full, this generator stalls at full growth.","Four matching generators in a 2×2 square form a Mega; nine matching generators in a 3×3 square form an Ultra; twenty-five matching generators in a 5×5 square form a Hyper."]};
+  return {id:"tile-object:"+o.row+":"+o.col,title:(o.hyper?"Hyper ":o.ultra?"Ultra ":o.mega?"Mega ":"")+g.name,kind:"tile",summary:"Output: "+formatNumber(rate)+" pumpkins/sec."+(o.clogged?" STALLED — storage is full.":""),rules:[size>1?"Occupies a "+size+"×"+size+" area and can be fragmented back into individual generators.":"Occupies one tile and grows a pumpkin on its generator pot.","Storage priority: "+dest.join(" → ")+".","Vault zones are 3×3; overlapping vaults are ordered top-to-bottom, then left-to-right.","When every assigned vault and base storage are full, this generator stalls at full growth.","Use the highlighted MERGE buttons to combine matching basic generators: 4 in a 2×2 square for a Mega, 9 in a 3×3 square for an Ultra, or 25 in a 5×5 square for a Hyper. Existing merged generators cannot be merged again."]};
  }
  if(o.kind==="multiplier"||o.kind==="shield")return {id:"tile-object:"+o.row+":"+o.col,title:"Multiplier",kind:"tile",summary:"Boosts directly adjacent pumpkin generators.",rules:["Only up, down, left and right adjacent tiles are affected.","Diagonal generators receive no bonus.","Adjacent multipliers stack with diminishing returns."]};
  if(o.kind==="vault"){const level=Math.max(0,o.level||0),cost=vaultUpgradeCost(level),stored=Number(o.stored)||0,cap=vaultCapacity(o);
