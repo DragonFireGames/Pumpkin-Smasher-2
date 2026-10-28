@@ -30,7 +30,7 @@ const CS_WAVE_ALPHA = 78;
 const CS_WAVE_REFERENCE_SIZE = 232;
 const CS_NATURAL_SPECIAL_CHANCE = 0.015;
 const CS_FRENZY_NATURAL_SPECIAL_CHANCE = 0.10;
-const CS_FRENZY_HOT_TAMALE_WEIGHT = 0.32;
+const CS_FRENZY_HOT_TAMALE_WEIGHT = 0.28;
 const CS_FRENZY_TAMALE_GUARANTEE_INTERVAL = 12;
 const CS_SHUFFLE_ANIMATION_MS = 780;
 const CS_PEPPERMINT_TIME_BONUS = 1;
@@ -281,7 +281,9 @@ function csCreateCandy(id) {
     special: null,
     specialDirection: null,
     fall: null,
-    bornAt: millis()
+    bornAt: millis(),
+    // Keep a stable per-candy phase so nearby Hot Tamales never animate in sync.
+    energyOffset: Math.random() * Math.PI * 2
   };
 }
 
@@ -1589,18 +1591,19 @@ function csDrawCandy(candy, x, y, cellSize) {
   const sprite = csImages[candy.type];
   const isHotTamale = candy.type === "hot_tamale";
   const energyPhase = millis() / 1000;
+  const energyOffset = candy.energyOffset || 0;
   const hotTamalePulse = isHotTamale
-    ? 1 + Math.sin(energyPhase * 14.5 + candy.bornAt * 0.071) * 0.045 +
-        Math.sin(energyPhase * 23.7 + candy.bornAt * 0.037) * 0.025 : 1;
+    ? 1 + Math.sin(energyPhase * 14.5 + energyOffset) * 0.045 +
+        Math.sin(energyPhase * 23.7 + energyOffset * 1.71) * 0.025 : 1;
   const hotTamaleShakeX = isHotTamale
-    ? Math.sin(energyPhase * 37 + candy.bornAt * 0.083) * 1.65 +
-        Math.sin(energyPhase * 53 + candy.bornAt * 0.019) * 0.65 : 0;
+    ? Math.sin(energyPhase * 37 + energyOffset * 2.13) * 1.65 +
+        Math.sin(energyPhase * 53 + energyOffset * 0.73) * 0.65 : 0;
   const hotTamaleShakeY = isHotTamale
-    ? Math.cos(energyPhase * 31 + candy.bornAt * 0.061) * 1.35 +
-        Math.sin(energyPhase * 47 + candy.bornAt * 0.029) * 0.5 : 0;
+    ? Math.cos(energyPhase * 31 + energyOffset * 1.37) * 1.35 +
+        Math.sin(energyPhase * 47 + energyOffset * 2.59) * 0.5 : 0;
   const hotTamaleTilt = isHotTamale
-    ? Math.sin(energyPhase * 34 + candy.bornAt * 0.053) * 0.075 +
-        Math.sin(energyPhase * 49 + candy.bornAt * 0.031) * 0.025 : 0;
+    ? Math.sin(energyPhase * 34 + energyOffset * 1.19) * 0.075 +
+        Math.sin(energyPhase * 49 + energyOffset * 2.31) * 0.025 : 0;
   const drawX = x + hotTamaleShakeX;
   const drawY = y + hotTamaleShakeY;
   if (sprite && sprite.width > 0 && sprite.height > 0) {
