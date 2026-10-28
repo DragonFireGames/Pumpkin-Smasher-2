@@ -482,7 +482,7 @@ function csCreateFreshPlayableBoard() {
       board[row] = [];
       for (let col = 0; col < CS_COLS; col++) {
         board[row][col] = null;
-        board[row][col] = csCreateCandyAt(board, row, col, true);
+        board[row][col] = csCreateCandyAt(board, row, col, true, false);
       }
     }
     csEnsureFastPeppermint(board, true);
