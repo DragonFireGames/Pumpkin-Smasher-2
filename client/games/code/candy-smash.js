@@ -850,20 +850,10 @@ function csTrySwap(from, to, tryTamaleMatch = false) {
   csKeyboardFocus = { row: to.row, col: to.col };
   const fromMatched = matches.some(cell => cell.row === from.row && cell.col === from.col);
   const toMatched = matches.some(cell => cell.row === to.row && cell.col === to.col);
-  let comboBombCell = null;
-  if (fromMatched && toMatched) {
-    // A swap that completes a match from both candies awards a bomb on one
-    // of the two swapped-to positions. Prefer an ordinary candy so existing
-    // specials still get their chance to activate.
-    const candidates = [from, to].filter(cell => {
-      const candy = csBoard[cell.row][cell.col];
-      return candy && !candy.special &&
-        !["hot_tamale", "pumpkin", "peppermint"].includes(candy.type);
-    });
-    if (candidates.length) {
-      comboBombCell = candidates[Math.floor(Math.random() * candidates.length)];
-    }
-  }
+  // If both swapped candies complete matches, the bomb always stays at
+  // the destination square. Players can choose its position by choosing
+  // the swap direction instead of relying on a random placement.
+  const comboBombCell = fromMatched && toMatched ? to : null;
   csBeginClear(matches, false, to, null, comboBombCell);
   return true;
 }
