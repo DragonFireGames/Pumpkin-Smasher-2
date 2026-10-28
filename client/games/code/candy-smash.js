@@ -427,7 +427,7 @@ function csEnsureFastHotTamale(board) {
 function csCreateCandyAt(board, row, col, avoidImmediateMatch, allowGuaranteedSpawn = true) {
   const adjacentHotTamale = csHasAdjacentHotTamale(board, row, col);
   const guaranteedTamale = allowGuaranteedSpawn && csMode.id === "fast" &&
-    csCandiesSinceHotTamale >= CS_FRENZY_TAMALE_GUARANTEE_INTERVAL &&
+    csCandiesSinceHotTamale >= CS_FRENZY_TAMALE_GUARANTEE_INTERVAL - 1 &&
     !adjacentHotTamale;
   let type = guaranteedTamale ? "hot_tamale" : csRandomCandyId(adjacentHotTamale);
 
