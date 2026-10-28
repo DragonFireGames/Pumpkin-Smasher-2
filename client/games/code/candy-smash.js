@@ -30,7 +30,7 @@ const CS_WAVE_ALPHA = 78;
 const CS_WAVE_REFERENCE_SIZE = 232;
 const CS_NATURAL_SPECIAL_CHANCE = 0.015;
 const CS_FRENZY_NATURAL_SPECIAL_CHANCE = 0.10;
-const CS_FRENZY_HOT_TAMALE_WEIGHT = 0.3;
+const CS_FRENZY_HOT_TAMALE_WEIGHT = 0.2;
 const CS_FRENZY_TAMALE_GUARANTEE_INTERVAL = 60;
 const CS_SHUFFLE_ANIMATION_MS = 780;
 const CS_PEPPERMINT_TIME_BONUS = 1;
@@ -848,7 +848,23 @@ function csTrySwap(from, to, tryTamaleMatch = false) {
   };
   csMovesLeft = csMode.moves === null ? csMovesLeft : csMovesLeft - 1;
   csKeyboardFocus = { row: to.row, col: to.col };
-  csBeginClear(matches, false, to);
+  const fromMatched = matches.some(cell => cell.row === from.row && cell.col === from.col);
+  const toMatched = matches.some(cell => cell.row === to.row && cell.col === to.col);
+  let comboBombCell = null;
+  if (fromMatched && toMatched) {
+    // A swap that completes a match from both candies awards a bomb on one
+    // of the two swapped-to positions. Prefer an ordinary candy so existing
+    // specials still get their chance to activate.
+    const candidates = [from, to].filter(cell => {
+      const candy = csBoard[cell.row][cell.col];
+      return candy && !candy.special &&
+        !["hot_tamale", "pumpkin", "peppermint"].includes(candy.type);
+    });
+    if (candidates.length) {
+      comboBombCell = candidates[Math.floor(Math.random() * candidates.length)];
+    }
+  }
+  csBeginClear(matches, false, to, null, comboBombCell);
   return true;
 }
 
@@ -1035,7 +1051,7 @@ function csAddCandyColorCells(unique, typeId) {
   return addedCells;
 }
 
-function csBeginClear(cells, fromSpecial, preferredSpawnCell, sourceTypes) {
+function csBeginClear(cells, fromSpecial, preferredSpawnCell, sourceTypes, comboBombCell) {
   if (!fromSpecial) {
     const matchedTamale = cells.find(cell => {
       const candy = csBoard[cell.row] && csBoard[cell.row][cell.col];
@@ -1086,7 +1102,49 @@ function csBeginClear(cells, fromSpecial, preferredSpawnCell, sourceTypes) {
   // Every third clear in a chain spawns exactly one bomb. If that same clear makes
   // a beam/star, keep it and place the bomb on another ordinary candy.
   if (!fromSpecial) {
-    const creation = csGetMatchSpecial(clearCells, preferredSpawnCell);
+    let creation = csGetMatchSpecial(clearCells, preferredSpawnCell);
+    const keyOf = cell => cell ? cell.row + "," + cell.col : null;
+    const reservedBombKey = keyOf(comboBombCell);
+
+    // Never overwrite a powered candy just because it was the preferred
+    // match-spawn location. Let the existing special fire, and put the new
+    // match reward on another ordinary candy in the same match instead.
+    if (creation && !creation.clearBoard) {
+      const creationCandy = csBoard[creation.cell.row] && csBoard[creation.cell.row][creation.cell.col];
+      const creationKey = keyOf(creation.cell);
+      if (!creationCandy || creationCandy.special || creationKey === reservedBombKey) {
+        const alternate = clearCells.find(cell => {
+          const key = keyOf(cell);
+          const candy = csBoard[cell.row] && csBoard[cell.row][cell.col];
+          return key !== creationKey && key !== reservedBombKey && candy && !candy.special &&
+            !["hot_tamale", "pumpkin", "peppermint"].includes(candy.type);
+        });
+        if (alternate) {
+          creation.cell = { row: alternate.row, col: alternate.col };
+        } else {
+          // Protect existing specials if there is no safe cell for the new one.
+          creation = null;
+        }
+      }
+
+      if (creation && creation.extraBombCell) {
+        const extraKey = keyOf(creation.extraBombCell);
+        const extra = csBoard[creation.extraBombCell.row] && csBoard[creation.extraBombCell.row][creation.extraBombCell.col];
+        const clashes = extraKey === keyOf(creation.cell) || extraKey === reservedBombKey || !extra || extra.special;
+        if (clashes) {
+          const alternateExtra = clearCells.find(cell => {
+            const key = keyOf(cell);
+            const candy = csBoard[cell.row] && csBoard[cell.row][cell.col];
+            return key !== keyOf(creation.cell) && key !== reservedBombKey && candy && !candy.special &&
+              !["hot_tamale", "pumpkin", "peppermint"].includes(candy.type) &&
+              Math.abs(cell.row - creation.cell.row) + Math.abs(cell.col - creation.cell.col) === 1;
+          });
+          if (alternateExtra) creation.extraBombCell = { row: alternateExtra.row, col: alternateExtra.col };
+          else delete creation.extraBombCell;
+        }
+      }
+    }
+
     if (creation && creation.clearBoard) {
       for (let row = 0; row < CS_ROWS; row++) {
         for (let col = 0; col < CS_COLS; col++) addCell({ row, col });
@@ -1114,6 +1172,19 @@ function csBeginClear(cells, fromSpecial, preferredSpawnCell, sourceTypes) {
           extra.bornAt = millis();
           unique.delete(creation.extraBombCell.row + "," + creation.extraBombCell.col);
         }
+      }
+    }
+
+    // A double-completing swap leaves a bomb on one of its two candies.
+    // It is a newly-created power-up, so it remains on the board until used.
+    if (comboBombCell && !(creation && creation.clearBoard)) {
+      const bombCandy = csBoard[comboBombCell.row] && csBoard[comboBombCell.row][comboBombCell.col];
+      if (bombCandy && !bombCandy.special &&
+          !["hot_tamale", "pumpkin", "peppermint"].includes(bombCandy.type)) {
+        bombCandy.special = "bomb";
+        bombCandy.specialDirection = null;
+        bombCandy.bornAt = millis();
+        unique.delete(keyOf(comboBombCell));
       }
     }
 
