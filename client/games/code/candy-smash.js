@@ -32,7 +32,7 @@ const CS_NATURAL_SPECIAL_CHANCE = 0.015;
 const CS_FRENZY_NATURAL_SPECIAL_CHANCE = 0.10;
 const CS_FRENZY_HOT_TAMALE_WEIGHT = 0.2;
 const CS_FRENZY_TAMALE_GUARANTEE_INTERVAL = 60;
-const CS_SHUFFLE_ANIMATION_MS = 780;
+const CS_SHUFFLE_ANIMATION_MS = 1250;
 const CS_PEPPERMINT_TIME_BONUS = 1;
 const CS_HINT_IDLE_MS = 5000;
 const CS_HINT_FLASH_MS = 1500;
@@ -1497,47 +1497,89 @@ function csDrawShuffleOverlay() {
   if (!csIsShuffleAnimating()) return;
   const elapsed = millis() - csShuffleAnimation.startedAt;
   const progress = Math.min(1, Math.max(0, elapsed / csShuffleAnimation.duration));
-  const eased = 1 - Math.pow(1 - progress, 2);
-  const pulse = Math.sin(progress * Math.PI);
-  const beamX = -100 + (width + 200) * eased;
   const beamY = CS_BOARD_Y + CS_ROWS * CS_CELL / 2;
 
-  noStroke();
-  fill(0, 0, 0, 145 * pulse);
-  rect(0, 0, width, height);
+  // Three beats: the sweep darkens the board as it enters, SHUFFLE is
+  // announced once the board is dim, then the sweep exits and reveals it.
+  const enterEnd = 0.38;
+  const holdEnd = 0.68;
+  let beamX;
+  let shadeAlpha;
+  let labelAlpha = 0;
 
-  const ctx = drawingContext;
-  ctx.save();
-  ctx.globalCompositeOperation = "lighter";
-  ctx.lineCap = "round";
-  ctx.shadowColor = "rgba(255,135,20,0.98)";
-  ctx.shadowBlur = 18;
-  ctx.strokeStyle = `rgba(255,175,58,${0.95 * pulse})`;
-  ctx.lineWidth = 5;
-  ctx.beginPath();
-  ctx.moveTo(beamX - 105, beamY);
-  ctx.lineTo(beamX + 105, beamY);
-  ctx.stroke();
-  ctx.shadowColor = "rgba(255,245,195,0.98)";
-  ctx.shadowBlur = 9;
-  ctx.strokeStyle = `rgba(255,255,245,${0.75 * pulse})`;
-  ctx.lineWidth = 1.8;
-  ctx.stroke();
-  ctx.restore();
-
-  push();
-  textAlign(CENTER, CENTER);
-  textStyle(BOLD);
-  textSize(27);
-  stroke(255, 175, 58, 210 * pulse);
-  strokeWeight(2);
-  fill(255, 247, 205, 245 * pulse);
-  text("SHUFFLE", beamX, beamY - 10);
-  if (csMode.id === "fast") {
-    textSize(12);
-    text("+15 SECONDS", beamX, beamY + 16);
+  if (progress < enterEnd) {
+    const p = progress / enterEnd;
+    const eased = p * p * (3 - 2 * p);
+    beamX = -110 + (width + 220) * eased;
+    shadeAlpha = 155 * eased;
+  } else if (progress < holdEnd) {
+    const p = (progress - enterEnd) / (holdEnd - enterEnd);
+    beamX = width + 120;
+    shadeAlpha = 155;
+    labelAlpha = Math.min(1, p * 5, (1 - p) * 5);
+  } else {
+    const p = (progress - holdEnd) / (1 - holdEnd);
+    const eased = p * p * (3 - 2 * p);
+    beamX = width + 110 - (width + 220) * eased;
+    shadeAlpha = 155 * (1 - eased);
   }
-  pop();
+
+  // During entry, darken the space the sweep has passed. During exit,
+  // reveal the board behind it instead of fading the entire screen at once.
+  noStroke();
+  if (progress < enterEnd) {
+    fill(0, 0, 0, shadeAlpha);
+    rect(0, 0, Math.max(0, beamX), height);
+  } else if (progress < holdEnd) {
+    fill(0, 0, 0, shadeAlpha);
+    rect(0, 0, width, height);
+  } else {
+    fill(0, 0, 0, shadeAlpha);
+    rect(Math.max(0, beamX), 0, Math.max(0, width - beamX), height);
+  }
+
+  // Keep the moving glow visible during entry and exit, but let the label
+  // have its own beat while the board is fully dimmed.
+  if (progress < enterEnd || progress >= holdEnd) {
+    const edgePulse = progress < enterEnd
+      ? Math.min(1, progress / 0.08)
+      : Math.min(1, (1 - progress) / 0.08);
+    const visible = Math.max(0, edgePulse);
+    const ctx = drawingContext;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.lineCap = "round";
+    ctx.shadowColor = "rgba(255,135,20,0.98)";
+    ctx.shadowBlur = 18;
+    ctx.strokeStyle = `rgba(255,175,58,${0.95 * visible})`;
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(beamX - 105, beamY);
+    ctx.lineTo(beamX + 105, beamY);
+    ctx.stroke();
+    ctx.shadowColor = "rgba(255,245,195,0.98)";
+    ctx.shadowBlur = 9;
+    ctx.strokeStyle = `rgba(255,255,245,${0.75 * visible})`;
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  if (labelAlpha > 0) {
+    push();
+    textAlign(CENTER, CENTER);
+    textStyle(BOLD);
+    textSize(27);
+    stroke(255, 175, 58, 210 * labelAlpha);
+    strokeWeight(2);
+    fill(255, 247, 205, 245 * labelAlpha);
+    text("SHUFFLE", width / 2, beamY - 10);
+    if (csMode.id === "fast") {
+      textSize(12);
+      text("+15 SECONDS", width / 2, beamY + 16);
+    }
+    pop();
+  }
 }
 
 function csFinishGame(won, reason) {
