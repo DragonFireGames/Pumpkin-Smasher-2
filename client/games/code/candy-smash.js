@@ -1695,7 +1695,7 @@ function csDrawHud() {
   fill(CS_WHITE);
   textStyle(NORMAL);
   textSize(9);
-  if (csMode.id === "fast") text("PEPPERMINTS: ABILITIES ONLY (+1 SEC)", width - 8, 31);
+  if (csMode.id === "fast") text("PEPPERMINTS: ABILITIES ONLY (+0.5 SEC)", width - 8, 31);
   else if (csMode.id === "puzzle") text("PUMPKINS LEFT " + csCountPumpkins(), width - 8, 31);
   else text("MATCH 3 OR MORE", width - 8, 31);
 }
