@@ -323,6 +323,22 @@ function csCountPumpkins() {
   return count;
 }
 
+function csGetMostCommonZapType() {
+  const counts = new Map();
+  for (let row = 0; row < CS_ROWS; row++) {
+    for (let col = 0; col < CS_COLS; col++) {
+      const candy = csBoard[row][col];
+      if (!candy || ["pumpkin", "hot_tamale", "peppermint"].includes(candy.type)) continue;
+      counts.set(candy.type, (counts.get(candy.type) || 0) + 1);
+    }
+  }
+  let best = null, bestCount = 0;
+  for (const [type, count] of counts) {
+    if (count > bestCount) { best = type; bestCount = count; }
+  }
+  return best || "blue";
+}
+
 function csRandomCandyId() {
   const candidates = CS_CANDY_TYPES.filter(type =>
     type.id !== "pumpkin" &&
@@ -732,7 +748,10 @@ function csTrySwap(from, to, tryTamaleMatch = false) {
   // Clicking a Tamale first activates it immediately.
   if (first.type === "hot_tamale" || second.type === "hot_tamale") {
     csMovesLeft = csMode.moves === null ? csMovesLeft : csMovesLeft - 1;
-    const targetType = first.type === "hot_tamale" ? second.type : first.type;
+    const requestedType = first.type === "hot_tamale" ? second.type : first.type;
+    // A Hot Tamale's color zap cannot target pumpkins. If one is selected beside
+    // a Tamale, zap the most common ordinary candy color instead and leave pumpkins alone.
+    const targetType = requestedType === "pumpkin" ? csGetMostCommonZapType() : requestedType;
     const center = first.type === "hot_tamale" ? from : to;
     const bombCells = [];
     if (first.type === "hot_tamale" && second.type === "hot_tamale") {
@@ -742,15 +761,18 @@ function csTrySwap(from, to, tryTamaleMatch = false) {
     } else {
       for (let row = 0; row < CS_ROWS; row++) {
         for (let col = 0; col < CS_COLS; col++) {
-          if (csBoard[row][col] && (csBoard[row][col].type === targetType ||
-              (row === from.row && col === from.col) || (row === to.row && col === to.col))) {
+          if (csBoard[row][col] && csBoard[row][col].type !== "pumpkin" &&
+              (csBoard[row][col].type === targetType ||
+               (row === from.row && col === from.col) || (row === to.row && col === to.col))) {
             bombCells.push({ row, col });
           }
         }
       }
     }
     csAddSpecialEffect("bomb", center);
-    if (targetType !== "hot_tamale") csAddTamaleZapEffect(center, targetType);
+    if (targetType && targetType !== "hot_tamale" && targetType !== "pumpkin") {
+      csAddTamaleZapEffect(center, targetType);
+    }
     csBeginClear(bombCells, true);
     return true;
   }
@@ -931,7 +953,7 @@ function csGetCascadeBombCell(cells, creationCell, preferredSpawnCell) {
 }
 
 function csAddTamaleZapEffect(center, targetType) {
-  if (!targetType || targetType === "hot_tamale") return;
+  if (!targetType || targetType === "hot_tamale" || targetType === "pumpkin") return;
   const targets = [];
   for (let row = 0; row < CS_ROWS; row++) {
     for (let col = 0; col < CS_COLS; col++) {
