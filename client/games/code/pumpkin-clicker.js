@@ -75,7 +75,7 @@ const workers = [
     id: "rusher",
     name: "Rusher",
     cost: 1200,
-    desc: "Burst every 10 seconds",
+    desc: "+50% generator production per Rusher for 2 seconds every 10 seconds",
     path: "/assets/entities/rusher/idle.png",
     frames: 14,
     fps: 12
@@ -272,6 +272,8 @@ function newGameState(prestige = 0) {
     autoSellPurchased: false,
     autoSellLevel: 0,
     autoSellProgressMs: 0,
+    rusherBurstTimerMs: 10000,
+    rusherBurstRemainingMs: 0,
     progress: 0,
     activeCandies: [],
     clickUpgrades: { power: 0, bonus: 0, cash: 0 },
@@ -812,7 +814,7 @@ function generatorRate(building) {
   const globalBonus = (1 + staff.ghost * 0.05 * workerBonus)
     * (1 + staff.speeder * 0.1 * workerBonus)
     * (1 + staff.wizard * 0.18 * workerBonus)
-    * (1 + staff.rusher * 0.035 * workerBonus);
+    * (game.rusherBurstRemainingMs > 0 ? 1 + staff.rusher * 0.5 : 1);
   const workerProduction = (staff.monster * 0.1 + staff.brute * 0.55) * workerBonus;
 
   return (generators[building.tier].rate + workerProduction)
@@ -852,15 +854,25 @@ function updateGame() {
 
   const activeAuto = game.autoSell && userIsActive();
 
+  if (game.workers.rusher > 0) {
+    game.rusherBurstTimerMs = (Number(game.rusherBurstTimerMs) || 10000) - dt * 1000;
+    game.rusherBurstRemainingMs = Math.max(0, (Number(game.rusherBurstRemainingMs) || 0) - dt * 1000);
+
+    if (game.rusherBurstTimerMs <= 0) {
+      game.rusherBurstTimerMs += 10000;
+      game.rusherBurstRemainingMs = 2000;
+    }
+  } else {
+    game.rusherBurstTimerMs = 10000;
+    game.rusherBurstRemainingMs = 0;
+  }
+
   forEachUniqueBuilding(building => {
     if (building.kind === "generator") {
       advanceGenerator(building, generatorRate(building) * dt);
     }
   });
 
-  if (game.workers.rusher > 0 && frameCount % 600 === 0) {
-    depositInStorage(game.workers.rusher * 5);
-  }
 
   if (activeAuto) {
     game.autoSellProgressMs = (Number(game.autoSellProgressMs) || 0) + dt * 1000;
