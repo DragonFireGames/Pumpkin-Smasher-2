@@ -747,30 +747,11 @@ function advanceGenerator(building, amount) {
   building.clogged = !generatorCanStore(building);
 }
 
-function multiplierAdjacencyCount(building) {
-  const neighbors = [
-    [building.row - 1, building.col],
-    [building.row + 1, building.col],
-    [building.row, building.col - 1],
-    [building.row, building.col + 1]
-  ];
-  let count = 0;
-
-  neighbors.forEach(([row, col]) => {
-    if (row < 0 || col < 0 || row >= game.farmRows || col >= game.farmCols) return;
-
-    const neighbor = game.farm[row] && game.farm[row][col];
-    if (neighbor && neighbor !== building && (neighbor.kind === "multiplier" || neighbor.kind === "shield")) {
-      count++;
-    }
-  });
-
-  return count;
-}
-
-function shieldMultiplier(building) {
-  const adjacentMultipliers = new Map();
+function generatorMultiplier(building) {
+  const adjacentMultipliers = new Set();
+  const visitedMultipliers = new Set();
   const size = generatorSize(building);
+  const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
 
   for (let i = 0; i < size; i++) {
     const edgeTiles = [
@@ -784,20 +765,43 @@ function shieldMultiplier(building) {
       if (row < 0 || col < 0 || row >= game.farmRows || col >= game.farmCols) return;
 
       const neighbor = game.farm[row] && game.farm[row][col];
-      if (neighbor && (neighbor.kind === "multiplier" || neighbor.kind === "shield")) {
-        adjacentMultipliers.set(neighbor, (adjacentMultipliers.get(neighbor) || 0) + 1);
-      }
+      if (neighbor && neighbor.kind === "multiplier") adjacentMultipliers.add(neighbor);
     });
   }
 
-  let strength = 0;
-  adjacentMultipliers.forEach(count => {
-    strength += Math.pow(1.6, count);
+  let result = 1;
+  adjacentMultipliers.forEach(multiplier => {
+    if (visitedMultipliers.has(multiplier)) return;
+
+    const queue = [multiplier];
+    const network = [];
+    visitedMultipliers.add(multiplier);
+
+    while (queue.length) {
+      const current = queue.pop();
+      network.push(current);
+
+      directions.forEach(([dr, dc]) => {
+        const row = current.row + dr;
+        const col = current.col + dc;
+        if (row < 0 || col < 0 || row >= game.farmRows || col >= game.farmCols) return;
+
+        const neighbor = game.farm[row] && game.farm[row][col];
+        if (!neighbor || neighbor.kind !== "multiplier" || visitedMultipliers.has(neighbor)) return;
+
+        visitedMultipliers.add(neighbor);
+        queue.push(neighbor);
+      });
+    }
+
+    const factor = 1.4 + network.length * 0.04;
+    network.forEach(() => {
+      if (adjacentMultipliers.has(multiplier)) result *= factor;
+    });
   });
 
-  return 1 + 0.28 * strength;
+  return result;
 }
-
 function hasVaultBonus(building) {
   return vaultsForGenerator(building).length > 0;
 }
@@ -816,7 +820,7 @@ function generatorRate(building) {
   const workerProduction = (staff.monster * 0.1 + staff.brute * 0.55) * workerBonus;
 
   return (generators[building.tier].rate + workerProduction)
-    * shieldMultiplier(building)
+    * generatorMultiplier(building)
     * (hasVaultBonus(building) ? 1.15 : 1)
     * (building.hyper ? 25 : building.ultra ? 9 : building.mega ? 4 : 1)
     * globalBonus
@@ -1208,7 +1212,7 @@ function drawShopItem(item, x, y, w, h) {
     textAlign(CENTER, CENTER);
     textSize(Math.max(11, size * 0.75));
     text(isBuildItem
-      ? d.kind === "shield" ? "S" : d.kind === "vault" ? "V" : "$"
+      ? d.kind === "multiplier" ? "M" : d.kind === "vault" ? "V" : "$"
       : item.type === "sell" ? "$" : item.type === "globalVault" ? "G" : "i", iconX, iconY);
   }
 
@@ -1667,7 +1671,7 @@ function drawFarmGrid(L){
      textSize(Math.max(7,t*.17));
      text(formatNumber(generators[o.tier].rate)+"/s",x+t/2,y+t-1);
      }
-  }else if(o.kind==="multiplier"||o.kind==="shield"){const si=images.multiplier;
+  }else if(o.kind==="multiplier"){const si=images.multiplier;
     if(si&&si.width)drawSpriteSheet(si,x+t/2,y+t/2,t*.92,3,Math.floor(frameCount/7)%3);
     else drawShieldFallback(x+t/2,y+t/2,t);
     }
@@ -1803,7 +1807,7 @@ function exportGrid(){
       pg.textSize(Math.max(7,t*.17));
       pg.text(formatNumber(generators[o.tier].rate)+"/s",x+t/2,y+t-1);
       }
-   }else if(o.kind==="multiplier"||o.kind==="shield"){
+   }else if(o.kind==="multiplier"){
     const img=images.multiplier;
     if(img&&img.width)drawExportSheet(pg,img,x+t/2,y+t/2,t*.92,3,Math.floor(frameCount/7)%3);
     else{pg.noStroke();
@@ -1879,7 +1883,7 @@ function getGridCell(L){
  return {r,c};
 }
 function multiplierBlobEdgeCells(startRow,startCol){
- const key=(r,c)=>r+","+c,isMult=o=>!!o&&(o.kind==="multiplier"||o.kind==="shield"),queue=[[startRow,startCol]],cluster=new Set(),edge=new Map(),dirs=[[-1,0],[1,0],[0,-1],[0,1]];
+ const key=(r,c)=>r+","+c,isMult=o=>!!o&&(o.kind==="multiplier"),queue=[[startRow,startCol]],cluster=new Set(),edge=new Map(),dirs=[[-1,0],[1,0],[0,-1],[0,1]];
  while(queue.length){const [r,c]=queue.pop(),k=key(r,c);
    if(cluster.has(k)||r<0||c<0||r>=game.farmRows||c>=game.farmCols||!isMult(game.farm[r]&&game.farm[r][c]))continue;
    cluster.add(k);
@@ -1898,7 +1902,7 @@ function multiplierBlobEdgeCells(startRow,startCol){
 }
 function drawGridEffectPreview(L){
  const cell=getGridCell(L);if(!cell)return;
- const hovered=game.farm[cell.r]&&game.farm[cell.r][cell.c],hoveredMultiplier=!!hovered&&(hovered.kind==="multiplier"||hovered.kind==="shield"),selected=selectedBuild&&buildings.find(v=>v.id===selectedBuild);
+ const hovered=game.farm[cell.r]&&game.farm[cell.r][cell.c],hoveredMultiplier=!!hovered&&(hovered.kind==="multiplier"),selected=selectedBuild&&buildings.find(v=>v.id===selectedBuild);
  let kind=null,ar=cell.r,ac=cell.c;
  if(hoveredMultiplier){kind="multiplier";
    ar=Number.isFinite(hovered.row)?hovered.row:cell.r;
@@ -1910,11 +1914,11 @@ function drawGridEffectPreview(L){
    ac=Number.isFinite(hovered.col)?hovered.col:cell.c;
    }
  if(!kind)return;
- const isMultiplier=kind==="multiplier"||kind==="shield",border=isMultiplier?"#c58aff":"#54e8cf",cells=[];
+ const isMultiplier=kind==="multiplier",border=isMultiplier?"#c58aff":"#54e8cf",cells=[];
  if(isMultiplier){if(hoveredMultiplier)cells.push(...multiplierBlobEdgeCells(ar,ac));
    else [[-1,0],[1,0],[0,-1],[0,1]].forEach(([dr,dc])=>{const r=ar+dr,c=ac+dc;
      if(r>=0&&r<game.farmRows&&c>=0&&c<game.farmCols){const o=game.farm[r]&&game.farm[r][c];
-       if(!o||(o.kind!=="multiplier"&&o.kind!=="shield"))cells.push({r,c,center:false});
+       if(!o||(o.kind!=="multiplier"))cells.push({r,c,center:false});
        }});
    }
  else for(let r=Math.max(0,ar-1);r<=Math.min(game.farmRows-1,ar+1);r++)for(let c=Math.max(0,ac-1);c<=Math.min(game.farmCols-1,ac+1);c++)cells.push({r,c,center:r===ar&&c===ac});
@@ -2069,7 +2073,7 @@ function handleTileClick(row, col) {
     return;
   }
 
-  if (!selectedBuild && building && (building.kind === "multiplier" || building.kind === "shield")) {
+  if (!selectedBuild && building && (building.kind === "multiplier")) {
     showToast("Multipliers boost only directly adjacent generators");
     return;
   }
@@ -2240,7 +2244,7 @@ function handleTileClick(row, col) {
 function tileValue(o){
   if(!o)return 0;
   if(o.kind==="generator")return generators[o.tier].cost*generatorSize(o)**2;
-  if(o.kind==="multiplier"||o.kind==="shield")return 180;
+  if(o.kind==="multiplier")return 180;
   if(o.kind==="vault"){let value=100;
     for(let i=0;i<Math.max(0,o.level||0);i++)value+=vaultUpgradeCost(i);
     return value;
@@ -2742,7 +2746,7 @@ function getItemHoverInfo(it){
  }
  if(it.type==="build"||it.type==="autosell"){
   if(d.kind==="generator")return {id:"build:"+d.id,title:d.name,kind:"build",summary:"Produces "+d.desc+".",rules:["Next cost: $"+formatNumber(buildCost(d))+". Each owned "+d.name+" or higher-tier generator increases this tier’s base-price component by "+generators[d.tier].growth.toFixed(2)+"×. Removing a generator lowers relevant prices. Choose this, then click an empty farm tile.","Click an existing generator to upgrade it for the difference between this tier’s price and the current tier’s price.","Use the highlighted MERGE buttons to combine matching basic generators: 4 in a 2×2 square for a Mega, 9 in a 3×3 square for an Ultra, or 25 in a 5×5 square for a Hyper. Existing merged generators cannot be merged again."]};
-  if(d.kind==="multiplier")return {id:"build:"+d.id,title:"Multiplier",kind:"build",summary:"Boosts adjacent generators; neighboring multipliers amplify one another.",rules:["Next cost: $"+formatNumber(buildCost(d))+". Each multiplier costs 35% more per multiplier currently placed, and removing one lowers the next price.","Only the four orthogonally adjacent tiles count; diagonals do not.","Each neighboring multiplier boosts the other multiplier’s strength by 1.6×."]};
+  if(d.kind==="multiplier")return {id:"build:"+d.id,title:"Multiplier",kind:"build",summary:"Boosts adjacent generators; neighboring multipliers amplify one another.",rules:["Next cost: $"+formatNumber(buildCost(d))+". Each multiplier costs 35% more per multiplier currently placed, and removing one lowers the next price.","Only the four orthogonally adjacent tiles count; diagonals do not.","Connected multipliers form a network. Every multiplier in a network gains +0.04× per multiplier in that network, added to its base 1.4× factor."]};
   if(d.kind==="vault")return {id:"build:"+d.id,title:"Vault",kind:"build",summary:"Dedicated storage grows nonlinearly with each level.",rules:["Next cost: $"+formatNumber(buildCost(d))+". Each vault costs 15% more per vault currently placed, and removing one lowers the next price.","Its storage zone is a 3×3 area centered on the vault.","Generators in overlapping vault zones fill vaults top-to-bottom, then left-to-right, and finally base storage.","Click a placed vault to upgrade it; capacity grows by 1.5× per level; upgrade prices rise with each level.","Monster and Brute workers increase the base storage capacity, which starts at 50."]};
   return {id:"build:"+d.id,title:d.name,kind:"build",summary:"Automatically sells stored pumpkins for cash.",rules:["Upgrade tiers cost $650, $250K, $330M and $500B.","Each tier reduces the sale interval: 60s, 30s, 10s and 5s.","Click to buy the next tier. Shift-click to enable or disable Auto-Sell without changing tiers.","Sales happen only during active play. While disabled, production accumulates as pumpkins."]};
  }
@@ -2763,7 +2767,7 @@ function getFarmHoverInfo(o,r,c){
   const g=generators[o.tier],rate=generatorRate(o),vaults=generatorDestinations(o),dest=vaults.map(v=>"Vault ("+(v.row+1)+","+(v.col+1)+")").concat(["Base storage"]),size=generatorSize(o);
   return {id:"tile-object:"+o.row+":"+o.col,title:(o.hyper?"Hyper ":o.ultra?"Ultra ":o.mega?"Mega ":"")+g.name,kind:"tile",summary:"Output: "+formatNumber(rate)+" pumpkins/sec."+(o.clogged?" STALLED — storage is full.":""),rules:[size>1?"Occupies a "+size+"×"+size+" area and can be fragmented back into individual generators.":"Occupies one tile and grows a pumpkin on its generator pot.","Storage priority: "+dest.join(" → ")+".","Vault zones are 3×3; overlapping vaults are ordered top-to-bottom, then left-to-right.","When every assigned vault and base storage are full, this generator stalls at full growth.","Use the highlighted MERGE buttons to combine matching basic generators: 4 in a 2×2 square for a Mega, 9 in a 3×3 square for an Ultra, or 25 in a 5×5 square for a Hyper. Existing merged generators cannot be merged again."]};
  }
- if(o.kind==="multiplier"||o.kind==="shield")return {id:"tile-object:"+o.row+":"+o.col,title:"Multiplier",kind:"tile",summary:"Boosts directly adjacent pumpkin generators.",rules:["Only up, down, left and right adjacent tiles are affected.","Diagonal generators receive no bonus.","Adjacent multipliers stack with diminishing returns."]};
+ if(o.kind==="multiplier")return {id:"tile-object:"+o.row+":"+o.col,title:"Multiplier",kind:"tile",summary:"Boosts directly adjacent pumpkin generators. Connected multipliers strengthen one another.",rules:["Only up, down, left and right adjacent tiles are affected.","Diagonal generators receive no bonus.","Each adjacent multiplier contributes its network-adjusted factor. Connected networks increase every member multiplier’s factor by +0.04× per multiplier in the network."]};
  if(o.kind==="vault"){const level=Math.max(0,o.level||0),cost=vaultUpgradeCost(level),stored=Number(o.stored)||0,cap=vaultCapacity(o);
    return {id:"tile-object:"+o.row+":"+o.col,title:"Vault • Level "+(level+1),kind:"tile",summary:formatNumber(stored)+" / "+formatNumber(cap)+" pumpkins stored.",rules:["Click the vault to upgrade it for $"+formatNumber(cost)+".","Capacity follows the storage curve: 50, 125, 250, 500, 1,000, 3,500, then 7.5M through 500M at higher levels.","Its zone is a 3×3 area centered on this vault.","Generators in multiple zones fill vaults in row-major order, then base storage.","Base storage capacity (50 by default) is increased by Monster and Brute workers."]};
    }
