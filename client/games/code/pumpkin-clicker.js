@@ -770,27 +770,25 @@ function multiplierAdjacencyCount(building) {
 
 function shieldMultiplier(building) {
   const adjacentMultipliers = new Set();
+  const size = generatorSize(building);
 
-  generatorFootprint(building).forEach(([row, col]) => {
-    const neighbors = [
-      [row - 1, col],
-      [row + 1, col],
-      [row, col - 1],
-      [row, col + 1]
+  for (let i = 0; i < size; i++) {
+    const edgeTiles = [
+      [building.row - 1, building.col + i],
+      [building.row + size, building.col + i],
+      [building.row + i, building.col - 1],
+      [building.row + i, building.col + size]
     ];
 
-    neighbors.forEach(([neighborRow, neighborCol]) => {
-      if (neighborRow < 0 || neighborCol < 0
-        || neighborRow >= game.farmRows || neighborCol >= game.farmCols) {
-        return;
-      }
+    edgeTiles.forEach(([row, col]) => {
+      if (row < 0 || col < 0 || row >= game.farmRows || col >= game.farmCols) return;
 
-      const neighbor = game.farm[neighborRow] && game.farm[neighborRow][neighborCol];
+      const neighbor = game.farm[row] && game.farm[row][col];
       if (neighbor && (neighbor.kind === "multiplier" || neighbor.kind === "shield")) {
         adjacentMultipliers.add(neighbor);
       }
     });
-  });
+  }
 
   let strength = 0;
   adjacentMultipliers.forEach(multiplier => {
