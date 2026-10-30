@@ -75,7 +75,7 @@ const workers = [
     id: "rusher",
     name: "Rusher",
     cost: 1200,
-    desc: "Boosts generator production to 1.5x for 2 seconds every 10 seconds, +1% per additional Rusher",
+    desc: "Boosts generator production to 1.5x for 2 seconds every 10 seconds, +about 2% per additional Rusher",
     path: "/assets/entities/rusher/idle.png",
     frames: 14,
     fps: 12
@@ -814,7 +814,7 @@ function generatorRate(building) {
   const globalBonus = (1 + staff.ghost * 0.05 * workerBonus)
     * (1 + staff.speeder * 0.1 * workerBonus)
     * (1 + staff.wizard * 0.18 * workerBonus)
-    * (game.rusherBurstRemainingMs > 0 ? 1.5 + Math.max(0, staff.rusher - 1) * 0.01 : 1);
+    * (game.rusherBurstRemainingMs > 0 ? 1.5 + Math.max(0, staff.rusher - 1) / 49 : 1);
   const workerProduction = (staff.monster * 0.1 + staff.brute * 0.55) * workerBonus;
 
   return (generators[building.tier].rate + workerProduction)
@@ -2733,7 +2733,7 @@ function getItemHoverInfo(it){
    monster:["Adds 0.10 base pumpkins/sec to every generator per Monster.","Additive bonuses apply before the generator and multiplier bonuses."],
    ghost:["Each Ghost adds 5% total production.","Bonuses stack multiplicatively with other global workers."],
    speeder:["Each Speeder adds 10% total production.","Bonuses stack multiplicatively with other global workers."],
-   rusher:["Rushers boost generator production to 1.5x for 2 seconds every 10 seconds.","Each additional Rusher adds 1% to the burst multiplier."],
+   rusher:["Rushers boost generator production to 1.5x for 2 seconds every 10 seconds.","Each additional Rusher adds about 2% to the burst multiplier, reaching 2.5x at 50 Rushers."],
    brute:["Adds 0.55 base pumpkins/sec to every generator per Brute.","This is an additive bonus before generator/multiplier bonuses."],
    wizard:["Each Wizard adds 18% total production.","Bonuses stack multiplicatively with other global workers."],
    debuffer:["Each Debuffer increases other worker bonuses by 8%.","This strengthens additive Monster/Brute bonuses and other worker multipliers."]
