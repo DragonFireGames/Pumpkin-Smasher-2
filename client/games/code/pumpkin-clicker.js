@@ -1130,7 +1130,7 @@ function drawShopItem(item, x, y, w, h) {
   } else if (item.type === "build" && d.kind !== "upgrade") {
     itemCost = buildCost(d);
     hasCost = true;
-  } else if (item.type === "autosell" || (item.type === "build" && d.kind === "upgrade" && game.autoSellLevel < 4)) {
+  } else if ((item.type === "autosell" || (item.type === "build" && d.kind === "upgrade")) && game.autoSellLevel < 4) {
     itemCost = autoSellUpgradeCosts[game.autoSellLevel];
     hasCost = true;
   } else if (item.type === "buyCandy") {
