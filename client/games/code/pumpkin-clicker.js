@@ -636,7 +636,10 @@ function vaultUpgradeCost(level) {
 }
 
 function globalVaultUpgradeCost(level) {
-  return Math.ceil(vaultUpgradeCost(level) * Math.pow(1.3, Math.max(0, level || 0)));
+  level = Math.max(0, Math.floor(level || 0));
+  let multiplier = 1;
+  for (let i = 0; i < Math.min(level + 1, 30); i++) multiplier *= 1.3 - i * 0.01;
+  return Math.ceil(vaultUpgradeCost(level) * multiplier);
 }
 
 function storageCapacity() {
@@ -1399,7 +1402,7 @@ function drawShopItem(item, x, y, w, h) {
       title: "Global Vault",
       kind: "build",
       summary: "Increases default storage for generators outside normal Vault zones.",
-      rules: ["Level " + (game.globalVaultLevel + 1) + " • " + formatNumber(baseStorageCapacity()) + " total capacity.", "Currently storing " + formatNumber(game.baseStored || 0) + " / " + formatNumber(baseStorageCapacity()) + " pumpkins.", "Raises the default 50 storage cap.", "Unpaired generators deposit into this shared storage.", "Costs 5× as much as a normal Vault upgrade, with an additional 5% compounding cost increase per level.", "Monster, Brute and Ghost Chew bonuses still apply."]
+      rules: ["Level " + (game.globalVaultLevel + 1) + " • " + formatNumber(baseStorageCapacity()) + " total capacity.", "Currently storing " + formatNumber(game.baseStored || 0) + " / " + formatNumber(baseStorageCapacity()) + " pumpkins.", "Raises the default 50 storage cap.", "Unpaired generators deposit into this shared storage.", "Cost multiplier starts at 1.3× and compounds by 1.29×, 1.28×, and so on until reaching 1× at level 30.", "Monster, Brute and Ghost Chew bonuses still apply."]
     });
   }
 
