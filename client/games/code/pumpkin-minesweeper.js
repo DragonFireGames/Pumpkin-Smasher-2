@@ -463,6 +463,7 @@ function drawResultOverlay() {
 }
 
 function handleGameKeyDown(event) {
+  if (event.code === "Enter" || event.code === "Space") event.preventDefault();
   if (event.repeat) return;
   if (gameState === "title" && ["ArrowLeft", "ArrowUp", "ArrowRight", "ArrowDown"].includes(event.code)) {
     const direction = event.code === "ArrowLeft" || event.code === "ArrowUp" ? -1 : 1;
