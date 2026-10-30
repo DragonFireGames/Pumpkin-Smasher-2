@@ -2544,11 +2544,17 @@ function candyPriceLabel(){
   const tier=candyPurchaseTier(),price=candyPrice(tier),exponent=3*Math.pow(2,tier);
   return exponent<=12?formatNumber(price):"1e"+exponent;
   }
-function randomCandy() {
-  return candies[Math.floor(Math.random() * candies.length)];
+function randomCandy(excludedIds = new Set((game.activeCandies || []).filter(v => v && v.expiresAt > Date.now()).map(v => v.id))) {
+  const available = candies.filter(candy => candy.stackable || !excludedIds.has(candy.id));
+  return available.length ? available[Math.floor(Math.random() * available.length)] : null;
 }
 function openCandy(source, candy) {
-  candyOpening = { source, candy: candy || randomCandy(), started: millis(), activated: false };
+  candy = candy || randomCandy();
+  if (!candy) {
+    showToast("You already have every candy");
+    return;
+  }
+  candyOpening = { source, candy, started: millis(), activated: false };
   toastMessage = "";
 }
 function claimDailyCandy(){
@@ -2569,14 +2575,15 @@ function buyCandy(quantity=1){
   let bought=0,total=0;
   while(bought<limit){const price=candyPrice(projectedActive.size);
     if(!Number.isFinite(price)||game.cash<price)break;
-    const candy=randomCandy();
+    const candy=randomCandy(projectedActive);
+    if(!candy)break;
     game.cash-=price;
     game.candyPurchases=Math.max(0,Math.floor(Number(game.candyPurchases)||0))+1;
     queue.push(candy);
-    projectedActive.add(candy.id);
+    if(!candy.stackable)projectedActive.add(candy.id);
     bought++;
     total+=price;
-    }if(!bought){showToast("Random candy costs $"+candyPriceLabel());
+    }if(!bought){showToast(projectedActive.size>=candies.filter(candy=>!candy.stackable).length?"You already have every candy":"Random candy costs $"+candyPriceLabel());
     return;
     }candyQueue=queue.slice(1);
   openCandy("shop",queue[0]);
