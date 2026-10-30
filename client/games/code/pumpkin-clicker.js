@@ -769,7 +769,7 @@ function multiplierAdjacencyCount(building) {
 }
 
 function shieldMultiplier(building) {
-  const adjacentMultipliers = new Set();
+  const adjacentMultipliers = new Map();
   const size = generatorSize(building);
 
   for (let i = 0; i < size; i++) {
@@ -785,14 +785,14 @@ function shieldMultiplier(building) {
 
       const neighbor = game.farm[row] && game.farm[row][col];
       if (neighbor && (neighbor.kind === "multiplier" || neighbor.kind === "shield")) {
-        adjacentMultipliers.add(neighbor);
+        adjacentMultipliers.set(neighbor, (adjacentMultipliers.get(neighbor) || 0) + 1);
       }
     });
   }
 
   let strength = 0;
-  adjacentMultipliers.forEach(multiplier => {
-    strength += Math.pow(1.6, multiplierAdjacencyCount(multiplier));
+  adjacentMultipliers.forEach(count => {
+    strength += Math.pow(1.6, count);
   });
 
   return 1 + 0.28 * strength;
