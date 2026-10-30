@@ -1600,7 +1600,7 @@ function clickCashBonus(){
   }
 function clickUpgradeCost(id){
   const u=game.clickUpgrades||{power:0,bonus:0,cash:0},level=u[id]||0;
-  return Math.ceil(({power:20,bonus:60,cash:30}[id]||30)*Math.pow(({power:1.10,bonus:1.12,cash:1.10}[id]||1.10),level));
+  return Math.ceil(({power:22,bonus:66,cash:33}[id]||33)*Math.pow(({power:1.10,bonus:1.12,cash:1.10}[id]||1.10),level));
   }
 function buyClickUpgrade(id,quantity=1){
   const data={power:{name:"Click Power"},bonus:{name:"Click Boost"},cash:{name:"Click Cash"}}[id];
