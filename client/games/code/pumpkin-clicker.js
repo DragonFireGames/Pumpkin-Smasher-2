@@ -820,7 +820,7 @@ function generatorRate(building) {
   return (generators[building.tier].rate + workerProduction)
     * shieldMultiplier(building)
     * (hasVaultBonus(building) ? 1.15 : 1)
-    * (building.hyper ? 5 : building.ultra ? 3 : building.mega ? 1.5 : 1)
+    * (building.hyper ? 25 : building.ultra ? 9 : building.mega ? 4 : 1)
     * globalBonus
     * candyMultiplier("production")
     * (1 + game.prestige * 0.5);
