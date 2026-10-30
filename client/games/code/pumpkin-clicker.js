@@ -2488,7 +2488,7 @@ function drawGeneratorMergeButtons(L) {
 function workerCost(id){
   const w=workers.find(v=>v.id===id);
   if(!w)return Infinity;
-  return Math.ceil(w.cost*Math.pow(1.4,Math.max(0,game.workers[id]||0)));
+  return Math.ceil(w.cost*Math.pow(1.45,Math.max(0,game.workers[id]||0)));
   }
 function buyWorker(id,quantity=1){
   const w=workers.find(v=>v.id===id);
@@ -2755,7 +2755,7 @@ function getItemHoverInfo(it){
    wizard:["Each Wizard adds 18% total production.","Bonuses stack multiplicatively with other global workers."],
    debuffer:["Each Debuffer increases other worker bonuses by 8%.","This strengthens additive Monster/Brute bonuses and other worker multipliers."]
   };
-  return {id:"worker:"+d.id,title:d.name,kind:"worker",summary:d.desc,rules:["Next hire: $"+formatNumber(workerCost(d.id))+". Owned: "+count+".","Each additional worker of this type costs 40% more than the previous price.","Uses the global ×1, ×10 or MAX purchase mode; Shift-click forces ×10. Hiring stops when you cannot afford the next worker.",...(rules[d.id]||[]),"Workers never occupy farm tiles and have no recurring wages."]};
+  return {id:"worker:"+d.id,title:d.name,kind:"worker",summary:d.desc,rules:["Next hire: $"+formatNumber(workerCost(d.id))+". Owned: "+count+".","Each additional worker of this type costs 45% more than the previous price.","Uses the global ×1, ×10 or MAX purchase mode; Shift-click forces ×10. Hiring stops when you cannot afford the next worker.",...(rules[d.id]||[]),"Workers never occupy farm tiles and have no recurring wages."]};
  }
  if(it.type==="build"||it.type==="autosell"){
   if(d.kind==="generator")return {id:"build:"+d.id,title:d.name,kind:"build",summary:"Produces "+d.desc+".",rules:["Next cost: $"+formatNumber(buildCost(d))+". Each owned "+d.name+" or higher-tier generator increases this tier’s base-price component by "+generators[d.tier].growth.toFixed(2)+"×. Removing a generator lowers relevant prices. Choose this, then click an empty farm tile.","Click an existing generator to upgrade it for the difference between this tier’s price and the current tier’s price.","Use the highlighted MERGE buttons to combine matching basic generators: 4 in a 2×2 square for a Mega, 9 in a 3×3 square for an Ultra, or 25 in a 5×5 square for a Hyper. Existing merged generators cannot be merged again."]};
