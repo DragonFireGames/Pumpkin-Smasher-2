@@ -237,6 +237,8 @@ let shiftHeld = false;
 let toastMessage = "";
 let toastEnd = 0;
 let lastTick = 0;
+let lastUpdateAt = 0;
+let lastUpdateWasActive = false;
 let saveTicks = 0;
 let dailyClaimed = false;
 let backgroundSpecks = [];
@@ -324,8 +326,16 @@ function setup() {
   loadGame();
   applyOfflineProgress();
   lastTick = millis();
+  lastUpdateAt = Date.now();
+  lastUpdateWasActive = userIsActive();
   lastActivity = Date.now();
 
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      lastUpdateWasActive = false;
+      saveGame();
+    }
+  });
   window.addEventListener("beforeunload", saveGame);
   window.addEventListener("pagehide", saveGame);
   window.addEventListener("pointermove", markActivity, { passive: true });
@@ -850,11 +860,14 @@ function productionRate() {
   return total;
 }
 function updateGame() {
-  const now = millis();
-  const dt = Math.max(0, Math.min(0.25, (now - lastTick) / 1000));
-  lastTick = now;
+  const now = Date.now();
+  const dt = Math.max(0, Math.min(2592000, (now - lastUpdateAt) / 1000));
+  lastUpdateAt = now;
+  lastTick = millis();
 
-  const activeAuto = game.autoSell && userIsActive();
+  const active = userIsActive();
+  const activeAuto = game.autoSell && active && lastUpdateWasActive;
+  lastUpdateWasActive = active;
 
   if (game.workers.rusher > 0) {
     game.rusherBurstTimerMs = (Number(game.rusherBurstTimerMs) || 10000) - dt * 1000;
