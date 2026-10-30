@@ -795,8 +795,8 @@ function generatorMultiplier(building) {
     }
 
     const factor = 1.4 + network.length * 0.04;
-    network.forEach(() => {
-      if (adjacentMultipliers.has(multiplier)) result *= factor;
+    network.forEach(member => {
+      if (adjacentMultipliers.has(member)) result *= factor;
     });
   });
 
