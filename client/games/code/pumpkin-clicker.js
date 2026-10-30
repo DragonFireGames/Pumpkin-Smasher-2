@@ -1194,7 +1194,7 @@ function drawShopItem(item, x, y, w, h) {
     textSize(Math.max(11, size * 0.75));
     text(isBuildItem
       ? d.kind === "shield" ? "S" : d.kind === "vault" ? "V" : "$"
-      : item.type === "sell" ? "$" : "i", iconX, iconY);
+      : item.type === "sell" ? "$" : item.type === "globalVault" ? "G" : "i", iconX, iconY);
   }
 
   const textX = x + size + 12;
