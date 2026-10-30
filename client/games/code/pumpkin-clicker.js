@@ -2497,28 +2497,36 @@ function toggleAutoSell(){
   showToast(game.autoSell?"Auto-Sell activated":"Auto-Sell paused");
   saveGame();
   }
-function clickPumpkin(){
-  pumpkinPressedAt=millis();
-  const lucky=Math.random()<.001;
+function clickPumpkin() {
+  pumpkinPressedAt = millis();
+  const lucky = Math.random() < 0.001;
   syncStoredPumpkins();
-  if(!game.autoSell&&availableStorage()<=0){if(lucky)openCandy("drop",randomCandy());
+
+  if (availableStorage() <= 0) {
+    if (lucky) openCandy("drop", randomCandy());
     else showToast("Storage full — sell pumpkins or add a vault");
     saveGame();
     return;
-    }game.totalClicks++;
-  game.totalHarvested++;
-  if(game.autoSell){const chocolateMultiplier=hasCandy("chocolate")?2:1,harvested=clickPumpkinYield()*chocolateMultiplier,cashBonus=clickCashBonus()*cashMultiplier()*chocolateMultiplier,earned=harvested*candyMultiplier("sell")+cashBonus;
-    game.cash+=earned;
-    showToast("+$"+formatNumber(earned));
-    }else{const n=clickPumpkinYield()*(hasCandy("chocolate")?2:1);
-    const added=depositInStorage(n);
-    showToast("+"+added+" pumpkins");
-    const cashBonus=clickCashBonus();
-    if(cashBonus>0){game.cash+=cashBonus*cashMultiplier()*(hasCandy("chocolate")?2:1);
-      showToast("+$"+cashBonus+" click bonus");
-      }}if(lucky)openCandy("drop",randomCandy());
-  saveGame();
   }
+
+  game.totalClicks++;
+  game.totalHarvested++;
+
+  const chocolateMultiplier = hasCandy("chocolate") ? 2 : 1;
+  const harvested = clickPumpkinYield() * chocolateMultiplier;
+  const added = depositInStorage(harvested);
+  showToast("+" + added + " pumpkins");
+
+  const cashBonus = clickCashBonus();
+  if (cashBonus > 0) {
+    const earned = cashBonus * cashMultiplier() * chocolateMultiplier;
+    game.cash += earned;
+    showToast("+$" + formatNumber(earned) + " click bonus");
+  }
+
+  if (lucky) openCandy("drop", randomCandy());
+  saveGame();
+}
 function sellPumpkins(){
   syncStoredPumpkins();
   const n=Math.floor(game.pumpkins);
