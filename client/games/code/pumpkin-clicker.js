@@ -619,7 +619,7 @@ function vaultUpgradeCost(level) {
 }
 
 function globalVaultUpgradeCost(level) {
-  return vaultUpgradeCost(level) * 5;
+  return Math.ceil(vaultUpgradeCost(level) * 5 * Math.pow(1.03, Math.max(0, level || 0)));
 }
 
 function storageCapacity() {
