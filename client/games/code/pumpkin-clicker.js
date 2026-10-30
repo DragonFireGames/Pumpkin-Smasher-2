@@ -619,7 +619,7 @@ function vaultUpgradeCost(level) {
 }
 
 function globalVaultUpgradeCost(level) {
-  return Math.ceil(vaultUpgradeCost(level) * 5 * Math.pow(1.03, Math.max(0, level || 0)));
+  return Math.ceil(vaultUpgradeCost(level) * 5 * Math.pow(1.05, Math.max(0, level || 0)));
 }
 
 function storageCapacity() {
@@ -1099,11 +1099,11 @@ function getShopItems() {
   }
 
   return [
-    { type: "globalVault", d: { id: "global-vault", name: "Global Vault", desc: "Raises default storage cap", kind: "globalVault" } },
     { type: "autosell", d: { id: "autosell", name: "Auto-Sell", cost: 650, desc: "Sell stored pumpkins every 60s", kind: "upgrade" } },
     { type: "daily", d: { name: "Daily Candy", desc: "Free one-hour candy" } },
     { type: "buyCandy", d: { name: "Buy Random Candy", desc: "One-hour random bonus" } },
     { type: "sell", d: { name: "Sell Pumpkins", desc: "Trade stored harvest" } },
+    { type: "globalVault", d: { id: "global-vault", name: "Global Vault", desc: "Raises default storage cap", kind: "globalVault" } },
     { type: "delete", d: { name: "Delete / Sell", desc: "Clear tile • 25% refund" } },
     { type: "info", d: { name: "Farm Guide", desc: "Build → click an empty tile" } }
   ];
@@ -1236,6 +1236,21 @@ function drawShopItem(item, x, y, w, h) {
 
   text(subtitle, textX, y + h * 0.43, textW, h * 0.29);
 
+  if (item.type === "globalVault") {
+    const capacity = baseStorageCapacity();
+    const stored = Math.min(capacity, Math.max(0, Number(game.baseStored) || 0));
+    const progress = capacity > 0 ? stored / capacity : 0;
+    const barX = x + 4;
+    const barY = y + h - 5;
+    const barW = w - 8;
+
+    noStroke();
+    fill("#263b1b");
+    rect(barX, barY, barW, 2);
+    fill(orange);
+    rect(barX, barY, barW * progress, 2);
+  }
+
   if (item.type === "autosell" && game.autoSellPurchased && game.autoSell) {
     const progress = constrain((Number(game.autoSellProgressMs) || 0) / 60000, 0, 1);
     const barX = x + 4;
@@ -1355,7 +1370,7 @@ function drawShopItem(item, x, y, w, h) {
       title: "Global Vault",
       kind: "build",
       summary: "Increases default storage for generators outside normal Vault zones.",
-      rules: ["Raises the default 50 storage cap.", "Unpaired generators deposit into this shared storage.", "Costs 5× as much as a normal Vault upgrade and follows the same capacity curve.", "Monster, Brute and Ghost Chew bonuses still apply."]
+      rules: ["Level " + (game.globalVaultLevel + 1) + " • " + formatNumber(baseStorageCapacity()) + " total capacity.", "Currently storing " + formatNumber(game.baseStored || 0) + " / " + formatNumber(baseStorageCapacity()) + " pumpkins.", "Raises the default 50 storage cap.", "Unpaired generators deposit into this shared storage.", "Costs 5× as much as a normal Vault upgrade, with an additional 5% compounding cost increase per level.", "Monster, Brute and Ghost Chew bonuses still apply."]
     });
   }
 
