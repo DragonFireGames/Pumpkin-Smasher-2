@@ -2722,7 +2722,8 @@ function drawCandyReveal(){
  drawCandyConfetti();
 }
 function prestigeCost() {
-  if (game.prestige >= 5) return Math.floor(1e21 * Math.pow(5, game.prestige - 5));
+  if (game.prestige >= 6) return Math.floor(1e24 * Math.pow(5, game.prestige - 6));
+  if (game.prestige >= 5) return 1e21;
   return Math.floor(1000000000 * Math.pow(5, game.prestige));
 }
 function performPrestige(){
