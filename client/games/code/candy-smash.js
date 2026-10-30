@@ -396,9 +396,9 @@ function randomCandyId() {
   const weighted = candidates.map(type => {
     let weight = type.weight;
     if (type.id === "hot_tamale") {
-      // Frenzy is much more generous; a separate spawn guarantee prevents long dry streaks.
-      if (currentMode.id === "fast") weight = frenzyHotTamaleWeight;
-      else weight = 0.06;
+      // Random Hot Tamale spawns and the anti-dry-streak guarantee are
+      // Frenzy-only. In other modes, Tamales come from actual five-matches.
+      weight = currentMode.id === "fast" ? frenzyHotTamaleWeight : 0;
     }
     if (type.id === "smarties" && currentMode.id === "fast") weight = 2;
     if (type.id === "peppermint") weight = 1.25;
