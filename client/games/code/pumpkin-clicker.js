@@ -152,7 +152,7 @@ const buildings = [
   {
     id: "vault",
     name: "Vault",
-    cost: 60,
+    cost: 66,
     desc: "50 base storage; scales per level",
     kind: "vault"
   }
