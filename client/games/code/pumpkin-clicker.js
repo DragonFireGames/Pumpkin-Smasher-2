@@ -1315,7 +1315,7 @@ function drawShopItem(item, x, y, w, h) {
   } else if (item.type === "globalVault") {
     text("$" + formatNumber(globalVaultUpgradeCost(game.globalVaultLevel)), x + w - 5, y + h * 0.5);
   } else if (item.type === "sell") {
-    text("$" + formatNumber(Math.floor(game.pumpkins)), x + w - 5, y + h * 0.5);
+    text("$" + formatNumber(Math.floor(game.pumpkins) * candyMultiplier("sell")), x + w - 5, y + h * 0.5);
   }
 
   if (item.type === "worker") {
