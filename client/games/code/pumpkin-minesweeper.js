@@ -458,7 +458,7 @@ function drawResultOverlay() {
   fill(orange);
   textStyle(BOLD);
   textSize(10);
-  text("PRESS ENTER TO CONTINUE", width / 2, panelY + 113);
+  text("CLICK OR PRESS ENTER TO CONTINUE", width / 2, panelY + 113);
   textStyle(NORMAL);
 }
 
@@ -490,6 +490,10 @@ function handleGameKeyDown(event) {
 }
 
 function mousePressed(event) {
+  if (gameState === "gameover" || gameState === "victory") {
+    gameState = "title";
+    return false;
+  }
   if (gameState === "title") {
     for (let i = 0; i < difficulties.length; i++) {
       const x = 52;
