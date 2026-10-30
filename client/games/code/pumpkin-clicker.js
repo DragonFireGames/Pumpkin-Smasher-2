@@ -1234,9 +1234,10 @@ function drawShopItem(item, x, y, w, h) {
   } else if (item.type === "buyCandy") {
     subtitle = "ONE-HOUR RANDOM BONUS";
   } else if (item.type === "globalVault") {
-    subtitle = "LEVEL " + (game.globalVaultLevel + 1) + " • " + formatNumber(baseStorageCapacity()) + " CAPACITY";
+    subtitle = "LVL " + (game.globalVaultLevel + 1) + " • " + formatNumber(baseStorageCapacity()) + " CAP";
   }
 
+  if (item.type === "globalVault") textSize(Math.max(6, Math.min(8, w * 0.065)));
   text(subtitle, textX, y + h * 0.43, textW, h * 0.29);
 
   if (item.type === "globalVault") {
