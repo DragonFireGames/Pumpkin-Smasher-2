@@ -519,7 +519,10 @@ function applyOfflineProgress(){
 }
 function formatNumber(v){
  v=Number(v)||0;if(Math.abs(v)<1000)return Math.floor(v).toLocaleString("en-US");
- const u=["K","M","B","T","Qa","Qi"];let i=-1;while(Math.abs(v)>=1000&&i<u.length-1){v/=1000;i++;}
+ const u=["K","M","B","T","Qa","Qi","Sx","Sp","Oc","No","Dc"];
+ let i=-1;
+ while(Math.abs(v)>=1000&&i<u.length-1){v/=1000;i++;}
+ if(Math.abs(v)>=1000)return (v/1000).toExponential(2).replace("e+","e");
  return (Math.abs(v)>=100?v.toFixed(0):Math.abs(v)>=10?v.toFixed(1):v.toFixed(2))+u[i];
 }
 function forEachUniqueBuilding(callback) {
