@@ -170,8 +170,8 @@ const candies = [
     id: "smarties",
     name: "Smarties",
     path: "/assets/candies/smarties.png",
-    desc: "Clicks harvest 3 pumpkins",
-    click: 3
+    desc: "3× pumpkin harvest per click",
+    pumpkinClickMultiplier: 3
   },
   {
     id: "peppermint",
@@ -1579,7 +1579,7 @@ function clickPumpkinYield(){
   const u=game.clickUpgrades||{power:0,bonus:0,cash:0},power=Math.max(0,Math.floor(Number(u.power)||0)),bonus=Math.max(0,Math.floor(Number(u.bonus)||0));
   const wizardBonus = game.workers.wizard * 0.18 * (1 + game.workers.debuffer * 0.08) * candyMultiplier("workers") * 0.1;
   const wizardMultiplier = 1 + wizardBonus;
-  return Math.max(1,Math.ceil((1+Math.pow(power,1.35))*Math.pow(1.08,bonus)*candyMultiplier("click")*wizardMultiplier));
+  return Math.max(1,Math.ceil((1+Math.pow(power,1.35))*Math.pow(1.08,bonus)*candyMultiplier("pumpkinClickMultiplier")*wizardMultiplier));
   }
 function clickCashBonus(){
   const level=Math.max(0,Math.floor(Number((game.clickUpgrades||{}).cash)||0));
