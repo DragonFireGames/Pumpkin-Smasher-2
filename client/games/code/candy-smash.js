@@ -960,7 +960,8 @@ function getMatchSpecial(cells, preferredSpawnCell) {
     return { cell: center, special: "hot_tamale", extraStarCell: starCell };
   }
 
-  // A 4-by-3 crossing makes a star at the junction and a bomb beside it.
+  // A 4-by-3 crossing makes a star at the intersection and a bomb
+  // immediately along the shorter arm of the four-candy run.
   for (const cell of cells) {
     const candy = board[cell.row][cell.col];
     if (!candy) continue;
@@ -969,14 +970,37 @@ function getMatchSpecial(cells, preferredSpawnCell) {
     if (h >= 3 && v >= 3) {
       const creation = { cell, special: "star" };
       if (h >= 4 || v >= 4) {
-        const adjacent = cells.find(other =>
-          !(other.row === cell.row && other.col === cell.col) &&
-          Math.abs(other.row - cell.row) + Math.abs(other.col - cell.col) === 1 &&
-          board[other.row][other.col] &&
-          !board[other.row][other.col].special &&
-          board[other.row][other.col].type !== "hot_tamale"
-        );
-        if (adjacent) creation.extraBombCell = adjacent;
+        const horizontalLong = h >= 4 && (v < 4 || h >= v);
+        const dr = horizontalLong ? 0 : 1;
+        const dc = horizontalLong ? 1 : 0;
+        const countArm = sign => {
+          let count = 0;
+          let row = cell.row + dr * sign;
+          let col = cell.col + dc * sign;
+          while (row >= 0 && row < rows && col >= 0 && col < cols &&
+                 board[row][col] && board[row][col].type === candy.type &&
+                 matched.has(row + "," + col)) {
+            count++;
+            row += dr;
+            col += dc;
+          }
+          return count;
+        };
+        const negativeArm = countArm(-1);
+        const positiveArm = countArm(1);
+        // Put the bomb on the shorter tail of the four-run. In the example
+        // xxxx / ..x. / ..x., that is the cell immediately to the right
+        // of the intersection, producing xxsb.
+        const bombDirection = negativeArm < positiveArm ? -1 : 1;
+        const bombCell = {
+          row: cell.row + dr * bombDirection,
+          col: cell.col + dc * bombDirection
+        };
+        const bombCandy = board[bombCell.row] && board[bombCell.row][bombCell.col];
+        if (bombCandy && matched.has(bombCell.row + "," + bombCell.col) &&
+            !bombCandy.special && bombCandy.type !== "hot_tamale") {
+          creation.extraBombCell = bombCell;
+        }
       }
       return creation;
     }
