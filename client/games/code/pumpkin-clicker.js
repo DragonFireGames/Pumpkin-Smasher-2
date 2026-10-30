@@ -2016,7 +2016,7 @@ function drawSprite(id,x,y,s,frames=8,fps=12){
   const img=images[id];
   if(img?.width){push();
     if(id==="brute")tint(255,145,145);
-    drawSpriteSheet(img,x,y,s,frames,Math.floor(frameCount/(60/fps))%frames);
+    drawSpriteSheet(img,x,y,s,frames,Math.floor(Date.now()/(1000/fps))%frames);
     pop();
     }else{noStroke();
     fill(id==="ghost"?"#b6cce0":id==="brute"?"#9d5b45":id==="wizard"?"#6a65bd":orange);
