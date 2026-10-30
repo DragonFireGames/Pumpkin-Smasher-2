@@ -270,6 +270,7 @@ function newGameState(prestige = 0) {
     candyPurchases: 0,
     autoSell: false,
     autoSellPurchased: false,
+    autoSellLevel: 0,
     autoSellProgressMs: 0,
     progress: 0,
     activeCandies: [],
@@ -366,6 +367,7 @@ function loadGame() {
     game.autoSellPurchased = typeof savedGame.autoSellPurchased === "boolean"
       ? savedGame.autoSellPurchased
       : !!savedGame.autoSell;
+    game.autoSellLevel = Math.max(0, Math.min(4, Math.floor(Number(savedGame.autoSellLevel) || (game.autoSellPurchased ? 1 : 0))));
 
     game.farmCols = Math.max(6, +game.farmCols || 6);
     game.farmRows = Math.max(4, +game.farmRows || 4);
@@ -434,7 +436,7 @@ function loadGame() {
       }
     });
   });
-  game.autoSellProgressMs = Math.max(0, Math.min(59999, Number(game.autoSellProgressMs) || 0));
+  game.autoSellProgressMs = Math.max(0, Math.min(autoSellInterval() - 1, Number(game.autoSellProgressMs) || 0));
 
   if (!savedGame || savedGame.storageVersion !== 2 || !Number.isFinite(Number(savedGame.baseStored))) {
     let remaining = Math.max(0, Number(game.pumpkins) || 0);
@@ -863,8 +865,8 @@ function updateGame() {
   if (activeAuto) {
     game.autoSellProgressMs = (Number(game.autoSellProgressMs) || 0) + dt * 1000;
 
-    while (game.autoSellProgressMs >= 60000) {
-      game.autoSellProgressMs -= 60000;
+    while (game.autoSellProgressMs >= autoSellInterval()) {
+      game.autoSellProgressMs -= autoSellInterval();
       syncStoredPumpkins();
 
       const sold = Math.floor(game.pumpkins);
@@ -1128,8 +1130,8 @@ function drawShopItem(item, x, y, w, h) {
   } else if (item.type === "build" && d.kind !== "upgrade") {
     itemCost = buildCost(d);
     hasCost = true;
-  } else if (item.type === "autosell" || (item.type === "build" && d.kind === "upgrade" && !game.autoSellPurchased)) {
-    itemCost = 650;
+  } else if (item.type === "autosell" || (item.type === "build" && d.kind === "upgrade" && game.autoSellLevel < 4)) {
+    itemCost = autoSellUpgradeCosts[game.autoSellLevel];
     hasCost = true;
   } else if (item.type === "buyCandy") {
     itemCost = candyPrice();
@@ -1216,15 +1218,10 @@ function drawShopItem(item, x, y, w, h) {
   if (item.type === "worker") {
     subtitle = d.desc;
   } else if (isBuildItem && d.kind === "upgrade") {
-    if (!game.autoSellPurchased) {
-      subtitle = "BUY AUTO-SELL";
-    } else if (!game.autoSell) {
-      subtitle = "OWNED • OFF";
-    } else {
-      subtitle = userIsActive()
-        ? "SELL IN " + Math.ceil((60000 - (Number(game.autoSellProgressMs) || 0)) / 1000) + "s"
-        : "AUTO-SELL PAUSED";
-    }
+    const interval = autoSellInterval() / 1000;
+    subtitle = !game.autoSellPurchased ? "BUY AUTO-SELL"
+      : game.autoSell ? (userIsActive() ? "SELL IN " + Math.ceil((interval * 1000 - (Number(game.autoSellProgressMs) || 0)) / 1000) + "s • " + interval + "s TIER" : "AUTO-SELL PAUSED • " + interval + "s")
+        : "OFF • " + interval + "s TIER";
   } else if (item.type === "delete" && selected) {
     subtitle = "SELECT A TILE";
   } else if (isBuildItem && selected) {
@@ -1256,7 +1253,7 @@ function drawShopItem(item, x, y, w, h) {
   }
 
   if (item.type === "autosell" && game.autoSellPurchased && game.autoSell) {
-    const progress = constrain((Number(game.autoSellProgressMs) || 0) / 60000, 0, 1);
+    const progress = constrain((Number(game.autoSellProgressMs) || 0) / autoSellInterval(), 0, 1);
     const barX = x + 4;
     const barY = y + h - 5;
     const barW = w - 8;
@@ -1282,7 +1279,7 @@ function drawShopItem(item, x, y, w, h) {
     text("$" + formatNumber(workerCost(d.id)), x + w - 5, y + h * 0.5);
   } else if (isBuildItem) {
     text(d.kind === "upgrade"
-      ? game.autoSellPurchased ? (game.autoSell ? "ON" : "OFF") : "$" + formatNumber(d.cost)
+      ? game.autoSellLevel >= 4 ? (game.autoSell ? "MAX • ON" : "MAX • OFF") : "$" + formatNumber(autoSellUpgradeCosts[game.autoSellLevel])
       : "$" + formatNumber(buildCost(d)), x + w - 5, y + h * 0.5);
   } else if (item.type === "daily") {
     text(dailyClaimed ? "DONE" : "OPEN", x + w - 5, y + h * 0.5);
@@ -1301,7 +1298,8 @@ function drawShopItem(item, x, y, w, h) {
   if (isBuildItem) {
     addTarget(x, y, w, h, () => {
       if (d.kind === "upgrade") {
-        toggleAutoSell();
+        if (isShiftClick()) toggleAutoSell();
+        else upgradeAutoSell();
         return;
       }
 
@@ -2481,22 +2479,43 @@ function buyWorker(id,quantity=1){
     }showToast(w.name+" hired "+bought+" for $"+formatNumber(total));
   saveGame();
   }
-function toggleAutoSell(){
-  if(!game.autoSellPurchased){if(game.cash<650){showToast("Auto-Sell costs $650");
-      return;
-      }game.cash-=650;
-    game.autoSellPurchased=true;
-    game.autoSell=true;
-    game.autoSellProgressMs=0;
-    selectedBuild=null;
-    showToast("Auto-Sell purchased and enabled — sells every minute of active play");
-    saveGame();
+const autoSellUpgradeCosts = [650, 250000, 330000000, 500000000000];
+const autoSellIntervals = [60000, 30000, 10000, 5000];
+function autoSellInterval() {
+  return autoSellIntervals[Math.max(0, Math.min(4, game.autoSellLevel || 0) - 1)] || 60000;
+}
+function upgradeAutoSell() {
+  const level = Math.max(0, Math.min(4, Math.floor(Number(game.autoSellLevel) || 0)));
+  if (level >= 4) {
+    showToast("Auto-Sell is fully upgraded");
     return;
-    }game.autoSell=!game.autoSell;
-  game.autoSellProgressMs=0;
-  showToast(game.autoSell?"Auto-Sell activated":"Auto-Sell paused");
-  saveGame();
   }
+
+  const cost = autoSellUpgradeCosts[level];
+  if (game.cash < cost) {
+    showToast("Auto-Sell upgrade costs $" + formatNumber(cost));
+    return;
+  }
+
+  game.cash -= cost;
+  game.autoSellLevel = level + 1;
+  game.autoSellPurchased = true;
+  game.autoSell = true;
+  game.autoSellProgressMs = 0;
+  showToast("Auto-Sell upgraded: every " + autoSellInterval() / 1000 + " seconds");
+  saveGame();
+}
+function toggleAutoSell() {
+  if (!game.autoSellPurchased) {
+    upgradeAutoSell();
+    return;
+  }
+
+  game.autoSell = !game.autoSell;
+  game.autoSellProgressMs = 0;
+  showToast(game.autoSell ? "Auto-Sell activated" : "Auto-Sell paused");
+  saveGame();
+}
 function clickPumpkin() {
   pumpkinPressedAt = millis();
   const lucky = Math.random() < 0.001;
@@ -2713,7 +2732,7 @@ function getItemHoverInfo(it){
   if(d.kind==="generator")return {id:"build:"+d.id,title:d.name,kind:"build",summary:"Produces "+d.desc+".",rules:["Next cost: $"+formatNumber(buildCost(d))+". Each owned "+d.name+" or higher-tier generator increases this tier’s base-price component by "+generators[d.tier].growth.toFixed(2)+"×. Removing a generator lowers relevant prices. Choose this, then click an empty farm tile.","Click an existing generator to upgrade it for the difference between this tier’s price and the current tier’s price.","Use the highlighted MERGE buttons to combine matching basic generators: 4 in a 2×2 square for a Mega, 9 in a 3×3 square for an Ultra, or 25 in a 5×5 square for a Hyper. Existing merged generators cannot be merged again."]};
   if(d.kind==="multiplier")return {id:"build:"+d.id,title:"Multiplier",kind:"build",summary:"Boosts adjacent generators; neighboring multipliers amplify one another.",rules:["Next cost: $"+formatNumber(buildCost(d))+". Each multiplier costs 35% more per multiplier currently placed, and removing one lowers the next price.","Only the four orthogonally adjacent tiles count; diagonals do not.","Each neighboring multiplier boosts the other multiplier’s strength by 1.6×."]};
   if(d.kind==="vault")return {id:"build:"+d.id,title:"Vault",kind:"build",summary:"Dedicated storage grows nonlinearly with each level.",rules:["Next cost: $"+formatNumber(buildCost(d))+". Each vault costs 15% more per vault currently placed, and removing one lowers the next price.","Its storage zone is a 3×3 area centered on the vault.","Generators in overlapping vault zones fill vaults top-to-bottom, then left-to-right, and finally base storage.","Click a placed vault to upgrade it; capacity grows by 1.5× per level; upgrade prices rise with each level.","Monster and Brute workers increase the base storage capacity, which starts at 50."]};
-  return {id:"build:"+d.id,title:d.name,kind:"build",summary:"Automatically sells generated pumpkins for cash.",rules:["One-time purchase: $650.","After purchase, click the Auto-Sell card in Misc to switch it on or off without paying again.","Auto-Sell empties stored pumpkins every 60 seconds of active play. Its on/off setting is saved, but prestige resets the purchase. While inactive, production accumulates as pumpkins instead of cash."]};
+  return {id:"build:"+d.id,title:d.name,kind:"build",summary:"Automatically sells stored pumpkins for cash.",rules:["Upgrade tiers cost $650, $250K, $330M and $500B.","Each tier reduces the sale interval: 60s, 30s, 10s and 5s.","Click to buy the next tier. Shift-click to enable or disable Auto-Sell without changing tiers.","Sales happen only during active play. While disabled, production accumulates as pumpkins."]};
  }
  if(it.type==="daily")return {id:"daily-candy",title:"Daily Candy",kind:"candy",summary:"Claim a free random candy once per local day.",rules:["Opens with a shake and pop animation.","Also grants a cash reward and up to 10 pumpkins.","The candy bonus lasts one hour.","A new claim becomes available when the local date changes."]};
  if(it.type==="buyCandy")return {id:"buy-candy",title:"Buy Random Candy",kind:"candy",summary:"Spend $"+candyPriceLabel()+" for a random one-hour bonus.",rules:["Each purchase reveals a random candy.","The effect starts after the reveal animation.","Different candies can be active together.","Getting the same candy again refreshes its timer."]};
