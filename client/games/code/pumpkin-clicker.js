@@ -2507,9 +2507,9 @@ function clickPumpkin(){
     return;
     }game.totalClicks++;
   game.totalHarvested++;
-  if(game.autoSell){const earned=(1+clickCashBonus()*cashMultiplier())*(hasCandy("chocolate")?2:1);
+  if(game.autoSell){const chocolateMultiplier=hasCandy("chocolate")?2:1,harvested=clickPumpkinYield()*chocolateMultiplier,cashBonus=clickCashBonus()*cashMultiplier()*chocolateMultiplier,earned=harvested*candyMultiplier("sell")+cashBonus;
     game.cash+=earned;
-    showToast("+$"+earned);
+    showToast("+$"+formatNumber(earned));
     }else{const n=clickPumpkinYield()*(hasCandy("chocolate")?2:1);
     const added=depositInStorage(n);
     showToast("+"+added+" pumpkins");
