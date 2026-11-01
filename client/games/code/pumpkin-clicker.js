@@ -1979,20 +1979,37 @@ function drawGridEffectPreview(L){
    noStroke();
    });
 
- // Mark every inactive multiplier in red while the multiplier preview is visible.
- // This makes disconnected tiles obvious even when they are outside the hovered cluster.
- for(let r=0;r<game.farmRows;r++)for(let c=0;c<game.farmCols;c++){
-   const o=game.farm[r]&&game.farm[r][c];
-   if(!o||o.kind!=="multiplier"||multiplierIsActive(o))continue;
-   const x=L.gridX+c*(L.tile+L.gap),y=L.gridTop+r*(L.tile+L.gap)-gridScroll;
-   if(y+L.tile<L.gridTop||y>L.gridTop+L.view)continue;
-   noStroke();
-   fill(255,35,35,105);
-   rect(x,y,L.tile,L.tile);
-   stroke("#ff3434");
-   strokeWeight(Math.max(2,L.tile*.075));
-   line(x+L.tile*.2,y+L.tile*.2,x+L.tile*.8,y+L.tile*.8);
-   line(x+L.tile*.8,y+L.tile*.2,x+L.tile*.2,y+L.tile*.8);
+ // Only flag inactive multipliers that touch the specific active network
+ // currently being hovered. Vault previews and unrelated networks stay clean.
+ if(hoveredMultiplier&&multiplierIsActive(hovered)){
+   const dirs=[[-1,0],[1,0],[0,-1],[0,1]],queue=[[ar,ac]],network=new Set(),candidates=new Set();
+   while(queue.length){
+     const [r,c]=queue.pop(),key=r+","+c;
+     if(network.has(key)||r<0||c<0||r>=game.farmRows||c>=game.farmCols)continue;
+     const o=game.farm[r]&&game.farm[r][c];
+     if(!o||o.kind!=="multiplier"||!multiplierIsActive(o))continue;
+     network.add(key);
+     dirs.forEach(([dr,dc])=>{
+       const nr=r+dr,nc=c+dc;
+       if(nr<0||nc<0||nr>=game.farmRows||nc>=game.farmCols)return;
+       const neighbor=game.farm[nr]&&game.farm[nr][nc];
+       if(neighbor&&neighbor.kind==="multiplier"){
+         if(multiplierIsActive(neighbor))queue.push([nr,nc]);
+         else candidates.add(nr+","+nc);
+       }
+     });
+   }
+   candidates.forEach(key=>{
+     const [r,c]=key.split(",").map(Number),x=L.gridX+c*(L.tile+L.gap),y=L.gridTop+r*(L.tile+L.gap)-gridScroll;
+     if(y+L.tile<L.gridTop||y>L.gridTop+L.view)return;
+     noStroke();
+     fill(255,35,35,105);
+     rect(x,y,L.tile,L.tile);
+     stroke("#ff3434");
+     strokeWeight(Math.max(2,L.tile*.075));
+     line(x+L.tile*.2,y+L.tile*.2,x+L.tile*.8,y+L.tile*.8);
+     line(x+L.tile*.8,y+L.tile*.2,x+L.tile*.2,y+L.tile*.8);
+   });
  }
 }
 function drawSpriteSheet(img,x,y,size,frames,frame=0){
