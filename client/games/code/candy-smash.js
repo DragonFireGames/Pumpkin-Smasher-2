@@ -390,7 +390,8 @@ function getMostCommonZapType() {
 function randomCandyId() {
   const candidates = candyTypes.filter(type =>
     type.id !== "pumpkin" &&
-    (type.id !== "peppermint" || currentMode.id === "fast")
+    (type.id !== "peppermint" || currentMode.id === "fast") &&
+    (type.id !== "hot_tamale" || currentMode.id !== "classic")
   );
   let totalWeight = 0;
   const weighted = candidates.map(type => {
@@ -455,7 +456,7 @@ function applyNaturalSpecial(candy) {
   const candyType = candyTypes.find(type => type.id === candy.type);
   // Hot Tamales and Peppermints already have their own behavior and cannot roll
   // a second special effect.
-  if (!candyType || candyType.special) return candy;
+  if (!candyType || candyType.special || currentMode.id === "classic") return candy;
 
   const chance = currentMode.id === "fast"
     ? frenzyNaturalSpecialChance
