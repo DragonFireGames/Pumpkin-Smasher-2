@@ -1926,7 +1926,7 @@ function getGridCell(L){
  return {r,c};
 }
 function multiplierBlobEdgeCells(startRow,startCol){
- const key=(r,c)=>r+","+c,isMult=o=>!!o&&(o.kind==="multiplier"),queue=[[startRow,startCol]],cluster=new Set(),edge=new Map(),dirs=[[-1,0],[1,0],[0,-1],[0,1]];
+ const key=(r,c)=>r+","+c,isMult=o=>!!o&&(o.kind==="multiplier")&&multiplierIsActive(o),queue=[[startRow,startCol]],cluster=new Set(),edge=new Map(),dirs=[[-1,0],[1,0],[0,-1],[0,1]];
  while(queue.length){const [r,c]=queue.pop(),k=key(r,c);
    if(cluster.has(k)||r<0||c<0||r>=game.farmRows||c>=game.farmCols||!isMult(game.farm[r]&&game.farm[r][c]))continue;
    cluster.add(k);
@@ -1959,7 +1959,7 @@ function drawGridEffectPreview(L){
  if(!kind)return;
  const isMultiplier=kind==="multiplier",border=isMultiplier?"#c58aff":"#54e8cf",cells=[];
  if(isMultiplier){if(hoveredMultiplier)cells.push(...multiplierBlobEdgeCells(ar,ac));
-   else [[-1,0],[1,0],[0,-1],[0,1]].forEach(([dr,dc])=>{const r=ar+dr,c=ac+dc;
+   else [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]].forEach(([dr,dc])=>{const r=ar+dr,c=ac+dc;
      if(r>=0&&r<game.farmRows&&c>=0&&c<game.farmCols){const o=game.farm[r]&&game.farm[r][c];
        if(!o||(o.kind!=="multiplier"))cells.push({r,c,center:false});
        }});
@@ -2117,7 +2117,7 @@ function handleTileClick(row, col) {
   }
 
   if (!selectedBuild && building && (building.kind === "multiplier")) {
-    showToast("Multipliers boost only directly adjacent generators");
+    showToast("Multipliers only count beside a generator or vault; diagonals count too");
     return;
   }
 
