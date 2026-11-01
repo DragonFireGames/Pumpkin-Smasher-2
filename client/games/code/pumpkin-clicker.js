@@ -760,26 +760,52 @@ function advanceGenerator(building, amount) {
   building.clogged = !generatorCanStore(building);
 }
 
+function getMultiplierConnections(multiplier) {
+  const connections = new Set();
+
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      if (dr === 0 && dc === 0) continue;
+      const row = multiplier.row + dr;
+      const col = multiplier.col + dc;
+      if (row < 0 || col < 0 || row >= game.farmRows || col >= game.farmCols) continue;
+
+      const neighbor = game.farm[row] && game.farm[row][col];
+      if (neighbor && (neighbor.kind === "generator" || neighbor.kind === "vault")) {
+        connections.add(neighbor);
+      }
+    }
+  }
+
+  return Array.from(connections);
+}
+
+function multiplierIsActive(multiplier) {
+  return getMultiplierConnections(multiplier).length > 0;
+}
+
 function generatorMultiplier(building) {
   const adjacentMultipliers = new Set();
   const visitedMultipliers = new Set();
   const size = generatorSize(building);
   const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
 
-  for (let i = 0; i < size; i++) {
-    const edgeTiles = [
-      [building.row - 1, building.col + i],
-      [building.row + size, building.col + i],
-      [building.row + i, building.col - 1],
-      [building.row + i, building.col + size]
-    ];
+  // A generator footprint can be any size; check all eight neighbors of every
+  // footprint cell so diagonal multiplier placement works for merged generators too.
+  for (const [baseRow, baseCol] of generatorFootprint(building)) {
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        if (dr === 0 && dc === 0) continue;
+        const row = baseRow + dr;
+        const col = baseCol + dc;
+        if (row < 0 || col < 0 || row >= game.farmRows || col >= game.farmCols) continue;
 
-    edgeTiles.forEach(([row, col]) => {
-      if (row < 0 || col < 0 || row >= game.farmRows || col >= game.farmCols) return;
-
-      const neighbor = game.farm[row] && game.farm[row][col];
-      if (neighbor && neighbor.kind === "multiplier") adjacentMultipliers.add(neighbor);
-    });
+        const neighbor = game.farm[row] && game.farm[row][col];
+        if (neighbor && neighbor.kind === "multiplier" && multiplierIsActive(neighbor)) {
+          adjacentMultipliers.add(neighbor);
+        }
+      }
+    }
   }
 
   let result = 1;
@@ -800,7 +826,8 @@ function generatorMultiplier(building) {
         if (row < 0 || col < 0 || row >= game.farmRows || col >= game.farmCols) return;
 
         const neighbor = game.farm[row] && game.farm[row][col];
-        if (!neighbor || neighbor.kind !== "multiplier" || visitedMultipliers.has(neighbor)) return;
+        if (!neighbor || neighbor.kind !== "multiplier" || visitedMultipliers.has(neighbor)
+          || !multiplierIsActive(neighbor)) return;
 
         visitedMultipliers.add(neighbor);
         queue.push(neighbor);
@@ -2767,7 +2794,7 @@ function getItemHoverInfo(it){
  }
  if(it.type==="build"||it.type==="autosell"){
   if(d.kind==="generator")return {id:"build:"+d.id,title:d.name,kind:"build",summary:"Produces "+d.desc+".",rules:["Next cost: $"+formatNumber(buildCost(d))+". Each owned "+d.name+" or higher-tier generator increases this tier’s base-price component by "+generators[d.tier].growth.toFixed(2)+"×. Removing a generator lowers relevant prices. Choose this, then click an empty farm tile.","Click an existing generator to upgrade it for the difference between this tier’s price and the current tier’s price.","Use the highlighted MERGE buttons to combine matching basic generators: 4 in a 2×2 square for a Mega, 9 in a 3×3 square for an Ultra, or 25 in a 5×5 square for a Hyper. Existing merged generators cannot be merged again."]};
-  if(d.kind==="multiplier")return {id:"build:"+d.id,title:"Multiplier",kind:"build",summary:"Boosts adjacent generators; neighboring multipliers amplify one another.",rules:["Next cost: $"+formatNumber(buildCost(d))+". Each multiplier costs 35% more per multiplier currently placed, and removing one lowers the next price.","Only the four orthogonally adjacent tiles count; diagonals do not.","Connected multipliers form a network. Every multiplier in a network gains +0.04× per multiplier in that network, added to its base 1.4× factor."]};
+  if(d.kind==="multiplier")return {id:"build:"+d.id,title:"Multiplier",kind:"build",summary:"Boosts generators through a connected network, but only while touching a generator or vault.",rules:["Next cost: $"+formatNumber(buildCost(d))+". Each multiplier costs 35% more per multiplier currently placed, and removing one lowers the next price.","A multiplier must be directly or diagonally adjacent to a generator or vault to count.","Inactive multipliers contribute nothing and do not strengthen a network.","Connected active multipliers gain +0.04× per multiplier in their network, added to the base 1.4× factor."]};
   if(d.kind==="vault")return {id:"build:"+d.id,title:"Vault",kind:"build",summary:"Dedicated storage grows nonlinearly with each level.",rules:["Next cost: $"+formatNumber(buildCost(d))+". Each vault costs 15% more per vault currently placed, and removing one lowers the next price.","Its storage zone is a 3×3 area centered on the vault.","Generators in overlapping vault zones fill vaults top-to-bottom, then left-to-right, and finally base storage.","Click a placed vault to upgrade it; capacity grows by 1.5× per level; upgrade prices rise with each level.","Monster and Brute workers increase the base storage capacity, which starts at 50."]};
   return {id:"build:"+d.id,title:d.name,kind:"build",summary:"Automatically sells stored pumpkins for cash.",rules:["Upgrade tiers cost $650, $250K, $330M and $500B.","Each tier reduces the sale interval: 60s, 30s, 10s and 5s.","Click to buy the next tier. Shift-click to enable or disable Auto-Sell without changing tiers.","Sales happen only during active play. While disabled, production accumulates as pumpkins."]};
  }
@@ -2788,7 +2815,14 @@ function getFarmHoverInfo(o,r,c){
   const g=generators[o.tier],rate=generatorRate(o),vaults=generatorDestinations(o),dest=vaults.map(v=>"Vault ("+(v.row+1)+","+(v.col+1)+")").concat(["Base storage"]),size=generatorSize(o);
   return {id:"tile-object:"+o.row+":"+o.col,title:(o.hyper?"Hyper ":o.ultra?"Ultra ":o.mega?"Mega ":"")+g.name,kind:"tile",summary:"Output: "+formatNumber(rate)+" pumpkins/sec."+(o.clogged?" STALLED — storage is full.":""),rules:[size>1?"Occupies a "+size+"×"+size+" area and can be fragmented back into individual generators.":"Occupies one tile and grows a pumpkin on its generator pot.","Storage priority: "+dest.join(" → ")+".","Vault zones are 3×3; overlapping vaults are ordered top-to-bottom, then left-to-right.","When every assigned vault and base storage are full, this generator stalls at full growth.","Use the highlighted MERGE buttons to combine matching basic generators: 4 in a 2×2 square for a Mega, 9 in a 3×3 square for an Ultra, or 25 in a 5×5 square for a Hyper. Existing merged generators cannot be merged again."]};
  }
- if(o.kind==="multiplier")return {id:"tile-object:"+o.row+":"+o.col,title:"Multiplier",kind:"tile",summary:"Boosts directly adjacent pumpkin generators. Connected multipliers strengthen one another.",rules:["Only up, down, left and right adjacent tiles are affected.","Diagonal generators receive no bonus.","Each adjacent multiplier contributes its network-adjusted factor. Connected networks increase every member multiplier’s factor by +0.04× per multiplier in the network."]};
+ if(o.kind==="multiplier"){
+  const connections=getMultiplierConnections(o);
+  const active=connections.length>0;
+  const connectedTo=connections.map(target=>(target.kind==="generator"?(target.hyper?"Hyper ":target.ultra?"Ultra ":target.mega?"Mega ":"")+generators[target.tier].name:"Vault")+" ("+(target.row+1)+","+(target.col+1)+")");
+  return {id:"tile-object:"+o.row+":"+o.col,title:"Multiplier",kind:"tile",
+    summary:active?"COUNTED — connected to "+connectedTo.join(", ")+".":"NOT COUNTED — no generator or vault is adjacent.",
+    rules:active?["This multiplier is active because it touches a generator or vault.","All eight neighboring tiles count, including diagonals.","Connected active multipliers strengthen one another; each adds +0.04× to the network factor."]:["This multiplier currently contributes nothing to production.","Place it directly beside a generator or vault; diagonal adjacency also counts.","Inactive multipliers do not strengthen a network or increase its multiplier bonus."]};
+ }
  if(o.kind==="vault"){const level=Math.max(0,o.level||0),cost=vaultUpgradeCost(level),stored=Number(o.stored)||0,cap=vaultCapacity(o);
    return {id:"tile-object:"+o.row+":"+o.col,title:"Vault • Level "+(level+1),kind:"tile",summary:formatNumber(stored)+" / "+formatNumber(cap)+" pumpkins stored.",rules:["Click the vault to upgrade it for $"+formatNumber(cost)+".","Capacity follows the storage curve: 50, 125, 250, 500, 1,000, 3,500, then 7.5M through 500M at higher levels.","Its zone is a 3×3 area centered on this vault.","Generators in multiple zones fill vaults in row-major order, then base storage.","Base storage capacity (50 by default) is increased by Monster and Brute workers."]};
    }
