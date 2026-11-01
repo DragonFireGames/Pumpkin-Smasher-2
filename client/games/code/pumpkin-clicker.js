@@ -1978,6 +1978,22 @@ function drawGridEffectPreview(L){
    rect(x+1,y+1,L.tile-2,L.tile-2);
    noStroke();
    });
+
+ // Mark every inactive multiplier in red while the multiplier preview is visible.
+ // This makes disconnected tiles obvious even when they are outside the hovered cluster.
+ for(let r=0;r<game.farmRows;r++)for(let c=0;c<game.farmCols;c++){
+   const o=game.farm[r]&&game.farm[r][c];
+   if(!o||o.kind!=="multiplier"||multiplierIsActive(o))continue;
+   const x=L.gridX+c*(L.tile+L.gap),y=L.gridTop+r*(L.tile+L.gap)-gridScroll;
+   if(y+L.tile<L.gridTop||y>L.gridTop+L.view)continue;
+   noStroke();
+   fill(255,35,35,105);
+   rect(x,y,L.tile,L.tile);
+   stroke("#ff3434");
+   strokeWeight(Math.max(2,L.tile*.075));
+   line(x+L.tile*.2,y+L.tile*.2,x+L.tile*.8,y+L.tile*.8);
+   line(x+L.tile*.8,y+L.tile*.2,x+L.tile*.2,y+L.tile*.8);
+ }
 }
 function drawSpriteSheet(img,x,y,size,frames,frame=0){
   if(!img||!img.width||!img.height)return;
