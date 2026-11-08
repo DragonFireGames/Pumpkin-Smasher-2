@@ -43,7 +43,7 @@ self.addEventListener("fetch", event => {
     return;
   }
 
-  if (url.pathname.startsWith("/client/") || url.pathname.startsWith("/assets/") || url.pathname === "/manifest.webmanifest") {
+  if (url.pathname.startsWith("/client/") || url.pathname.startsWith("/assets/") || url.pathname.startsWith("/icons/") || url.pathname === "/manifest.webmanifest") {
     event.respondWith(
       caches.open(CACHE_NAME).then(async cache => {
         const cached = await cache.match(request);
