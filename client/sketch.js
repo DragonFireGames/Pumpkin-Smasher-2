@@ -1844,6 +1844,15 @@ function draw() {
 
   var mobileExitBtn = document.getElementById("mobileExitBtn");
   mobileExitBtn.style.display = isMobile && (display == "game" || display == "pmgame" || display == "lobby") ? "block" : "none";
+  var mobileLobbyControls = document.getElementById("mobileLobbyControls");
+  var mobileArcadeBtn = document.getElementById("mobileArcadeBtn");
+  var nearArcade = display == "lobby" && (player.x - 100) ** 2 + (player.y + 100) ** 2 < 1600;
+  mobileLobbyControls.style.display = isMobile && display == "lobby" && subdisplay == "host" ? "flex" : "none";
+  mobileArcadeBtn.style.display = isMobile && nearArcade ? "block" : "none";
+  if (isMobile && display == "lobby" && subdisplay == "host") {
+    document.getElementById("mobileStartCount").textContent = "Players: " + roomSettings.start_count;
+    document.getElementById("mobilePublicityBtn").textContent = roomSettings.hidden ? "Make Public" : "Make Private";
+  }
   mobileExitBtn.classList.toggle("pumpkin-master", display == "pmgame");
   var mobileRotatePrompt = document.getElementById("mobileRotatePrompt");
   mobileRotatePrompt.style.display = isMobile && windowWidth < windowHeight && (display == "game" || display == "pmgame" || display == "lobby") ? "flex" : "none";
@@ -3814,6 +3823,19 @@ Keybinds.onpress("openArcade",function(){
   if ((player.x-arcadeX)**2+(player.y-arcadeY)**2 >= 1600) return;
   openArcade();
 });
+function changeMobileStartCount(change) {
+  if (!isMobile || display != "lobby" || subdisplay != "host") return;
+  var nextCount = roomSettings.start_count + change;
+  if (change < 0 && nextCount < max(amount, 2)) return;
+  if (change > 0 && nextCount > 12) return;
+  roomSettings.start_count = nextCount;
+  socket.emit("updateSettings", room, roomSettings);
+}
+function toggleMobilePublicity() {
+  if (!isMobile || display != "lobby" || subdisplay != "host") return;
+  roomSettings.hidden = !roomSettings.hidden;
+  socket.emit("updateSettings", room, roomSettings);
+}
 Keybinds.onpress("togglePublicity",function(){
   if (display != "lobby" || subdisplay != "host") return;
   roomSettings.hidden = !roomSettings.hidden;
@@ -4213,6 +4235,14 @@ function mobilePointerDown(event) {
   if (!isMobile || (display != "game" && display != "pmgame" && display != "lobby")) return;
   if (event.pointerType === "touch") event.preventDefault();
   const pos = mobilePointerPosition(event);
+  if (display == "lobby") {
+    const arcadeWorldX = pos.x + player.x;
+    const arcadeWorldY = pos.y + player.y;
+    if (arcadeWorldX >= 55 && arcadeWorldX <= 145 && arcadeWorldY >= -145 && arcadeWorldY <= -55) {
+      openArcade();
+      return;
+    }
+  }
   if (display == "pmgame") {
     mobileCameraPointers.set(event.pointerId, pos);
     if (mobileCameraPointers.size == 2) {
