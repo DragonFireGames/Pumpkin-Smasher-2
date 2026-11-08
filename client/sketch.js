@@ -1844,6 +1844,7 @@ function draw() {
 
   var mobileExitBtn = document.getElementById("mobileExitBtn");
   mobileExitBtn.style.display = isMobile && (display == "game" || display == "pmgame" || display == "lobby") ? "block" : "none";
+  document.getElementById("mobileInstructionsExitBtn").style.display = isMobile && display == "instructions" ? "block" : "none";
   var mobileLobbyControls = document.getElementById("mobileLobbyControls");
   var mobileArcadeBtn = document.getElementById("mobileArcadeBtn");
   var nearArcade = display == "lobby" && (player.x - 100) ** 2 + (player.y + 100) ** 2 < 1600;
@@ -2555,9 +2556,13 @@ viewDis.clickEnter = function() {
   }
 }
 // Tutorial
+function closeInstructions() {
+  if (display != "instructions") return;
+  setDisplay("home");
+}
 Displays.instructions = function() {
   if (keyIsDown(27)) {
-    setDisplay("home");
+    closeInstructions();
     return;
   }
 }
