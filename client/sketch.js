@@ -3355,7 +3355,7 @@ var keybindContent = [
       }
     ]
   },
-  /*{
+  {
     type: "category",
     header: "Mobile",
     content: [{
@@ -3370,20 +3370,20 @@ var keybindContent = [
           id: "mobileMode",
           value: "joystick",
           options: [
-            { 
-              name: "joystick", 
+            {
+              name: "joystick",
               content: []
             },
-            { 
-              name: "buttons", 
+            {
+              name: "buttons",
               content: []
             },
           ],
         }
-      ], // optional
-      falsecontent: [] // optional
+      ],
+      falsecontent: []
     }],
-  }*/
+  }
 ];
 var displayContent = [
   {
