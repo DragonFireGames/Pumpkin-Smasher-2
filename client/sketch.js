@@ -1822,6 +1822,7 @@ var display = "loading";
 var subdisplay = "assets";
 function draw() {
   //console.log(deltaTime);
+  if (width != windowWidth || height != windowHeight) windowResized();
   angleMode(DEGREES);
   noSmooth();
   background("#123904");
