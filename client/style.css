@@ -487,9 +487,27 @@ canvas {
   touch-action: manipulation;
 }
 #mobileExitBtn.pumpkin-master {
+  top: 12vmin;
   left: auto;
   right: max(2vmin, env(safe-area-inset-right));
 }
+#mobileTutorialBtn {
+  display: none;
+  position: fixed;
+  z-index: 10;
+  top: max(2vmin, env(safe-area-inset-top));
+  right: max(2vmin, env(safe-area-inset-right));
+  padding: 2vmin 3.5vmin;
+  border: 0.6vmin solid #ffa500;
+  background: #231709;
+  color: #ffa500;
+  font: inherit;
+  font-size: 4vmin;
+  font-weight: bold;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+#mobileTutorialBtn:active { background: #381e08; }
 #mobileInstructionsExitBtn {
   display: none;
   position: fixed;
