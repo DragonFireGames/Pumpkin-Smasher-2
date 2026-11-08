@@ -388,7 +388,7 @@ canvas {
 }
 #arcadeDis.open {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
 }
 #arcadeWindow {
@@ -400,8 +400,9 @@ canvas {
   gap: 1vmin;
   width: 96vmin;
   max-width: 96vmin;
-  max-height: 96vmin;
-  margin: auto;
+  max-height: none;
+  margin: 2vmin auto;
+  flex: 0 0 auto;
   overflow: visible;
   background: #0C2504;
   border: 0.8vmin solid #303030;
