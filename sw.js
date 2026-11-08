@@ -1,10 +1,11 @@
-const CACHE_NAME = "pumpkin-smasher-pwa-v1";
+const CACHE_NAME = "pumpkin-smasher-pwa-v2";
 const APP_SHELL = [
   "/",
   "/client/index.html",
   "/client/style.css",
   "/client/sketch.js",
   "/assets/pumpkins/objective.png",
+  "/icons/pumpkin-app.svg",
   "/manifest.webmanifest"
 ];
 
