@@ -2074,7 +2074,7 @@ Displays.game = function() {
 
     // Score & Level
     push();
-    translate(-wWidth / 2 + 8, -wHeight / 2 + 23 + (isMobile ? 80 : 0));
+    translate(-wWidth / 2 + 8, -wHeight / 2 + 23 + (isMobile ? 4 * 4 + 4 * 4 : 0));
     format(255, false, 1, 18, LEFT);
     text("Score: " + player.score, 0, 0);
     text("Level: " + player.level, 0, 23);
@@ -2202,7 +2202,7 @@ Displays.pmgame = function() {
 
     // Show Coins
     push();
-    translate(-wWidth / 2, -wHeight / 2 + (isMobile ? 80 : 0));
+    translate(-wWidth / 2, -wHeight / 2 + (isMobile ? 4 * 4 + 4 * 4 : 0));
     format("#231709", "#ffa500", 2);
     rect(10, 10, 100, 30);
     format("#ffa500", false, 1, 20, LEFT);
