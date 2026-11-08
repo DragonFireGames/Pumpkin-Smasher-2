@@ -485,3 +485,23 @@ canvas {
   #arcadeControls { gap: 0.6vmin; }
   #arcadeControls button { padding: 1.5vmin 0.5vmin; }
 }
+
+#mobileExitBtn {
+  display: none;
+  position: fixed;
+  z-index: 10;
+  top: max(10px, env(safe-area-inset-top));
+  left: max(10px, env(safe-area-inset-left));
+  padding: 8px 14px;
+  border: 2px solid #ffa500;
+  background: #231709;
+  color: #ffa500;
+  font: inherit;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+#mobileExitBtn:active {
+  background: #381e08;
+}
