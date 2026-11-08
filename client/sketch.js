@@ -2109,7 +2109,7 @@ Displays.game = function() {
         c++;
       }
       var pointsX = isMobile ? -55 : -wWidth / 2 - 5;
-      var pointsY = isMobile ? -wHeight / 2 + 8 : wHeight / 2 - 45;
+      var pointsY = isMobile ? -wHeight / 2 + 8 : wHeight / 2 - 305;
       format("#231709", "#ffa500", 2);
       rect(pointsX, pointsY, 110, 30);
       format("#ffa500", false, 1, 18, CENTER);
