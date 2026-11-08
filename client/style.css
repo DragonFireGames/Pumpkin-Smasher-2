@@ -502,6 +502,10 @@ canvas {
   cursor: pointer;
   touch-action: manipulation;
 }
+#mobileExitBtn.pumpkin-master {
+  left: auto;
+  right: max(10px, env(safe-area-inset-right));
+}
 #mobileExitBtn:active {
   background: #381e08;
 }
