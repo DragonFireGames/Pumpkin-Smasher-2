@@ -948,6 +948,7 @@ class TutorialRoom extends Room {
       "and pumpkin master, have fun!"
     ],Date.now(),false);
     this.freeplay = true;
+    this.socket.emit('freeplayEnabled');
     console.log("Tutorial Room("+this.id+") has finished and activated freeplay!")
   }
   update() {
@@ -2882,6 +2883,7 @@ io.sockets.on('connection', function (socket) {
       console.log("Tutorial Room("+room.id+") has activated freeplay!")
     }
     room.freeplay = true;
+    socket.emit('freeplayEnabled');
   });
 
   // Pumpkin Master actions
