@@ -2094,27 +2094,26 @@ Displays.game = function() {
     // Upgrades
     if (upgradeDisplay) {
       push();
-      translate(-wWidth / 2 - 5, wHeight / 2 - 75);
-      var overX = wMouseX > -wWidth / 2 && wMouseX < -wWidth / 2 + 105;
       var c = 0;
       for (var i in upgrades) {
-        var over = overX && wMouseY > wHeight / 2 - 75 - 65 * c && wMouseY < wHeight / 2 - 15 - 65 * c && player.upgradePts > 0;
+        var pos = upgradePosition(c);
+        var over = wMouseX >= pos.x && wMouseX <= pos.x + pos.width && wMouseY >= pos.y && wMouseY <= pos.y + 60 && player.upgradePts > 0;
         var color = over ? "#381e08" : "#231709";
         if (upgrades[i] >= upgradeMaxes[i]) color = "#2e2e2e";
         format(color, "#ffa500", 2);
-        rect(0, 0, 110, 60);
-        format("#ffa500", false, 1, 18, CENTER);
-        text(upgradeNames[i], 55, 20);
+        rect(pos.x, pos.y, pos.width, 60);
+        format("#ffa500", false, 1, isMobile ? 15 : 18, CENTER);
+        text(upgradeNames[i], pos.x + pos.width / 2, pos.y + 20);
         textSize(30);
-        text(upgrades[i], 55, 50);
-        translate(0, -65);
+        text(upgrades[i], pos.x + pos.width / 2, pos.y + 50);
         c++;
       }
-      translate(0, 30);
+      var pointsX = isMobile ? -55 : -wWidth / 2 - 5;
+      var pointsY = isMobile ? -wHeight / 2 + 8 : wHeight / 2 - 45;
       format("#231709", "#ffa500", 2);
-      rect(0, 0, 110, 30);
+      rect(pointsX, pointsY, 110, 30);
       format("#ffa500", false, 1, 18, CENTER);
-      text("Points: " + player.upgradePts, 55, 20);
+      text("Points: " + player.upgradePts, pointsX + 55, pointsY + 20);
       pop();
     }
   }
@@ -4028,26 +4027,7 @@ function mousePressed2() {
       return;
     }
   }
-  if (display == "game" && subdisplay == "") {
-    // Do Upgrades
-    var overX = wMouseX > -wWidth / 2 && wMouseX < -wWidth / 2 + 105;
-    var c = 0;
-    for (var i in upgrades) {
-      var over = overX && wMouseY > wHeight / 2 - 75 - 65 * c && wMouseY < wHeight / 2 - 15 - 65 * c && player.upgradePts > 0;
-      if (over && upgrades[i] < upgradeMaxes[i]) {
-        upgrades[i]++;
-        socket.emit('upgrade', i);
-        player.upgradePts--;
-        if (player.upgradePts == 0) {
-          setTimeout(() => {
-            upgradeDisplay = false;
-          }, 1000);
-        }
-        return;
-      }
-      c++;
-    }
-  }
+  if (buyUpgradeAt(wMouseX, wMouseY)) return;
   else if (display == "pmgame") {
     // Select Entities
     var t = { x: -wWidth / 2 + 35, y: wHeight / 2 - 35 };
@@ -4189,6 +4169,30 @@ function drawGUI() {
   //exit();
   //}
 }
+function upgradePosition(index) {
+  if (isMobile) return { x: -187.5 + index * 95, y: -wHeight / 2 + 45, width: 90 };
+  return { x: -wWidth / 2 - 5, y: wHeight / 2 - 75 - 65 * index, width: 110 };
+}
+function buyUpgradeAt(x, y) {
+  if (display != "game" || subdisplay != "" || !upgradeDisplay || player.upgradePts <= 0) return false;
+  var c = 0;
+  for (var i in upgrades) {
+    var pos = upgradePosition(c);
+    if (x >= pos.x && x <= pos.x + pos.width && y >= pos.y && y <= pos.y + 60 && upgrades[i] < upgradeMaxes[i]) {
+      upgrades[i]++;
+      socket.emit("upgrade", i);
+      player.upgradePts--;
+      if (player.upgradePts == 0) {
+        setTimeout(() => {
+          upgradeDisplay = false;
+        }, 1000);
+      }
+      return true;
+    }
+    c++;
+  }
+  return false;
+}
 function continueTutorial() {
   if (!tutorialMsg || Date.now() - tutorialDate <= 1000) return;
   tutorialDate = Date.now();
@@ -4213,6 +4217,10 @@ function mobilePointerDown(event) {
     return;
   }
   if (display == "pmgame") return;
+  if (buyUpgradeAt(pos.x, pos.y)) {
+    event.preventDefault();
+    return;
+  }
   const smashOver = display == "game" && subdisplay == "" &&
     sq(pos.x - (wWidth / 2 - 80)) + sq(pos.y - (wHeight / 2 - 80)) < 120 * 120;
   const joystickOver = sq(pos.x - (-wWidth / 2 + 80)) + sq(pos.y - (wHeight / 2 - 80)) < 120 * 120;
