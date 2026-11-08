@@ -3578,11 +3578,11 @@ function renderContentList(list, idMap, parent, insertAfter = null) {
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
       checkbox.checked = item.value;
-      if (item.onchange) checkbox.onchange = ()=>item.onchange(checkbox);
       checkbox.className = "checkbox";
 
       checkbox.addEventListener("change", () => {
         idMap[item.id].value = checkbox.checked;
+        if (item.onchange) item.onchange(checkbox);
         renderConditionalContent(item, idMap, wrapper);
       });
 
