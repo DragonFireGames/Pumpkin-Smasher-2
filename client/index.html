@@ -17,6 +17,14 @@
     <script src="client/lib/p5.touchgui.js"></script>
     <link rel="stylesheet" type="text/css" href="client/style.css">
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#123904">
+    <meta name="description" content="Smash pumpkins in this online multiplayer frenzy!">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Pumpkin Smasher">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/assets/pumpkins/objective.png">
   </head>
   <body>
     <main>
@@ -114,5 +122,12 @@
     </div>
     <embed src="https://pumpkin-smasher-discord-bot.onrender.com" style="visibility: hidden;">
     <script src="client/sketch.js"></script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("/sw.js").catch(error => console.error("Service worker registration failed:", error));
+        });
+      }
+    </script>
   </body>
 </html>
