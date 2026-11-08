@@ -506,6 +506,24 @@ canvas {
   left: auto;
   right: max(10px, env(safe-area-inset-right));
 }
+#mobileInstructionsExitBtn {
+  display: none;
+  position: fixed;
+  z-index: 20;
+  top: max(10px, env(safe-area-inset-top));
+  left: max(10px, env(safe-area-inset-left));
+  padding: 8px 14px;
+  border: 2px solid #ffa500;
+  background: #231709;
+  color: #ffa500;
+  font: inherit;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+#mobileInstructionsExitBtn:active { background: #381e08; }
+
 #mobileLobbyControls,
 #mobileArcadeBtn {
   display: none;
