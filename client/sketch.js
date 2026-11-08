@@ -1809,9 +1809,12 @@ function setup() {
   canvas_dom.addEventListener("lostpointercapture", mobilePointerEnd);
   window.addEventListener("blur", clearMobilePointers);
 
-  windowScale = min(windowWidth, windowHeight) / 400;
-  wWidth = windowWidth / windowScale;
-  wHeight = windowHeight / windowScale;
+  resizeGameCanvas();
+  window.addEventListener("orientationchange", function() {
+    requestAnimationFrame(function() {
+      requestAnimationFrame(resizeGameCanvas);
+    });
+  });
   userStartAudio();
 
   loadAssets();
@@ -2074,7 +2077,7 @@ Displays.game = function() {
 
     // Score & Level
     push();
-    translate(-wWidth / 2 + 8 + (isMobile ? 20 * 4 : 0), -wHeight / 2 + 23);
+    translate(-wWidth / 2 + 8 + (isMobile ? 19 * 4 - 1 : 0), -wHeight / 2 + 23);
     format(255, false, 1, 18, LEFT);
     text("Score: " + player.score, 0, 0);
     text("Level: " + player.level, 0, 23);
@@ -2202,7 +2205,7 @@ Displays.pmgame = function() {
 
     // Show Coins
     push();
-    translate(-wWidth / 2 + (isMobile ? 20 * 4 : 0), -wHeight / 2);
+    translate(-wWidth / 2 + (isMobile ? 19 * 4 - 1 : 0), -wHeight / 2);
     format("#231709", "#ffa500", 2);
     rect(10, 10, 100, 30);
     format("#ffa500", false, 1, 20, LEFT);
@@ -4132,11 +4135,19 @@ function applyScale(s) {
   user.cam = cam;
 }
 // Window
+function resizeGameCanvas() {
+  var viewportWidth = document.documentElement.clientWidth || window.innerWidth;
+  var viewportHeight = document.documentElement.clientHeight || window.innerHeight;
+  if (!viewportWidth || !viewportHeight) return;
+  windowWidth = viewportWidth;
+  windowHeight = viewportHeight;
+  if (width != viewportWidth || height != viewportHeight) resizeCanvas(viewportWidth, viewportHeight);
+  windowScale = min(viewportWidth, viewportHeight) / 400;
+  wWidth = viewportWidth / windowScale;
+  wHeight = viewportHeight / windowScale;
+}
 function windowResized() {
-  resizeCanvas(windowWidth, windowHeight);
-  windowScale = min(windowWidth, windowHeight) / 400;
-  wWidth = windowWidth / windowScale;
-  wHeight = windowHeight / windowScale;
+  resizeGameCanvas();
 }
 // Mobile GUI
 var mbGUI = {};
