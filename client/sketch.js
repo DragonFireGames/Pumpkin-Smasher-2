@@ -51,7 +51,8 @@ socket.on("disconnect", async () => {
 });
 //^^Connects to the socket.io server
 
-const isMobile = /*true;//*/ /Android|webOS|iPhone|iPad|iPod|Opera Mini/i.test(navigator.userAgent);
+const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|Opera Mini/i.test(navigator.userAgent);
+var isMobile = isMobileDevice;
 
 //
 //const DISCORD_LINK = "https://discord.gg/NqnXXy8mNz";
@@ -3363,6 +3364,7 @@ var keybindContent = [
       name: "Show Mobile Controls: ",
       id: "showMobileControls",
       value: false,
+      onchange: updateMobileMode,
       truecontent: [
         {
           type: "dropdown",
@@ -3468,12 +3470,20 @@ var miscContent = [
 var settingsIdMap = {};
 var selectedKeybind = null;
 
+function updateMobileMode() {
+  var wasMobile = isMobile;
+  isMobile = isMobileDevice || !!settingsIdMap.showMobileControls?.value;
+  if (isMobile && !wasMobile) loadGUI();
+  if (!isMobile && wasMobile) clearMobilePointers();
+}
+
 function setupSettings() {
   settingsIdMap = {};
   renderSettings(keybindContent,settingsIdMap,keybindDis.panel);
   renderSettings(displayContent,settingsIdMap,displayDis.panel); 
   renderSettings(miscContent,settingsIdMap,miscDis.panel);
   importSettings(user.settings||{},settingsIdMap);
+  updateMobileMode();
   Keybinds.loadKeybinds(settingsIdMap);
 }
 function mousePressed() {
@@ -4130,7 +4140,10 @@ function windowResized() {
 }
 // Mobile GUI
 var mbGUI = {};
+var mobileGuiLoaded = false;
 async function loadGUI() {
+  if (mobileGuiLoaded) return;
+  mobileGuiLoaded = true;
 
   mbGUI.joystick = {};
   mbGUI.joystick.tex = LoadImage("assets/mobile/joystick.png");
