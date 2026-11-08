@@ -1,0 +1,20 @@
+{
+  "id": "/",
+  "name": "Pumpkin Smasher 2",
+  "short_name": "Pumpkin Smasher",
+  "description": "Smash pumpkins in this online multiplayer frenzy!",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#123904",
+  "theme_color": "#123904",
+  "icons": [
+    {
+      "src": "/assets/pumpkins/objective.png",
+      "sizes": "210x210",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
