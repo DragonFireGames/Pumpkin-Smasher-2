@@ -252,6 +252,9 @@ if (localStorage.user != undefined) {
   user = JSON.parse(localStorage.user);
   homeDis.username.value = user.name;
 }
+var hasVisitedTutorial = !!user.doneTutorial;
+var tutorialProgressed = false;
+var tutorialFreeplay = false;
 var defaultUser = {};
 defaultUser.lastSession = {};
 defaultUser.name = "";
@@ -1844,6 +1847,10 @@ function draw() {
 
   var mobileExitBtn = document.getElementById("mobileExitBtn");
   mobileExitBtn.style.display = isMobile && (display == "game" || display == "pmgame" || display == "lobby") ? "block" : "none";
+  var mobileTutorialBtn = document.getElementById("mobileTutorialBtn");
+  var tutorialRoom = display == "game" || display == "pmgame" ? room == player.id : false;
+  mobileTutorialBtn.style.display = isMobile && tutorialRoom && (tutorialFreeplay || (hasVisitedTutorial && !tutorialProgressed)) ? "block" : "none";
+  mobileTutorialBtn.textContent = tutorialFreeplay ? "Switch" : "Freeplay";
   document.getElementById("mobileInstructionsExitBtn").style.display = isMobile && display == "instructions" ? "block" : "none";
   var mobileLobbyControls = document.getElementById("mobileLobbyControls");
   var mobileArcadeBtn = document.getElementById("mobileArcadeBtn");
@@ -4225,7 +4232,18 @@ function continueTutorial() {
   if (!tutorialMsg || Date.now() - tutorialDate <= 1000) return;
   tutorialDate = Date.now();
   tutorialMsg = false;
+  if (room == player.id && hasVisitedTutorial && !tutorialFreeplay) tutorialProgressed = true;
   socket.emit("continueTutorial");
+}
+function mobileTutorialAction() {
+  if (!isMobile || room != player.id) return;
+  if (tutorialFreeplay) {
+    socket.emit("swap");
+    return;
+  }
+  if (!hasVisitedTutorial || tutorialProgressed) return;
+  tutorialFreeplay = true;
+  socket.emit("freeplay");
 }
 function mobilePointerPosition(event) {
   const rect = event.currentTarget.getBoundingClientRect();
@@ -4411,6 +4429,10 @@ socket.on('roomCodes', function(codes) {
   roomCodes = codes.sort((a, b) => b.amount - a.amount);
 });
 socket.on('room', function(r, n, s) {
+  if (room != r) {
+    tutorialProgressed = false;
+    tutorialFreeplay = false;
+  }
   room = r;
   isNext = n;
   roomSettings = s;
@@ -4724,6 +4746,9 @@ socket.on('tutorialMsg', function(msg, date, p) {
   tutorialDate = date;
   tutorialPumpkin = p;
 })
+socket.on('freeplayEnabled', function() {
+  tutorialFreeplay = true;
+});
 // Win Conditions
 socket.on('skeleton_win', async function(stats) {
   console.log("Skeletons Win!");
