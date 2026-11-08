@@ -388,7 +388,7 @@ canvas {
 }
 #arcadeDis.open {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
 }
 #arcadeWindow {
@@ -400,9 +400,8 @@ canvas {
   gap: 1vmin;
   width: 96vmin;
   max-width: 96vmin;
-  max-height: none;
-  margin: 2vmin auto;
-  flex: 0 0 auto;
+  max-height: 96vmin;
+  margin: auto;
   overflow: visible;
   background: #0C2504;
   border: 0.8vmin solid #303030;
@@ -425,11 +424,12 @@ canvas {
 }
 #arcadeFrame {
   display: block;
-  width: 68vmin;
-  height: 68vmin;
+  width: 78vmin;
+  height: auto;
   max-width: 100%;
-  max-height: 68vmin;
-  flex: 0 1 auto;
+  max-height: 78vmin;
+  aspect-ratio: 1 / 1;
+  flex: 1 1 auto;
   min-height: 0;
   border: 0.4vmin solid #303030;
   background: #0C2504;
