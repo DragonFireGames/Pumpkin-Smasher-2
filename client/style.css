@@ -397,17 +397,17 @@ canvas {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: clamp(6px, 1vmin, 12px);
-  width: min(96vw, 100vmin);
-  max-height: calc(100dvh - 4vmin);
+  gap: 1vmin;
+  width: 96vmin;
+  max-width: 96vmin;
+  max-height: 96vmin;
   margin: auto;
-  max-width: calc(100vw - 16px);
   overflow: visible;
   background: #0C2504;
   border: 0.8vmin solid #303030;
   box-shadow: 0 0 0 0.5vmin #ffa500, 0 1vmin 4vmin #000000A0;
   box-sizing: border-box;
-  padding: clamp(8px, 1.5vmin, 16px);
+  padding: 1.5vmin;
 }
 #arcadeGameName {
   width: 100%;
@@ -424,11 +424,10 @@ canvas {
 }
 #arcadeFrame {
   display: block;
-  width: min(100%, 78vmin, calc(100vw - 40px), calc(100dvh - 190px));
+  width: 68vmin;
+  height: 68vmin;
   max-width: 100%;
-  max-height: calc(100dvh - 190px);
-  aspect-ratio: 1 / 1;
-  height: auto;
+  max-height: 68vmin;
   flex: 0 1 auto;
   min-height: 0;
   border: 0.4vmin solid #303030;
@@ -445,13 +444,13 @@ canvas {
 #arcadeControls button {
   flex: 1 1 0;
   min-width: 0;
-  min-height: clamp(26px, 6vmin, 42px);
+  min-height: 6vmin;
   padding: 0.6vmin 0.5vmin;
   border: 0.4vmin solid #ffa500;
   background: #231709;
   color: #ffa500;
   font: inherit;
-  font-size: clamp(12px, 2.2vmin, 18px);
+  font-size: 2.2vmin;
   cursor: pointer;
 }
 #arcadeControls button:hover,
@@ -463,12 +462,12 @@ canvas {
   z-index: 1;
   top: 0.5vmin;
   right: 0.5vmin;
-  width: clamp(36px, 6vmin, 48px);
-  height: clamp(36px, 6vmin, 48px);
+  width: 7vmin;
+  height: 7vmin;
   border: 0.4vmin solid #303030;
   background: #ffa500;
   color: #231709;
-  font-size: clamp(24px, 4.5vmin, 32px);
+  font-size: 5vmin;
   line-height: 1;
   cursor: pointer;
 }
