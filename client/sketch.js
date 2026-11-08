@@ -1809,12 +1809,9 @@ function setup() {
   canvas_dom.addEventListener("lostpointercapture", mobilePointerEnd);
   window.addEventListener("blur", clearMobilePointers);
 
-  resizeGameCanvas();
-  window.addEventListener("orientationchange", function() {
-    requestAnimationFrame(function() {
-      requestAnimationFrame(resizeGameCanvas);
-    });
-  });
+  windowScale = min(windowWidth, windowHeight) / 400;
+  wWidth = windowWidth / windowScale;
+  wHeight = windowHeight / windowScale;
   userStartAudio();
 
   loadAssets();
@@ -4135,19 +4132,11 @@ function applyScale(s) {
   user.cam = cam;
 }
 // Window
-function resizeGameCanvas() {
-  var viewportWidth = document.documentElement.clientWidth || window.innerWidth;
-  var viewportHeight = document.documentElement.clientHeight || window.innerHeight;
-  if (!viewportWidth || !viewportHeight) return;
-  windowWidth = viewportWidth;
-  windowHeight = viewportHeight;
-  if (width != viewportWidth || height != viewportHeight) resizeCanvas(viewportWidth, viewportHeight);
-  windowScale = min(viewportWidth, viewportHeight) / 400;
-  wWidth = viewportWidth / windowScale;
-  wHeight = viewportHeight / windowScale;
-}
 function windowResized() {
-  resizeGameCanvas();
+  resizeCanvas(windowWidth, windowHeight);
+  windowScale = min(windowWidth, windowHeight) / 400;
+  wWidth = windowWidth / windowScale;
+  wHeight = windowHeight / windowScale;
 }
 // Mobile GUI
 var mbGUI = {};
