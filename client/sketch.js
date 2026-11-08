@@ -1806,7 +1806,6 @@ function setup() {
   canvas_dom.addEventListener("pointermove", mobilePointerMove);
   canvas_dom.addEventListener("pointerup", mobilePointerEnd);
   canvas_dom.addEventListener("pointercancel", mobilePointerEnd);
-  canvas_dom.addEventListener("lostpointercapture", mobilePointerEnd);
   window.addEventListener("blur", clearMobilePointers);
 
   windowScale = min(windowWidth, windowHeight) / 400;
@@ -3978,10 +3977,10 @@ function keybinds() {
     if (mbGUI.joystick.isActive) {
       var delta = createVector(mbGUI.joystick.deltaX, mbGUI.joystick.deltaY);
       delta.limit(50);
-      u = delta.y < -10;
-      d = delta.y > 10;
-      l = delta.x < -10;
-      r = delta.x > 10;
+      u = u || delta.y < -10;
+      d = d || delta.y > 10;
+      l = l || delta.x < -10;
+      r = r || delta.x > 10;
     }
   }
   switch (settingsIdMap.facingMode.value) {
