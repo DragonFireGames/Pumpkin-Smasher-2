@@ -392,8 +392,8 @@ canvas {
   justify-content: center;
 }
 #arcadeWindow {
-  position: relative;
-  min-height: 0;
+  position: absolute;
+  top: 2vmin;
   display: flex;
   flex-direction: column;
   align-items: center;
