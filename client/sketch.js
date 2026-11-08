@@ -1842,6 +1842,9 @@ function draw() {
     return;
   }
 
+  var mobileExitBtn = document.getElementById("mobileExitBtn");
+  mobileExitBtn.style.display = isMobile && (display == "game" || display == "pmgame" || display == "lobby") ? "block" : "none";
+
   // MouseX, MouseY, Width and Height
   wMouseX = (mouseX - windowWidth / 2) / windowScale;
   wMouseY = (mouseY - windowHeight / 2) / windowScale;
@@ -1933,11 +1936,7 @@ function draw() {
     }
     pop();
     // Continue
-    if (keyIsDown(13) && Date.now()-tutorialDate > 1000) {
-      tutorialDate = Date.now();
-      tutorialMsg = false;
-      socket.emit("continueTutorial");
-    }
+    if (keyIsDown(13)) continueTutorial();
   }
 
   localStorage.user = JSON.stringify(user);
@@ -4188,6 +4187,12 @@ function drawGUI() {
   //exit();
   //}
 }
+function continueTutorial() {
+  if (!tutorialMsg || Date.now() - tutorialDate <= 1000) return;
+  tutorialDate = Date.now();
+  tutorialMsg = false;
+  socket.emit("continueTutorial");
+}
 function mobilePointerPosition(event) {
   const rect = event.currentTarget.getBoundingClientRect();
   const x = (event.clientX - rect.left) * windowWidth / rect.width;
@@ -4198,9 +4203,14 @@ function mobilePointerPosition(event) {
   };
 }
 function mobilePointerDown(event) {
-  if (!isMobile || (display != "game" && display != "lobby")) return;
+  if (!isMobile || (display != "game" && display != "pmgame" && display != "lobby")) return;
   if (event.pointerType === "touch") event.preventDefault();
   const pos = mobilePointerPosition(event);
+  if (tutorialMsg && Date.now() - tutorialDate > 1000 && pos.x >= -150 && pos.x <= 150 && pos.y >= -wHeight / 2 + 60 && pos.y <= -wHeight / 2 + 133) {
+    continueTutorial();
+    return;
+  }
+  if (display == "pmgame") return;
   const smashOver = display == "game" && subdisplay == "" &&
     sq(pos.x - (wWidth / 2 - 80)) + sq(pos.y - (wHeight / 2 - 80)) < 120 * 120;
   const joystickOver = sq(pos.x - (-wWidth / 2 + 80)) + sq(pos.y - (wHeight / 2 - 80)) < 120 * 120;
