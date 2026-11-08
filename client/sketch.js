@@ -1844,6 +1844,8 @@ function draw() {
 
   var mobileExitBtn = document.getElementById("mobileExitBtn");
   mobileExitBtn.style.display = isMobile && (display == "game" || display == "pmgame" || display == "lobby") ? "block" : "none";
+  var mobileRotatePrompt = document.getElementById("mobileRotatePrompt");
+  mobileRotatePrompt.style.display = isMobile && windowWidth < windowHeight && (display == "game" || display == "pmgame" || display == "lobby") ? "flex" : "none";
 
   // MouseX, MouseY, Width and Height
   wMouseX = (mouseX - windowWidth / 2) / windowScale;
