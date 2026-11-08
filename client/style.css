@@ -477,8 +477,8 @@ canvas {
   display: none;
   position: fixed;
   z-index: 10;
-  top: max(2vmin, env(safe-area-inset-top));
-  left: max(2vmin, env(safe-area-inset-left));
+  top: max(12vmin, env(safe-area-inset-top));
+  right: max(2vmin, env(safe-area-inset-right));
   padding: 2vmin 3.5vmin;
   border: 0.6vmin solid #ffa500;
   background: #231709;
@@ -488,11 +488,6 @@ canvas {
   font-weight: bold;
   cursor: pointer;
   touch-action: manipulation;
-}
-#mobileExitBtn.pumpkin-master {
-  top: 12vmin;
-  left: auto;
-  right: max(2vmin, env(safe-area-inset-right));
 }
 #mobileTutorialBtn {
   display: none;
