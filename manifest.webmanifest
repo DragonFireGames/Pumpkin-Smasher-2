@@ -11,6 +11,12 @@
   "theme_color": "#123904",
   "icons": [
     {
+      "src": "/icons/pumpkin-app.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
       "src": "/assets/pumpkins/objective.png",
       "sizes": "210x210",
       "type": "image/png",
