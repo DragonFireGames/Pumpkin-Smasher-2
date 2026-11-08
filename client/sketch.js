@@ -1844,6 +1844,7 @@ function draw() {
 
   var mobileExitBtn = document.getElementById("mobileExitBtn");
   mobileExitBtn.style.display = isMobile && (display == "game" || display == "pmgame" || display == "lobby") ? "block" : "none";
+  mobileExitBtn.classList.toggle("pumpkin-master", display == "pmgame");
   var mobileRotatePrompt = document.getElementById("mobileRotatePrompt");
   mobileRotatePrompt.style.display = isMobile && windowWidth < windowHeight && (display == "game" || display == "pmgame" || display == "lobby") ? "flex" : "none";
 
@@ -4212,6 +4213,15 @@ function mobilePointerDown(event) {
   if (!isMobile || (display != "game" && display != "pmgame" && display != "lobby")) return;
   if (event.pointerType === "touch") event.preventDefault();
   const pos = mobilePointerPosition(event);
+  if (display == "pmgame") {
+    mobileCameraPointers.set(event.pointerId, pos);
+    if (mobileCameraPointers.size == 2) {
+      const points = Array.from(mobileCameraPointers.values());
+      mobileCameraPinch = { distance: dist(points[0].x, points[0].y, points[1].x, points[1].y), midpoint: { x: (points[0].x + points[1].x) / 2, y: (points[0].y + points[1].y) / 2 } };
+    }
+    event.currentTarget.setPointerCapture(event.pointerId);
+    return;
+  }
   if (tutorialMsg && Date.now() - tutorialDate > 1000 && pos.x >= -150 && pos.x <= 150 && pos.y >= -wHeight / 2 + 60 && pos.y <= -wHeight / 2 + 133) {
     continueTutorial();
     return;
@@ -4241,7 +4251,28 @@ function mobilePointerDown(event) {
   event.currentTarget.setPointerCapture(event.pointerId);
 }
 function mobilePointerMove(event) {
-  if (!isMobile || !mbGUI.joystick.isActive || mbGUI.joystick.pointerId !== event.pointerId) return;
+  if (!isMobile) return;
+  if (display == "pmgame" && mobileCameraPointers.has(event.pointerId)) {
+    if (event.pointerType === "touch") event.preventDefault();
+    mobileCameraPointers.set(event.pointerId, mobilePointerPosition(event));
+    if (mobileCameraPointers.size == 2) {
+      const points = Array.from(mobileCameraPointers.values());
+      const distance = dist(points[0].x, points[0].y, points[1].x, points[1].y);
+      const midpoint = { x: (points[0].x + points[1].x) / 2, y: (points[0].y + points[1].y) / 2 };
+      if (mobileCameraPinch && mobileCameraPinch.distance > 0) {
+        const scaleFactor = distance / mobileCameraPinch.distance;
+        const nextZoom = min(max(cam.zoom * scaleFactor, 0.2), 2);
+        const appliedScale = nextZoom / cam.zoom;
+        cam.pos.x = midpoint.x * (1 - appliedScale) + cam.pos.x * appliedScale;
+        cam.pos.y = midpoint.y * (1 - appliedScale) + cam.pos.y * appliedScale;
+        cam.zoom = nextZoom;
+        user.cam = cam;
+      }
+      mobileCameraPinch = { distance, midpoint };
+    }
+    return;
+  }
+  if (!mbGUI.joystick.isActive || mbGUI.joystick.pointerId !== event.pointerId) return;
   if (event.pointerType === "touch") event.preventDefault();
   const pos = mobilePointerPosition(event);
   mbGUI.joystick.deltaX = pos.x - mbGUI.joystick.touchpos.x;
@@ -4249,6 +4280,14 @@ function mobilePointerMove(event) {
 }
 function mobilePointerEnd(event) {
   if (!isMobile) return;
+  if (mobileCameraPointers.has(event.pointerId)) {
+    mobileCameraPointers.delete(event.pointerId);
+    mobileCameraPinch = null;
+    if (mobileCameraPointers.size == 2) {
+      const points = Array.from(mobileCameraPointers.values());
+      mobileCameraPinch = { distance: dist(points[0].x, points[0].y, points[1].x, points[1].y), midpoint: { x: (points[0].x + points[1].x) / 2, y: (points[0].y + points[1].y) / 2 } };
+    }
+  }
   if (mbGUI.joystick.pointerId === event.pointerId) {
     mbGUI.joystick.isActive = false;
     mbGUI.joystick.pointerId = null;
@@ -4257,7 +4296,11 @@ function mobilePointerEnd(event) {
   }
   mbGUI.smash.pointerIds.delete(event.pointerId);
 }
+var mobileCameraPointers = new Map();
+var mobileCameraPinch = null;
 function clearMobilePointers() {
+  mobileCameraPointers.clear();
+  mobileCameraPinch = null;
   if (!mbGUI.joystick) return;
   mbGUI.joystick.isActive = false;
   mbGUI.joystick.pointerId = null;
