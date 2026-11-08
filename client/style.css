@@ -506,6 +506,54 @@ canvas {
   left: auto;
   right: max(10px, env(safe-area-inset-right));
 }
+#mobileLobbyControls,
+#mobileArcadeBtn {
+  display: none;
+  position: fixed;
+  z-index: 8;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px;
+  border: 2px solid #ffa500;
+  background: #231709;
+  color: #ffa500;
+  font: inherit;
+  font-size: 15px;
+  font-weight: bold;
+  touch-action: manipulation;
+}
+#mobileLobbyControls {
+  top: max(10px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+#mobileLobbyControls button,
+#mobileArcadeBtn {
+  min-height: 40px;
+  padding: 7px 12px;
+  border: 2px solid #ffa500;
+  background: #381e08;
+  color: #ffa500;
+  font: inherit;
+  font-size: 16px;
+  font-weight: bold;
+}
+#mobileLobbyControls span {
+  min-width: 82px;
+  text-align: center;
+}
+#mobileArcadeBtn {
+  bottom: max(16px, env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 8;
+}
+#mobileLobbyControls button:active,
+#mobileArcadeBtn:active {
+  background: #55300b;
+}
 #mobileExitBtn:active {
   background: #381e08;
 }
