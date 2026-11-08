@@ -450,8 +450,8 @@ canvas {
   border: 0.4vmin solid #ffa500;
   background: #231709;
   color: #ffa500;
-  font: inherit;
-  font-size: 2.2vmin;
+  font-family: Arial, sans-serif;
+  font-size: 2.4vmin;
   cursor: pointer;
 }
 #arcadeControls button:hover,
