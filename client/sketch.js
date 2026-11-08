@@ -1356,42 +1356,49 @@ class joinTile extends Tile {
   }
 }
 
-
 // ------
 // Assets
 // ------
 
 // Asset Classes
 class Sound {
-  constructor(url) {
-    var self = this;
-    //this.sound = LoadSound(url,(s)=>{
-    //  self.length = s.duration();
-    //});
-    this.sound = new Audio(url);
+  constructor(url, call, fail) {
+    this.url = url;
+    this.call = call;
+    this.fail = fail;
+    this.sound = null;
+    this.length = Infinity;
     toLoad++;
-    this.sound.addEventListener("loadeddata", () => {
-      if (self.sound.readyState >= 1) {
-        loaded++;
-        self.length = self.sound.duration;
-      }
-    });
-    this.sound.addEventListener('error', () => {
-      loaded++;
-      self.length = Infinity;
-      failures.push(url);
-    });
+    this.init();
   }
-  async play(amp) {
-    //amp = amp ?? 1;
-    //this.sound.play(0, 1, amp, 0, this.length);
-    this.sound.volume = amp;
-    this.sound.play();
-    await wait(this.length * 1000);
-    return;
+  async init() {
+    try {
+      var response = await fetch(this.url);
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      var blob = await response.blob();
+      this.sound = new Audio(URL.createObjectURL(blob));
+      await new Promise((resolve, reject) => {
+        this.sound.addEventListener("loadedmetadata", resolve, { once: true });
+        this.sound.addEventListener("error", reject, { once: true });
+        this.sound.load();
+      });
+      this.length = this.sound.duration;
+      loaded++;
+      if (typeof this.call == 'function') this.call(this);
+    } catch (error) {
+      this.length = Infinity;
+      loaded++;
+      failures.push(this.url);
+      if (typeof this.fail == 'function') this.fail(error, this);
+    }
+  }
+  async play(amp = 1) {
+    this.sound.volume = Math.max(0, Math.min(1, amp));
+    this.sound.currentTime = 0;
+    await this.sound.play();
   }
   stop() {
-    //this.sound.stop();
+    if (!this.sound) return;
     this.sound.pause();
     this.sound.currentTime = 0;
   }
@@ -1666,7 +1673,7 @@ function LoadImage(url, call) {
 function LoadSound(url, call) {
   toLoad++;
   //return createAudio(url,(snd)=>{
-  return loadSound(url, (snd) => {
+  return new Sound(url, (snd) => {
     loaded++;
     if (call) call(snd);
   },()=>{
