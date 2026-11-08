@@ -1798,6 +1798,12 @@ function setup() {
   canvas_dom.addEventListener("touchmove", function(event) { event.preventDefault() }, { passive: false });
   canvas_dom.addEventListener("touchend", function(event) { event.preventDefault() }, { passive: false });
   canvas_dom.addEventListener("touchcancel", function(event) { event.preventDefault() }, { passive: false });
+  canvas_dom.addEventListener("pointerdown", mobilePointerDown);
+  canvas_dom.addEventListener("pointermove", mobilePointerMove);
+  canvas_dom.addEventListener("pointerup", mobilePointerEnd);
+  canvas_dom.addEventListener("pointercancel", mobilePointerEnd);
+  canvas_dom.addEventListener("lostpointercapture", mobilePointerEnd);
+  window.addEventListener("blur", clearMobilePointers);
 
   windowScale = min(windowWidth, windowHeight) / 400;
   wWidth = windowWidth / windowScale;
@@ -3462,7 +3468,6 @@ function mousePressed() {
   }
   Keybinds.mousePressed();
   mousePressed2();
-  if (isMobile) mousePressGUI();
 }
 function keyPressed() {
   if (arcadeIsOpen()) {
@@ -3499,7 +3504,6 @@ function keyReleased() {
 }
 function mouseReleased() {
   Keybinds.mouseReleased();
-  if (isMobile) mouseReleaseGUI();
 }
 function renderSettings(contentArray, idMap, container) {
   contentArray.forEach(item => {
@@ -3926,12 +3930,10 @@ function keybinds() {
   }
   if (isMobile) {
     if (mbGUI.joystick.isActive) {
-      var dx = wMouseX - mbGUI.joystick.touchpos.x;
-      var dy = wMouseY - mbGUI.joystick.touchpos.y;
-      var delta = createVector(dx, dy);
+      var delta = createVector(mbGUI.joystick.deltaX, mbGUI.joystick.deltaY);
       delta.limit(50);
-      u = delta.y < 10;
-      d = delta.y > -10;
+      u = delta.y < -10;
+      d = delta.y > 10;
       l = delta.x < -10;
       r = delta.x > 10;
     }
@@ -4120,9 +4122,13 @@ async function loadGUI() {
   mbGUI.joystick.texCenter = LoadImage("assets/mobile/joystick-center.png");
   mbGUI.joystick.texCenterPress = LoadImage("assets/mobile/joystick-center_press.png");
   mbGUI.joystick.isActive = false;
+  mbGUI.joystick.pointerId = null;
   mbGUI.joystick.touchpos = { x: 0, y: 0 };
+  mbGUI.joystick.deltaX = 0;
+  mbGUI.joystick.deltaY = 0;
 
   mbGUI.smash = {};
+  mbGUI.smash.pointerIds = new Set();
   mbGUI.smash.tex = LoadImage("assets/mobile/smash.png");
   mbGUI.smash.texPress = LoadImage("assets/mobile/smash_press.png");
 }
@@ -4138,9 +4144,7 @@ function drawGUI() {
     image(mbGUI.joystick[joystickTex], -wWidth / 2 + 20, wHeight / 2 - 140, 120, 120);
 
     if (mbGUI.joystick.isActive) {
-      var dx = wMouseX - mbGUI.joystick.touchpos.x;
-      var dy = wMouseY - mbGUI.joystick.touchpos.y;
-      var delta = createVector(dx, dy);
+      var delta = createVector(mbGUI.joystick.deltaX, mbGUI.joystick.deltaY);
       delta.limit(50);
       delta.add(-wWidth / 2 + 50, wHeight / 2 - 110);
       image(mbGUI.joystick.texCenterPress, delta.x, delta.y, 60, 60);
@@ -4175,7 +4179,7 @@ function drawGUI() {
   if (display == "game" && subdisplay == "") {
     push();
     tint(255, 255, 255, 182);
-    var smashTex = mouseCircle(wWidth / 2 - 80, wHeight / 2 - 80, 120) && mouseIsPressed ? "texPress" : "tex";
+    var smashTex = mbGUI.smash.pointerIds.size > 0 ? "texPress" : "tex";
     image(mbGUI.smash[smashTex], wWidth / 2 - 140, wHeight / 2 - 140, 120, 120);
     pop();
   }
@@ -4184,22 +4188,62 @@ function drawGUI() {
   //exit();
   //}
 }
-function mousePressGUI() {
-  if (display != "game" && display != "lobby") return;
-  if (smashcooldown && display == "game" && subdisplay == "" && mouseCircle(wWidth / 2 - 80, wHeight / 2 - 80, 120)) {
-    doSmash();
-  }
-  if (mouseCircle(-wWidth / 2 + 80, wHeight / 2 - 80, 120)) {
-    mbGUI.joystick.isActive = true;
-    mbGUI.joystick.touchpos.x = wMouseX;
-    mbGUI.joystick.touchpos.y = wMouseY;
-  }
+function mobilePointerPosition(event) {
+  const rect = event.currentTarget.getBoundingClientRect();
+  const x = (event.clientX - rect.left) * windowWidth / rect.width;
+  const y = (event.clientY - rect.top) * windowHeight / rect.height;
+  return {
+    x: (x - windowWidth / 2) / windowScale,
+    y: (y - windowHeight / 2) / windowScale
+  };
 }
-function mouseReleaseGUI() {
-  if (display != "game" && display != "lobby" && display != "host") return;
+function mobilePointerDown(event) {
+  if (!isMobile || (display != "game" && display != "lobby")) return;
+  if (event.pointerType === "touch") event.preventDefault();
+  const pos = mobilePointerPosition(event);
+  const smashOver = display == "game" && subdisplay == "" &&
+    sq(pos.x - (wWidth / 2 - 80)) + sq(pos.y - (wHeight / 2 - 80)) < 120 * 120;
+  const joystickOver = sq(pos.x - (-wWidth / 2 + 80)) + sq(pos.y - (wHeight / 2 - 80)) < 120 * 120;
+
+  if (smashOver) {
+    mbGUI.smash.pointerIds.add(event.pointerId);
+    if (smashcooldown) doSmash();
+  } else if (joystickOver && !mbGUI.joystick.isActive) {
+    mbGUI.joystick.isActive = true;
+    mbGUI.joystick.pointerId = event.pointerId;
+    mbGUI.joystick.touchpos.x = pos.x;
+    mbGUI.joystick.touchpos.y = pos.y;
+    mbGUI.joystick.deltaX = 0;
+    mbGUI.joystick.deltaY = 0;
+  } else {
+    return;
+  }
+  event.currentTarget.setPointerCapture(event.pointerId);
+}
+function mobilePointerMove(event) {
+  if (!isMobile || !mbGUI.joystick.isActive || mbGUI.joystick.pointerId !== event.pointerId) return;
+  if (event.pointerType === "touch") event.preventDefault();
+  const pos = mobilePointerPosition(event);
+  mbGUI.joystick.deltaX = pos.x - mbGUI.joystick.touchpos.x;
+  mbGUI.joystick.deltaY = pos.y - mbGUI.joystick.touchpos.y;
+}
+function mobilePointerEnd(event) {
+  if (!isMobile) return;
+  if (mbGUI.joystick.pointerId === event.pointerId) {
+    mbGUI.joystick.isActive = false;
+    mbGUI.joystick.pointerId = null;
+    mbGUI.joystick.deltaX = 0;
+    mbGUI.joystick.deltaY = 0;
+  }
+  mbGUI.smash.pointerIds.delete(event.pointerId);
+}
+function clearMobilePointers() {
+  if (!mbGUI.joystick) return;
   mbGUI.joystick.isActive = false;
-  mbGUI.joystick.touchpos.x = 0;
-  mbGUI.joystick.touchpos.y = 0;
+  mbGUI.joystick.pointerId = null;
+  mbGUI.joystick.deltaX = 0;
+  mbGUI.joystick.deltaY = 0;
+  if (mbGUI.smash?.pointerIds) mbGUI.smash.pointerIds.clear();
 }
 //
 function mouseRect(x, y, w, h) {
